@@ -75,8 +75,9 @@ func Hostname(value string) (string, error) {
 	return host, nil
 }
 
-// Validate normalizes a target, requires every DNS answer to be public and bounds DNS time.
-func (policy UrlPolicy) Validate(ctx context.Context, value string) (string, error) {
+// NormalizeURL performs lexical public-target checks without network activity.
+// A route preview uses this check and explicitly defers DNS eligibility to dispatch.
+func NormalizeURL(value string) (string, error) {
 	address, err := url.Parse(value)
 	if err != nil || address.User != nil || address.Opaque != "" || address.Host == "" || (address.Scheme != "http" && address.Scheme != "https") || strings.Contains(address.Host, "%") || strings.Contains(value, "\\") {
 		return "", store.Reject("target_blocked", 422, "Only public HTTP(S) URLs without user information are allowed")
@@ -96,9 +97,6 @@ func (policy UrlPolicy) Validate(ctx context.Context, value string) (string, err
 		if err != nil {
 			return "", err
 		}
-		if _, err = policy.resolve(ctx, host); err != nil {
-			return "", err
-		}
 	}
 	if strings.Contains(host, ":") {
 		host = "[" + host + "]"
@@ -112,6 +110,21 @@ func (policy UrlPolicy) Validate(ctx context.Context, value string) (string, err
 		address.Path = "/"
 	}
 	return address.String(), nil
+}
+
+// Validate also requires every current DNS answer to be public and bounds DNS time.
+func (policy UrlPolicy) Validate(ctx context.Context, value string) (string, error) {
+	normalized, err := NormalizeURL(value)
+	if err != nil {
+		return "", err
+	}
+	address, _ := url.Parse(normalized)
+	if _, err = netip.ParseAddr(address.Hostname()); err != nil {
+		if _, err = policy.resolve(ctx, address.Hostname()); err != nil {
+			return "", err
+		}
+	}
+	return normalized, nil
 }
 
 func (policy UrlPolicy) resolve(ctx context.Context, host string) ([]netip.Addr, error) {
@@ -141,7 +154,7 @@ func ProviderClient(origin string) (*http.Client, error) {
 	if err != nil || address.Scheme != "https" || address.User != nil || address.Path != "" || address.RawQuery != "" || address.Fragment != "" || address.Port() != "" {
 		return nil, errors.New("provider origin must be fixed HTTPS")
 	}
-	if address.Host != "api.exa.ai" && address.Host != "api.tavily.com" {
+	if address.Host != "api.exa.ai" && address.Host != "admin-api.exa.ai" && address.Host != "api.tavily.com" {
 		return nil, errors.New("provider origin is not approved")
 	}
 	policy := UrlPolicy{}

@@ -13,6 +13,7 @@ import (
 type Admission struct {
 	ParentId, PrincipalId, Provider, Operation string
 	Amount                                     int64
+	MinimumAmount                              int64
 	Research                                   bool
 }
 
@@ -61,6 +62,15 @@ func (state *Store) Reserve(ctx context.Context, input Admission) (Reservation, 
 func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, limits domain.Limits) (Reservation, error) {
 	result := Reservation{}
 	now := state.Now().UnixMilli()
+	var providerUntil int64
+	if err := tx.QueryRowContext(ctx, "SELECT coalesce(max(cooldown_ms),0) FROM runtime_gates WHERE scope='provider' AND entity_id=?", input.Provider).Scan(&providerUntil); err != nil {
+		return result, err
+	}
+	if providerUntil > now {
+		fault := Reject("upstream_rate_limited", 429, "Shared provider endpoint is cooling down")
+		fault.RetryAfterMs = providerUntil - now
+		return result, fault
+	}
 	if input.Research {
 		var active, personal, queued int
 		if err := tx.QueryRowContext(ctx, "SELECT count(*),coalesce(sum(CASE WHEN principal_id=? THEN 1 ELSE 0 END),0) FROM budget_reservations WHERE active_slot=1", input.PrincipalId).Scan(&active, &personal); err != nil {
@@ -105,6 +115,11 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 		if amount == 0 {
 			amount = int64(account.QuotaPolicy.PerOperationReservation)
 		}
+		if amount <= 0 {
+			selectionErr = Reject("quota_unavailable", 503, "Per-operation reservation must be configured before dispatch")
+			continue
+		}
+		amount = max(amount, input.MinimumAmount)
 		used, held, err := BalanceTx(ctx, tx, account.Id)
 		if err != nil {
 			return result, err
@@ -182,6 +197,14 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 		return result, nil
 	}
 	return result, selectionErr
+}
+
+// ProviderCooldown prevents unknown/network rate limits being bypassed across accounts.
+func (state *Store) ProviderCooldown(ctx context.Context, provider string, duration time.Duration) error {
+	return state.Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, "INSERT INTO runtime_gates(scope,entity_id,cooldown_ms) VALUES('provider',?,?) ON CONFLICT(scope,entity_id) DO UPDATE SET cooldown_ms=max(cooldown_ms,excluded.cooldown_ms)", provider, state.Now().Add(duration).UnixMilli())
+		return err
+	})
 }
 
 func consumeRate(ctx context.Context, tx *sql.Tx, scope, id string, now, units, rate, burst int64) error {
