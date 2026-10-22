@@ -26,8 +26,37 @@ func TestServeNeverSilentlyInitializes(t *testing.T) {
 	}
 }
 
+func TestInitCreatesPrivateParentsAndAcceptsPrivateEmptyLeaf(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		root := t.TempDir()
+		parent := filepath.Join(root, "missing-parent")
+		directory := filepath.Join(parent, "state")
+		if existing {
+			if err := security.PreparePrivateDirectory(directory); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := initialize(t.Context(), directory+string(os.PathSeparator), new(bytes.Buffer)); err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range []string{parent, directory, filepath.Join(directory, "master.key"), filepath.Join(directory, "config.json")} {
+			if err := security.CheckPrivate(path); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	root := t.TempDir()
+	if err := initialize(t.Context(), root+string(os.PathSeparator)+"missing/../state", new(bytes.Buffer)); err == nil {
+		t.Fatal("accepted raw parent traversal")
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("invalid path created directories")
+	}
+}
+
 func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
-	directory := t.TempDir()
+	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
 	if err := run(t.Context(), []string{"init", "--data-dir", directory}, &output, &output); err != nil {
 		t.Fatal(err)
@@ -103,7 +132,7 @@ func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
 }
 
 func TestWrongMasterKeyLeavesReadOnlyMetadataAvailable(t *testing.T) {
-	directory := t.TempDir()
+	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
 	if err := initialize(t.Context(), directory, &output); err != nil {
 		t.Fatal(err)
@@ -175,7 +204,7 @@ func TestServeRejectsEmptyAndIncompleteBootstrap(t *testing.T) {
 }
 
 func TestEightCharacterCredentialCreationAndRotation(t *testing.T) {
-	directory := t.TempDir()
+	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
 	if err := initialize(t.Context(), directory, &output); err != nil {
 		t.Fatal(err)

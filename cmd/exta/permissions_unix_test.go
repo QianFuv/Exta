@@ -10,7 +10,7 @@ import (
 )
 
 func TestServeRejectsWorldReadableMasterKey(t *testing.T) {
-	directory := t.TempDir()
+	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
 	if err := initialize(t.Context(), directory, &output); err != nil {
 		t.Fatal(err)
@@ -23,5 +23,19 @@ func TestServeRejectsWorldReadableMasterKey(t *testing.T) {
 		state.Close()
 		lock.Close()
 		t.Fatal("serve accepted world-readable master key")
+	}
+}
+
+func TestInitRejectsExistingInsecureDirectory(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.Chmod(directory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := initialize(t.Context(), directory, new(bytes.Buffer)); err == nil {
+		t.Fatal("insecure existing object rehabilitated in place")
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("rejected init wrote secret state")
 	}
 }

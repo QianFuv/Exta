@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -68,7 +69,7 @@ func defaultDirectory() string {
 
 func run(ctx context.Context, args []string, output, diagnostics io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: exta <version|init|serve> [--data-dir path]")
+		return errors.New("usage: exta <version|init|serve|doctor|backup|restore|migrate> [--data-dir path]")
 	}
 	if args[0] == "version" {
 		return json.NewEncoder(output).Encode(buildInfo())
@@ -77,6 +78,10 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 	flags.SetOutput(diagnostics)
 	directory := flags.String("data-dir", defaultDirectory(), "Absolute external state directory")
 	maintenance := flags.Bool("maintenance", false, "Serve local inspection without provider dispatch")
+	backupOutput := flags.String("output", "", "New backup directory")
+	keyOutput := flags.String("key-output", "", "Separate new key-recovery directory (default: backup directory plus .key-recovery)")
+	backupSource := flags.String("from", "", "Verified backup directory to restore")
+	migrationBackup := flags.String("backup", "", "New pre-migration backup directory")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -88,12 +93,24 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 		return initialize(ctx, *directory, output)
 	case "serve":
 		return serveMode(ctx, *directory, diagnostics, *maintenance)
+	case "doctor":
+		return doctor(ctx, *directory, output)
+	case "backup":
+		return backupCommand(ctx, *directory, *backupOutput, *keyOutput, output, false)
+	case "migrate":
+		return backupCommand(ctx, *directory, *migrationBackup, *keyOutput, output, true)
+	case "restore":
+		return restoreCommand(ctx, *directory, *backupSource, output, nil)
 	default:
 		return errors.New("unknown command")
 	}
 }
 
 func initialize(ctx context.Context, directory string, output io.Writer) error {
+	if err := security.CheckNoLinks(directory); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	directory = filepath.Clean(directory)
 	entries, err := os.ReadDir(directory)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.New("cannot inspect data directory")
@@ -101,11 +118,8 @@ func initialize(ctx context.Context, directory string, output io.Writer) error {
 	if len(entries) > 0 {
 		return errors.New("init requires a new or empty data directory; existing files were preserved")
 	}
-	if err = os.MkdirAll(directory, 0700); err != nil {
-		return errors.New("cannot create data directory")
-	}
-	if err = security.ProtectDirectory(directory); err != nil {
-		return errors.New("cannot protect data directory")
+	if err = security.PreparePrivateDirectory(directory); err != nil {
+		return err
 	}
 	lock, err := security.LockDirectory(filepath.Join(directory, "exta.lock"))
 	if err != nil {
@@ -200,6 +214,9 @@ func loadConfig(directory string) (config, error) {
 }
 
 func openRuntime(ctx context.Context, directory string) (*store.Store, *security.Auth, config, *os.File, error) {
+	if err := security.CheckNoLinks(directory); err != nil {
+		return nil, nil, config{}, nil, err
+	}
 	for _, name := range []string{"", "config.json", "exta.sqlite", "master.key", "exta.lock", "exta.sqlite-wal", "exta.sqlite-shm"} {
 		path := filepath.Join(directory, name)
 		if err := security.CheckPrivate(path); err != nil {
@@ -209,26 +226,17 @@ func openRuntime(ctx context.Context, directory string) (*store.Store, *security
 			return nil, nil, config{}, nil, errors.New("runtime state permissions are unsafe or unreadable; ownership and access must be restricted to the service user")
 		}
 	}
-	configuration, err := loadConfig(directory)
+	lock, err := lockOperations(directory, false)
 	if err != nil {
-		return nil, nil, configuration, nil, err
+		return nil, nil, config{}, nil, err
 	}
-	if info, err := os.Stat(filepath.Join(directory, "exta.sqlite")); err != nil || info.IsDir() || info.Size() == 0 {
-		return nil, nil, configuration, nil, errors.New("existing exta.sqlite is required; serve never initializes state")
-	}
-	lock, err := security.LockDirectory(filepath.Join(directory, "exta.lock"))
+	local, err := inspectLocal(ctx, directory)
 	if err != nil {
-		return nil, nil, configuration, nil, errors.New("data directory is already in use")
+		lock.Close()
+		return nil, nil, config{}, nil, err
 	}
-	key, err := os.ReadFile(filepath.Join(directory, "master.key"))
-	if err != nil {
-		key = nil
-	}
-	vault, err := security.NewVault(key)
-	if err != nil {
-		vault, _ = security.NewVault(nil)
-	}
-	state, err := store.OpenExisting(ctx, filepath.Join(directory, "exta.sqlite"), vault)
+	configuration := local.Config
+	state, err := store.OpenExisting(ctx, filepath.Join(directory, "exta.sqlite"), local.Vault)
 	if err != nil {
 		lock.Close()
 		return nil, nil, configuration, nil, errors.New("database is unavailable or incompatible")
@@ -255,15 +263,19 @@ func serveMode(ctx context.Context, directory string, diagnostics io.Writer, mai
 		state.Close()
 		lock.Close()
 	}()
-	if err = state.RecoverRequests(ctx); err != nil {
-		return err
+	if !maintenance {
+		if err = state.RecoverRequests(ctx); err != nil {
+			return err
+		}
 	}
 	core, err := service.New(state, nil, security.UrlPolicy{})
 	if err != nil {
 		return err
 	}
-	if err = core.Research.Recover(ctx); err != nil {
-		return err
+	if !maintenance {
+		if err = core.Research.Recover(ctx); err != nil {
+			return err
+		}
 	}
 	handler, err := managementHandlerWithCore(state, auth, configuration, core)
 	if err != nil {
@@ -280,6 +292,12 @@ func serveMode(ctx context.Context, directory string, diagnostics io.Writer, mai
 	if err != nil {
 		return errors.New("configured address is unavailable")
 	}
+	if !maintenance {
+		if err = state.Write(ctx, func(tx *sql.Tx) error { return store.AdvanceActivityTx(ctx, tx) }); err != nil {
+			listener.Close()
+			return err
+		}
+	}
 	finished := make(chan error, 1)
 	workerContext, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
@@ -287,7 +305,7 @@ func serveMode(ctx context.Context, directory string, diagnostics io.Writer, mai
 	if maintenance {
 		workerFinished <- nil
 	} else {
-		go func() { workerFinished <- core.Research.Run(workerContext) }()
+		go func() { workerFinished <- runWorkers(workerContext, core) }()
 	}
 	go func() {
 		if configuration.TlsCertFile != "" {

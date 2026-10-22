@@ -1,12 +1,77 @@
 package security
 
 import (
+	"crypto/rand"
 	"errors"
 	"os"
+	"path/filepath"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+func checkLink(path string) error {
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	attributes, err := windows.GetFileAttributes(name)
+	if err != nil {
+		return err
+	}
+	if attributes&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+		return errors.New("state paths cannot contain reparse points")
+	}
+	return nil
+}
+
+// CreatePrivateDirectory applies the owner-only DACL at creation, before handles can leak.
+func CreatePrivateDirectory(path string) error {
+	if err := CheckNoLinks(path); err != nil {
+		return err
+	}
+	path = filepath.Clean(path)
+	user, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		return err
+	}
+	descriptor, err := windows.SecurityDescriptorFromString("O:" + user.User.Sid.String() + "D:P(A;OICI;FA;;;" + user.User.Sid.String() + ")")
+	if err != nil {
+		return err
+	}
+	staged := path + ".creating-" + rand.Text()
+	name, err := windows.UTF16PtrFromString(staged)
+	if err != nil {
+		return err
+	}
+	attributes := windows.SecurityAttributes{Length: uint32(unsafe.Sizeof(windows.SecurityAttributes{})), SecurityDescriptor: descriptor}
+	if err = windows.CreateDirectory(name, &attributes); err != nil {
+		return err
+	}
+	defer os.Remove(staged)
+	destination, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	return windows.MoveFileEx(name, destination, windows.MOVEFILE_WRITE_THROUGH)
+}
+
+// SyncDirectory has no Windows directory-fsync operation. Directory creation and
+// file publication instead use write-through renames before returning.
+func SyncDirectory(string) error { return nil }
+
+// ReplaceFile publishes a synced sibling using Windows write-through rename ordering.
+func ReplaceFile(source, destination string) error {
+	from, err := windows.UTF16PtrFromString(source)
+	if err != nil {
+		return err
+	}
+	to, err := windows.UTF16PtrFromString(destination)
+	if err != nil {
+		return err
+	}
+	return windows.MoveFileEx(from, to, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH)
+}
 
 // ProtectDirectory installs a protected owner-only DACL; chmod alone is insufficient.
 func ProtectDirectory(path string) error {

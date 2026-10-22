@@ -5,8 +5,50 @@ package security
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"syscall"
 )
+
+func checkLink(path string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("state paths cannot contain symbolic links")
+	}
+	return nil
+}
+
+// CreatePrivateDirectory grants owner-only access from the first observable instant.
+func CreatePrivateDirectory(path string) error {
+	if err := CheckNoLinks(path); err != nil {
+		return err
+	}
+	path = filepath.Clean(path)
+	if err := os.Mkdir(path, 0700); err != nil {
+		return err
+	}
+	return SyncDirectory(filepath.Dir(path))
+}
+
+// SyncDirectory persists directory entries after file creation or publication.
+func SyncDirectory(path string) error {
+	directory, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	return directory.Sync()
+}
+
+// ReplaceFile publishes a synced sibling and persists the directory entry before return.
+func ReplaceFile(source, destination string) error {
+	if err := os.Rename(source, destination); err != nil {
+		return err
+	}
+	return SyncDirectory(filepath.Dir(destination))
+}
 
 // ProtectDirectory restricts a runtime directory to its owner.
 func ProtectDirectory(path string) error { return os.Chmod(path, 0700) }
