@@ -20,11 +20,15 @@ import (
 type adminAction func(http.ResponseWriter, *http.Request, store.Identity, domain.Session) (any, error)
 
 func managementHandler(state *store.Store, auth *security.Auth, configuration config) (http.Handler, error) {
-	mux := http.NewServeMux()
 	core, err := service.New(state, nil, security.UrlPolicy{})
 	if err != nil {
 		return nil, err
 	}
+	return managementHandlerWithCore(state, auth, configuration, core)
+}
+
+func managementHandlerWithCore(state *store.Store, auth *security.Auth, configuration config, core *service.Service) (http.Handler, error) {
+	mux := http.NewServeMux()
 	exaUsage, err := providers.NewExaUsage(nil)
 	if err != nil {
 		return nil, err

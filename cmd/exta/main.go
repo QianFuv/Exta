@@ -76,6 +76,7 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 	flags := flag.NewFlagSet("exta "+args[0], flag.ContinueOnError)
 	flags.SetOutput(diagnostics)
 	directory := flags.String("data-dir", defaultDirectory(), "Absolute external state directory")
+	maintenance := flags.Bool("maintenance", false, "Serve local inspection without provider dispatch")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 	case "init":
 		return initialize(ctx, *directory, output)
 	case "serve":
-		return serve(ctx, *directory, diagnostics)
+		return serveMode(ctx, *directory, diagnostics, *maintenance)
 	default:
 		return errors.New("unknown command")
 	}
@@ -242,25 +243,52 @@ func openRuntime(ctx context.Context, directory string) (*store.Store, *security
 }
 
 func serve(ctx context.Context, directory string, diagnostics io.Writer) error {
+	return serveMode(ctx, directory, diagnostics, false)
+}
+
+func serveMode(ctx context.Context, directory string, diagnostics io.Writer, maintenance bool) error {
 	state, auth, configuration, lock, err := openRuntime(ctx, directory)
 	if err != nil {
 		return err
 	}
-	defer lock.Close()
-	defer state.Close()
+	defer func() {
+		state.Close()
+		lock.Close()
+	}()
 	if err = state.RecoverRequests(ctx); err != nil {
 		return err
 	}
-	handler, err := managementHandler(state, auth, configuration)
+	core, err := service.New(state, nil, security.UrlPolicy{})
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Addr: configuration.Listen, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 180 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
+	if err = core.Research.Recover(ctx); err != nil {
+		return err
+	}
+	handler, err := managementHandlerWithCore(state, auth, configuration, core)
+	if err != nil {
+		return err
+	}
+	if maintenance {
+		handler = maintenanceHandler(handler)
+	}
+	admission := newAdmissionHandler(handler)
+	requests, cancelRequests := context.WithCancel(context.Background())
+	defer cancelRequests()
+	server := &http.Server{Addr: configuration.Listen, Handler: admission, BaseContext: func(net.Listener) context.Context { return requests }, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 180 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
 	listener, err := net.Listen("tcp", configuration.Listen)
 	if err != nil {
 		return errors.New("configured address is unavailable")
 	}
 	finished := make(chan error, 1)
+	workerContext, cancelWorker := context.WithCancel(context.Background())
+	defer cancelWorker()
+	workerFinished := make(chan error, 1)
+	if maintenance {
+		workerFinished <- nil
+	} else {
+		go func() { workerFinished <- core.Research.Run(workerContext) }()
+	}
 	go func() {
 		if configuration.TlsCertFile != "" {
 			finished <- server.ServeTLS(listener, configuration.TlsCertFile, configuration.TlsKeyFile)
@@ -269,19 +297,52 @@ func serve(ctx context.Context, directory string, diagnostics io.Writer) error {
 		}
 	}()
 	fmt.Fprintln(diagnostics, "Exta listening at "+configuration.Origin)
+	if maintenance {
+		fmt.Fprintln(diagnostics, "Maintenance mode: provider dispatch is disabled")
+	}
+	var workerWatch <-chan error
+	if !maintenance {
+		workerWatch = workerFinished
+	}
+	serverStopped := false
+	workerStopped := false
 	select {
 	case err = <-finished:
-	case <-ctx.Done():
-		shutdown, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		err = server.Shutdown(shutdown)
-		if err != nil {
-			server.Close()
+		serverStopped = true
+	case err = <-workerWatch:
+		workerStopped = true
+		if err == nil {
+			err = errors.New("research worker stopped unexpectedly")
 		}
+	case <-ctx.Done():
+	}
+	drained := admission.close()
+	cancelWorker()
+	shutdown, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	shutdownErr := server.Shutdown(shutdown)
+	cancel()
+	cancelRequests()
+	if shutdownErr != nil {
+		_ = server.Close()
+	}
+	if !serverStopped {
 		<-finished
 	}
 	if errors.Is(err, http.ErrServerClosed) {
-		return nil
+		err = nil
+	}
+	joined := make(chan error, 1)
+	go func() {
+		<-drained
+		var workerErr error
+		if !workerStopped {
+			workerErr = <-workerFinished
+		}
+		joined <- workerErr
+	}()
+	err = errors.Join(err, <-joined)
+	if shutdownErr != nil && err == nil {
+		err = shutdownErr
 	}
 	return err
 }
