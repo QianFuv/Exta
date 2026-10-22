@@ -21,17 +21,19 @@ import (
 
 	"exta/internal/domain"
 	"exta/internal/security"
+	"exta/internal/service"
 	"exta/internal/store"
 )
 
 var version = "dev"
 
 type config struct {
-	Listen             string   `json:"listen"`
-	Origin             string   `json:"origin"`
-	DevelopmentOrigins []string `json:"development_origins,omitempty"`
-	TlsCertFile        string   `json:"tls_cert_file,omitempty"`
-	TlsKeyFile         string   `json:"tls_key_file,omitempty"`
+	Listen             string                   `json:"listen"`
+	Origin             string                   `json:"origin"`
+	DevelopmentOrigins []string                 `json:"development_origins,omitempty"`
+	TlsCertFile        string                   `json:"tls_cert_file,omitempty"`
+	TlsKeyFile         string                   `json:"tls_key_file,omitempty"`
+	ExaUsage           []service.ExaUsageConfig `json:"exa_usage,omitempty"`
 }
 
 func main() {
@@ -190,6 +192,9 @@ func loadConfig(directory string) (config, error) {
 	if (origin.Scheme == "https") != (result.TlsCertFile != "") {
 		return result, errors.New("origin scheme must match the listener TLS configuration")
 	}
+	if err := service.ValidateExaUsage(result.ExaUsage); err != nil {
+		return result, err
+	}
 	return result, nil
 }
 
@@ -243,7 +248,14 @@ func serve(ctx context.Context, directory string, diagnostics io.Writer) error {
 	}
 	defer lock.Close()
 	defer state.Close()
-	server := &http.Server{Addr: configuration.Listen, Handler: managementHandler(state, auth, configuration), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 180 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
+	if err = state.RecoverRequests(ctx); err != nil {
+		return err
+	}
+	handler, err := managementHandler(state, auth, configuration)
+	if err != nil {
+		return err
+	}
+	server := &http.Server{Addr: configuration.Listen, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 180 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
 	listener, err := net.Listen("tcp", configuration.Listen)
 	if err != nil {
 		return errors.New("configured address is unavailable")

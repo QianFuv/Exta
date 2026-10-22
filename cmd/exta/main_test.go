@@ -43,7 +43,10 @@ func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
 	}
 	defer lock.Close()
 	defer state.Close()
-	handler := managementHandler(state, auth, configuration)
+	handler, err := managementHandler(state, auth, configuration)
+	if err != nil {
+		t.Fatal(err)
+	}
 	request := httptest.NewRequest("POST", configuration.Origin+"/v1/admin/session", strings.NewReader(`{"credential":"`+credential+`"}`))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Origin", configuration.Origin)
@@ -192,7 +195,10 @@ func TestEightCharacterCredentialCreationAndRotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := managementHandler(state, auth, configuration)
+	handler, err := managementHandler(state, auth, configuration)
+	if err != nil {
+		t.Fatal(err)
+	}
 	call := func(path, body string, status int) domain.ProviderKey {
 		t.Helper()
 		request := httptest.NewRequest("POST", configuration.Origin+path, strings.NewReader(body))

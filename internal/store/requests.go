@@ -162,6 +162,11 @@ func (state *Store) RecoverRequests(ctx context.Context) error {
 
 // Audit returns bounded sanitized audit metadata, never provider secrets or raw input.
 func (state *Store) Audit(ctx context.Context, cursor string, limit int) (domain.AuditEventList, error) {
+	return state.FilteredAudit(ctx, cursor, limit, "", "")
+}
+
+// FilteredAudit applies filters before bounded keyset pagination.
+func (state *Store) FilteredAudit(ctx context.Context, cursor string, limit int, action, entity string) (domain.AuditEventList, error) {
 	result := domain.AuditEventList{Items: []domain.AuditEvent{}}
 	boundary, err := CursorBoundary(cursor)
 	if err != nil {
@@ -170,7 +175,10 @@ func (state *Store) Audit(ctx context.Context, cursor string, limit int) (domain
 	if limit < 1 || limit > 100 {
 		return result, Reject("invalid_request", 400, "Invalid pagination limit")
 	}
-	rows, err := state.DB.QueryContext(ctx, "SELECT id,actor,action,entity_id,created_at,data FROM audit_events WHERE (?='' OR created_at || '/' || id < ?) ORDER BY created_at DESC,id DESC LIMIT ?", boundary, boundary, limit+1)
+	if len(action) > 128 || len(entity) > 128 {
+		return result, Reject("invalid_request", 400, "Audit filter exceeds the allowed length")
+	}
+	rows, err := state.DB.QueryContext(ctx, "SELECT id,actor,action,entity_id,created_at,data FROM audit_events WHERE (?='' OR created_at || '/' || id < ?) AND (?='' OR action=?) AND (?='' OR entity_id=?) ORDER BY created_at DESC,id DESC LIMIT ?", boundary, boundary, action, action, entity, entity, limit+1)
 	if err != nil {
 		return result, err
 	}

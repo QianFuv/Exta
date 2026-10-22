@@ -114,20 +114,33 @@ func (auth *Auth) Admin(request *http.Request, permission string) (store.Identit
 
 // Client accepts only a scoped Bearer token, never a browser cookie or URL token.
 func (auth *Auth) Client(request *http.Request, scope string) (store.Identity, error) {
+	identity, err := auth.Bearer(request)
+	if err != nil {
+		return identity, err
+	}
+	if err = RequireScope(identity, scope); err != nil {
+		return identity, err
+	}
+	return identity, nil
+}
+
+// Bearer authenticates a stable client principal without selecting a tool scope.
+func (auth *Auth) Bearer(request *http.Request) (store.Identity, error) {
 	parts := strings.Fields(request.Header.Get("Authorization"))
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 		return store.Identity{}, store.Reject("authentication_required", 401, "Bearer token is required")
 	}
-	identity, err := auth.Store.AuthenticateToken(request.Context(), parts[1])
-	if err != nil {
-		return identity, err
-	}
+	return auth.Store.AuthenticateToken(request.Context(), parts[1])
+}
+
+// RequireScope authorizes a tool using its parsed canonical name, never a client hint.
+func RequireScope(identity store.Identity, scope string) error {
 	for _, candidate := range identity.Scopes {
 		if string(candidate) == scope {
-			return identity, nil
+			return nil
 		}
 	}
-	return identity, store.Reject("forbidden", 403, "API token scope is required")
+	return store.Reject("forbidden", 403, "API token scope is required")
 }
 
 // SessionCookie never exposes the local session through JavaScript or public API paths.

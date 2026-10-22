@@ -10,14 +10,29 @@ import (
 	"time"
 
 	"exta/internal/domain"
+	"exta/internal/httpapi"
+	"exta/internal/providers"
 	"exta/internal/security"
+	"exta/internal/service"
 	"exta/internal/store"
 )
 
 type adminAction func(http.ResponseWriter, *http.Request, store.Identity, domain.Session) (any, error)
 
-func managementHandler(state *store.Store, auth *security.Auth, configuration config) http.Handler {
+func managementHandler(state *store.Store, auth *security.Auth, configuration config) (http.Handler, error) {
 	mux := http.NewServeMux()
+	core, err := service.New(state, nil, security.UrlPolicy{})
+	if err != nil {
+		return nil, err
+	}
+	exaUsage, err := providers.NewExaUsage(nil)
+	if err != nil {
+		return nil, err
+	}
+	usage := &service.UsageService{Store: state, Clients: core.Clients, ExaClient: exaUsage, ExaConfig: configuration.ExaUsage}
+	if err = httpapi.Register(mux, auth, core, usage, httpapi.Options{Origin: configuration.Origin, Version: version, Readiness: func() domain.Readiness { return readiness(state, configuration) }}); err != nil {
+		return nil, err
+	}
 	register := func(pattern, permission string, status int, action adminAction) {
 		mux.HandleFunc(pattern, func(writer http.ResponseWriter, request *http.Request) {
 			identity, session, err := auth.Admin(request, permission)
@@ -33,7 +48,7 @@ func managementHandler(state *store.Store, auth *security.Auth, configuration co
 			security.WriteJSON(writer, status, value)
 		})
 	}
-	mux.HandleFunc("GET /v1/live", func(writer http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		security.WriteJSON(writer, 200, domain.Liveness{Status: "ok"})
 	})
 	mux.HandleFunc("GET /v1/ready", func(writer http.ResponseWriter, request *http.Request) {
@@ -178,7 +193,7 @@ func managementHandler(state *store.Store, auth *security.Auth, configuration co
 	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		security.WriteError(writer, request, store.Reject("not_found", 404, "Resource not found"))
 	})
-	return auth.Guard(mux)
+	return auth.Guard(mux), nil
 }
 
 func body[T any](state *store.Store, writer http.ResponseWriter, request *http.Request, schema string) (T, error) {
