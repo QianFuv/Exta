@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -42,6 +43,8 @@ type noSchemaNetwork struct{}
 type privateResponse struct {
 	http.ResponseWriter
 	wroteHeader bool
+	request     *http.Request
+	replaced    bool
 }
 
 func (writer *privateResponse) WriteHeader(status int) {
@@ -56,11 +59,25 @@ func (writer *privateResponse) WriteHeader(status int) {
 		writer.Header().Set("Cache-Control", value+"no-store")
 	}
 	writer.wroteHeader = true
+	mediaType, _, _ := mime.ParseMediaType(writer.Header().Get("Content-Type"))
+	if status >= 400 && mediaType != "application/json" {
+		writer.replaced = true
+		writer.Header().Del("Content-Length")
+		code := "invalid_request"
+		if status >= 500 {
+			code = "storage_unavailable"
+		}
+		security.WriteError(writer.ResponseWriter, writer.request, store.Reject(code, status, http.StatusText(status)))
+		return
+	}
 	writer.ResponseWriter.WriteHeader(status)
 }
 
 func (writer *privateResponse) Write(data []byte) (int, error) {
 	writer.WriteHeader(http.StatusOK)
+	if writer.replaced {
+		return len(data), nil
+	}
 	return writer.ResponseWriter.Write(data)
 }
 
@@ -166,7 +183,7 @@ func New(auth *security.Auth, backend Backend, version string) (http.Handler, er
 			}
 		}
 		info := requestContext{identity: identity, id: security.RequestID(request), original: request.Context()}
-		transport.ServeHTTP(&privateResponse{ResponseWriter: writer}, request.WithContext(context.WithValue(request.Context(), requestKey{}, info)))
+		transport.ServeHTTP(&privateResponse{ResponseWriter: writer, request: request}, request.WithContext(context.WithValue(request.Context(), requestKey{}, info)))
 	}), nil
 }
 

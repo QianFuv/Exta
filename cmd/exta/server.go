@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"exta/internal/domain"
@@ -15,6 +16,7 @@ import (
 	"exta/internal/security"
 	"exta/internal/service"
 	"exta/internal/store"
+	"exta/internal/webassets"
 )
 
 type adminAction func(http.ResponseWriter, *http.Request, store.Identity, domain.Session) (any, error)
@@ -28,6 +30,10 @@ func managementHandler(state *store.Store, auth *security.Auth, configuration co
 }
 
 func managementHandlerWithCore(state *store.Store, auth *security.Auth, configuration config, core *service.Service) (http.Handler, error) {
+	assets, err := webassets.Embedded()
+	if err != nil {
+		return nil, err
+	}
 	mux := http.NewServeMux()
 	exaUsage, err := providers.NewExaUsage(nil)
 	if err != nil {
@@ -195,9 +201,22 @@ func managementHandlerWithCore(state *store.Store, auth *security.Auth, configur
 		return settingsResult(value, err)
 	})
 	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		security.WriteError(writer, request, store.Reject("not_found", 404, "Resource not found"))
+		var allowed []string
+		for _, method := range []string{"GET", "HEAD", "POST", "PATCH", "PUT", "DELETE"} {
+			probe := *request
+			probe.Method = method
+			if _, pattern := mux.Handler(&probe); pattern != "" && pattern != "/" {
+				allowed = append(allowed, method)
+			}
+		}
+		if len(allowed) > 0 {
+			writer.Header().Set("Allow", strings.Join(allowed, ", "))
+			security.WriteError(writer, request, store.Reject("invalid_request", 405, "Method is not supported for this resource"))
+			return
+		}
+		assets.ServeHTTP(writer, request)
 	})
-	return auth.Guard(mux), nil
+	return auth.Guard(webassets.GuardPaths(mux)), nil
 }
 
 func body[T any](state *store.Store, writer http.ResponseWriter, request *http.Request, schema string) (T, error) {
@@ -244,6 +263,9 @@ func readiness(state *store.Store, configuration config) domain.Readiness {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	result := domain.Readiness{Database: "ready", SecretStore: "locked", Assets: "missing", BindScope: "loopback", Providers: []json.RawMessage{}}
+	if assets, err := webassets.Embedded(); err == nil && assets.Available() {
+		result.Assets = "ready"
+	}
 	host, _, _ := net.SplitHostPort(configuration.Listen)
 	if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
 		result.BindScope = "nonloopback"
