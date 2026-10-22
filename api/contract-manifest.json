@@ -1,0 +1,13 @@
+{
+  "contract_version": "1.0.0",
+  "contract_sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+  "generator": "exta-contract-v1/openapi-typescript-7.13.0/defaultNonNullable=false",
+  "files": {
+    "api/schemas/exta.json": "3ef771467e08947e78cb5c32b2f3f933a39df3e236f4ec3d7b1008d9e3598529",
+    "api/schemas/mcp-tools.json": "c671e9896029e0e209c540e500719a725575b3153c7a31b36ae9583ca2704afd",
+    "internal/domain/schemas.gen.json": "3ef771467e08947e78cb5c32b2f3f933a39df3e236f4ec3d7b1008d9e3598529",
+    "internal/domain/types.gen.go": "814c97bc7a5f66742b00d6c68fcb50793abf733fcc3acd2e80c8a6d6a41bc06e",
+    "web/src/generated/client.gen.tsx": "f0fbac91a3322b57b01e76865101c74aebd5105740d6931502e682d0bc948b97",
+    "web/src/generated/types.gen.ts": "2967d5675666cbd43b3e04fcd6850807bdd87c89b57b5cfa037908fc35f67c45"
+  }
+}

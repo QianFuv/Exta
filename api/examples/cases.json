@@ -1,0 +1,1830 @@
+[
+  {
+    "name": "Provider-structural",
+    "schema": "Provider",
+    "valid": true,
+    "value": "exa"
+  },
+  {
+    "name": "Operation-structural",
+    "schema": "Operation",
+    "valid": true,
+    "value": "search"
+  },
+  {
+    "name": "Profile-structural",
+    "schema": "Profile",
+    "valid": true,
+    "value": "common"
+  },
+  {
+    "name": "AdminPermission-structural",
+    "schema": "AdminPermission",
+    "valid": true,
+    "value": "admin:read"
+  },
+  {
+    "name": "ClientScope-structural",
+    "schema": "ClientScope",
+    "valid": true,
+    "value": "read"
+  },
+  {
+    "name": "UsageUnit-structural",
+    "schema": "UsageUnit",
+    "valid": true,
+    "value": "micro_usd"
+  },
+  {
+    "name": "UsageCertainty-structural",
+    "schema": "UsageCertainty",
+    "valid": true,
+    "value": "reported"
+  },
+  {
+    "name": "JobState-structural",
+    "schema": "JobState",
+    "valid": true,
+    "value": "queued"
+  },
+  {
+    "name": "IdempotencyKey-structural",
+    "schema": "IdempotencyKey",
+    "valid": true,
+    "value": "synthetic-retry-key-0001"
+  },
+  {
+    "name": "ErrorCode-structural",
+    "schema": "ErrorCode",
+    "valid": true,
+    "value": "invalid_json"
+  },
+  {
+    "name": "ErrorDetail-structural",
+    "schema": "ErrorDetail",
+    "valid": true,
+    "value": {
+      "code": "invalid_json",
+      "message": "synthetic_test_only",
+      "request_id": "synthetic_id",
+      "retryable": false,
+      "retry_after_ms": null,
+      "details": {}
+    }
+  },
+  {
+    "name": "ApiError-structural",
+    "schema": "ApiError",
+    "valid": true,
+    "value": {
+      "error": {
+        "code": "invalid_json",
+        "message": "synthetic_test_only",
+        "request_id": "synthetic_id",
+        "retryable": false,
+        "retry_after_ms": null,
+        "details": {}
+      }
+    }
+  },
+  {
+    "name": "UsageAmount-structural",
+    "schema": "UsageAmount",
+    "valid": true,
+    "value": {
+      "unit": "micro_usd",
+      "amount": null,
+      "certainty": "reported",
+      "source": "synthetic_test_only",
+      "observed_at": "2026-10-22T08:00:00Z",
+      "pricing_revision": null
+    }
+  },
+  {
+    "name": "RequestMeta-structural",
+    "schema": "RequestMeta",
+    "valid": true,
+    "value": {
+      "request_id": "synthetic_id",
+      "operation": "search",
+      "route_revision": 0,
+      "source_provider": null,
+      "duration_ms": 0,
+      "attempt_count": 0,
+      "warnings": [],
+      "usage": []
+    }
+  },
+  {
+    "name": "RetrievalResult-structural",
+    "schema": "RetrievalResult",
+    "valid": true,
+    "value": {
+      "title": null,
+      "url": "https://example.com/document",
+      "snippet": null,
+      "snippet_kind": null,
+      "content": null,
+      "content_format": null,
+      "published_at": null,
+      "source_provider": "exa",
+      "provider_metadata": {}
+    }
+  },
+  {
+    "name": "ItemFailure-structural",
+    "schema": "ItemFailure",
+    "valid": true,
+    "value": {
+      "url": "https://example.com/document",
+      "input_index": 0,
+      "code": "synthetic_test_only",
+      "message": "synthetic_test_only",
+      "retryable": false,
+      "provider": "exa"
+    }
+  },
+  {
+    "name": "RetrievalResponse-structural",
+    "schema": "RetrievalResponse",
+    "valid": true,
+    "value": {
+      "meta": {
+        "request_id": "synthetic_id",
+        "operation": "search",
+        "route_revision": 0,
+        "source_provider": null,
+        "duration_ms": 0,
+        "attempt_count": 0,
+        "warnings": [],
+        "usage": []
+      },
+      "results": [],
+      "failures": [],
+      "partial": false
+    }
+  },
+  {
+    "name": "Hostname-structural",
+    "schema": "Hostname",
+    "valid": true,
+    "value": "example.com"
+  },
+  {
+    "name": "SearchRequest-structural",
+    "schema": "SearchRequest",
+    "valid": true,
+    "value": {
+      "query": "synthetic_test_only"
+    }
+  },
+  {
+    "name": "ExaDeepOptions-structural",
+    "schema": "ExaDeepOptions",
+    "valid": true,
+    "value": {
+      "kind": "exa_deep"
+    }
+  },
+  {
+    "name": "TavilyAdvancedOptions-structural",
+    "schema": "TavilyAdvancedOptions",
+    "valid": true,
+    "value": {
+      "kind": "tavily_advanced"
+    }
+  },
+  {
+    "name": "AdvancedSearchRequest-structural",
+    "schema": "AdvancedSearchRequest",
+    "valid": true,
+    "value": {
+      "query": "synthetic_test_only"
+    }
+  },
+  {
+    "name": "FetchRequest-structural",
+    "schema": "FetchRequest",
+    "valid": true,
+    "value": {
+      "urls": [
+        "https://example.com/document"
+      ]
+    }
+  },
+  {
+    "name": "MapRequest-structural",
+    "schema": "MapRequest",
+    "valid": true,
+    "value": {
+      "url": "https://example.com/document"
+    }
+  },
+  {
+    "name": "CrawlRequest-structural",
+    "schema": "CrawlRequest",
+    "valid": true,
+    "value": {
+      "url": "https://example.com/document"
+    }
+  },
+  {
+    "name": "OutputSchema-structural",
+    "schema": "OutputSchema",
+    "valid": true,
+    "value": {}
+  },
+  {
+    "name": "HardBudget-structural",
+    "schema": "HardBudget",
+    "valid": true,
+    "value": {
+      "mode": "hard",
+      "unit": "micro_usd",
+      "amount": 1000000
+    }
+  },
+  {
+    "name": "EstimatedBudget-structural",
+    "schema": "EstimatedBudget",
+    "valid": true,
+    "value": {
+      "mode": "estimated",
+      "unit": "tavily_credit",
+      "amount": 110,
+      "acknowledge_estimated_budget": true
+    }
+  },
+  {
+    "name": "ResearchBudget-structural",
+    "schema": "ResearchBudget",
+    "valid": true,
+    "value": {
+      "mode": "hard",
+      "unit": "micro_usd",
+      "amount": 1000000
+    }
+  },
+  {
+    "name": "ResearchCreate-structural",
+    "schema": "ResearchCreate",
+    "valid": true,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      }
+    }
+  },
+  {
+    "name": "ResearchReplayDefaults-structural",
+    "schema": "ResearchReplayDefaults",
+    "valid": true,
+    "value": {
+      "profile": "exa_auto",
+      "observation_seconds": 60
+    }
+  },
+  {
+    "name": "ResearchReplayContext-structural",
+    "schema": "ResearchReplayContext",
+    "valid": true,
+    "value": {
+      "canonicalization_version": 1,
+      "schema_version": 1,
+      "semantic_config_version": 1,
+      "defaults": {
+        "profile": "exa_auto",
+        "observation_seconds": 60
+      }
+    }
+  },
+  {
+    "name": "ResearchExecutionSnapshot-structural",
+    "schema": "ResearchExecutionSnapshot",
+    "valid": true,
+    "value": {
+      "source_provider": "exa",
+      "account_id": "synthetic_id",
+      "credential_version_id": "synthetic_id",
+      "route_policy": {
+        "capability": "search",
+        "revision": 1,
+        "enabled": false,
+        "targets": [],
+        "allow_duplicate_cost": false,
+        "max_attempts": 1,
+        "deadline_seconds": 1,
+        "created_at": "2026-10-22T08:00:00Z"
+      },
+      "pricing_revision": "synthetic_test_only",
+      "reserved_unit": "micro_usd",
+      "reserved_amount": 1
+    }
+  },
+  {
+    "name": "Citation-structural",
+    "schema": "Citation",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "title": null,
+      "url": "https://example.com/document",
+      "source_provider": "exa"
+    }
+  },
+  {
+    "name": "ResearchReport-structural",
+    "schema": "ResearchReport",
+    "valid": true,
+    "value": {
+      "markdown": null,
+      "structured_output": null,
+      "citations": []
+    }
+  },
+  {
+    "name": "CancelCapability-structural",
+    "schema": "CancelCapability",
+    "valid": true,
+    "value": {
+      "upstream": false,
+      "observation": false,
+      "unavailable_reason": null
+    }
+  },
+  {
+    "name": "BudgetHoldState-structural",
+    "schema": "BudgetHoldState",
+    "valid": true,
+    "value": "held"
+  },
+  {
+    "name": "CapacityReleaseBasis-structural",
+    "schema": "CapacityReleaseBasis",
+    "valid": true,
+    "value": "none"
+  },
+  {
+    "name": "Job-structural",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "id": "job_synthetic",
+      "owner_principal_id": "principal_synthetic",
+      "created_at": "2026-10-22T08:00:00Z",
+      "updated_at": "2026-10-22T08:00:00Z",
+      "state": "queued",
+      "upstream_state": null,
+      "source_provider": "exa",
+      "upstream_job_id": null,
+      "profile": "exa_auto",
+      "route_revision": 0,
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "reservation": {
+        "unit": "micro_usd",
+        "amount": 1000000,
+        "certainty": "estimated",
+        "source": "local_reservation",
+        "observed_at": "2026-10-22T08:00:00Z",
+        "pricing_revision": "2026-10-22"
+      },
+      "active_slot_held": true,
+      "budget_hold_state": "held",
+      "capacity_release_basis": "none",
+      "upstream_may_continue": true,
+      "observation_deadline": "2026-10-22T08:00:00Z",
+      "polling_count": 0,
+      "cancel_capability": {
+        "upstream": false,
+        "observation": false,
+        "unavailable_reason": null
+      },
+      "is_partial": false,
+      "completion_reason": null,
+      "uncertainty": false,
+      "result": null,
+      "error": null,
+      "version": 1,
+      "idempotency_expires_at": null
+    }
+  },
+  {
+    "name": "JobEvent-structural",
+    "schema": "JobEvent",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "created_at": "2026-10-22T08:00:00Z",
+      "from_state": null,
+      "to_state": "queued",
+      "reason": "synthetic_test_only",
+      "actor_principal_id": null,
+      "action_ref": null
+    }
+  },
+  {
+    "name": "JobDetail-structural",
+    "schema": "JobDetail",
+    "valid": true,
+    "value": {
+      "job": {
+        "id": "job_synthetic",
+        "owner_principal_id": "principal_synthetic",
+        "created_at": "2026-10-22T08:00:00Z",
+        "updated_at": "2026-10-22T08:00:00Z",
+        "state": "queued",
+        "upstream_state": null,
+        "source_provider": "exa",
+        "upstream_job_id": null,
+        "profile": "exa_auto",
+        "route_revision": 0,
+        "budget": {
+          "mode": "hard",
+          "unit": "micro_usd",
+          "amount": 1000000
+        },
+        "reservation": {
+          "unit": "micro_usd",
+          "amount": 1000000,
+          "certainty": "estimated",
+          "source": "local_reservation",
+          "observed_at": "2026-10-22T08:00:00Z",
+          "pricing_revision": "2026-10-22"
+        },
+        "active_slot_held": true,
+        "budget_hold_state": "held",
+        "capacity_release_basis": "none",
+        "upstream_may_continue": true,
+        "observation_deadline": "2026-10-22T08:00:00Z",
+        "polling_count": 0,
+        "cancel_capability": {
+          "upstream": false,
+          "observation": false,
+          "unavailable_reason": null
+        },
+        "is_partial": false,
+        "completion_reason": null,
+        "uncertainty": false,
+        "result": null,
+        "error": null,
+        "version": 1,
+        "idempotency_expires_at": null
+      },
+      "events": [],
+      "events_next_cursor": null
+    }
+  },
+  {
+    "name": "CancelRequest-structural",
+    "schema": "CancelRequest",
+    "valid": true,
+    "value": {
+      "mode": "upstream",
+      "expected_version": 1
+    }
+  },
+  {
+    "name": "ResumeRequest-structural",
+    "schema": "ResumeRequest",
+    "valid": true,
+    "value": {
+      "observation_seconds": 60,
+      "expected_version": 1
+    }
+  },
+  {
+    "name": "AttachUpstreamId-structural",
+    "schema": "AttachUpstreamId",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "synthetic_test_only",
+      "evidence_ref": "synthetic_test_only",
+      "action": "attach_upstream_id",
+      "upstream_job_id": "synthetic_id"
+    }
+  },
+  {
+    "name": "SettleTerminal-structural",
+    "schema": "SettleTerminal",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "synthetic_test_only",
+      "evidence_ref": "synthetic_test_only",
+      "action": "settle_terminal",
+      "upstream_state": "completed",
+      "cost": null
+    }
+  },
+  {
+    "name": "BudgetWriteOff-structural",
+    "schema": "BudgetWriteOff",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "synthetic_test_only",
+      "evidence_ref": "synthetic_test_only",
+      "action": "budget_write_off",
+      "acknowledge_upstream_may_bill": true
+    }
+  },
+  {
+    "name": "CapacityOverride-structural",
+    "schema": "CapacityOverride",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "synthetic_test_only",
+      "evidence_ref": "synthetic_test_only",
+      "action": "capacity_release_override",
+      "acknowledge_upstream_may_continue": true
+    }
+  },
+  {
+    "name": "ReconcileRequest-structural",
+    "schema": "ReconcileRequest",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "synthetic_test_only",
+      "evidence_ref": "synthetic_test_only",
+      "action": "attach_upstream_id",
+      "upstream_job_id": "synthetic_id"
+    }
+  },
+  {
+    "name": "SessionCreate-structural",
+    "schema": "SessionCreate",
+    "valid": true,
+    "value": {
+      "credential": "synthetic_test_only"
+    }
+  },
+  {
+    "name": "Session-structural",
+    "schema": "Session",
+    "valid": true,
+    "value": {
+      "principal_id": "synthetic_id",
+      "permissions": [],
+      "expires_at": "2026-10-22T08:00:00Z",
+      "csrf_token": "synthetic_test_onlyxxxxxxxxxxxxx"
+    }
+  },
+  {
+    "name": "Readiness-structural",
+    "schema": "Readiness",
+    "valid": true,
+    "value": {
+      "ready": false,
+      "database": "ready",
+      "secret_store": "unlocked",
+      "assets": "ready",
+      "bind_scope": "loopback",
+      "nonloopback_safety_configured": false,
+      "network_safety_reason": null,
+      "providers": []
+    }
+  },
+  {
+    "name": "CapabilityProfile-structural",
+    "schema": "CapabilityProfile",
+    "valid": true,
+    "value": {
+      "profile": "common",
+      "provider": "exa",
+      "cancellation": {
+        "upstream": false,
+        "observation": false,
+        "unavailable_reason": null
+      },
+      "budget_modes": [],
+      "enabled": false,
+      "unavailable_reason": null
+    }
+  },
+  {
+    "name": "Capability-structural",
+    "schema": "Capability",
+    "valid": true,
+    "value": {
+      "operation": "search",
+      "enabled": false,
+      "profiles": [],
+      "constraints": {},
+      "default_limits": {},
+      "hard_limits": {},
+      "unavailable_reason": null
+    }
+  },
+  {
+    "name": "Capabilities-structural",
+    "schema": "Capabilities",
+    "valid": true,
+    "value": {
+      "contract_version": "synthetic_test_only",
+      "contract_hash": "synthetic_test_onlyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "capabilities": []
+    }
+  },
+  {
+    "name": "QuotaPolicy-structural",
+    "schema": "QuotaPolicy",
+    "valid": true,
+    "value": {
+      "unit": "micro_usd",
+      "allocation": 0,
+      "per_operation_reservation": 0,
+      "active_jobs": 1
+    }
+  },
+  {
+    "name": "Account-structural",
+    "schema": "Account",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "provider": "exa",
+      "label": "synthetic_test_only",
+      "external_ref": null,
+      "verification_state": "unverified",
+      "billing_state": "eligible",
+      "enabled": false,
+      "quota_policy": {
+        "unit": "micro_usd",
+        "allocation": 0,
+        "per_operation_reservation": 0,
+        "active_jobs": 1
+      },
+      "version": 1,
+      "created_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "AccountCreate-structural",
+    "schema": "AccountCreate",
+    "valid": true,
+    "value": {
+      "provider": "exa",
+      "label": "synthetic_test_only",
+      "quota_policy": {
+        "unit": "micro_usd",
+        "allocation": 0,
+        "per_operation_reservation": 0,
+        "active_jobs": 1
+      },
+      "enabled": false
+    }
+  },
+  {
+    "name": "AccountPatch-structural",
+    "schema": "AccountPatch",
+    "valid": true,
+    "value": {
+      "expected_version": 1
+    }
+  },
+  {
+    "name": "ProviderKey-structural",
+    "schema": "ProviderKey",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "account_id": "synthetic_id",
+      "provider": "exa",
+      "label": "synthetic_test_only",
+      "fingerprint": "synthetic_test_only",
+      "last_four": "synt",
+      "enabled": false,
+      "validity": "valid",
+      "billing_state": "eligible",
+      "cooldown_until": null,
+      "breaker": "closed",
+      "retirement_state": "active",
+      "retained_credential_count": 0,
+      "version": 1,
+      "created_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "KeyCreate-structural",
+    "schema": "KeyCreate",
+    "valid": true,
+    "value": {
+      "account_id": "synthetic_id",
+      "label": "synthetic_test_only",
+      "secret": "synthetic_test_only",
+      "enabled": false
+    }
+  },
+  {
+    "name": "KeyPatch-structural",
+    "schema": "KeyPatch",
+    "valid": true,
+    "value": {
+      "expected_version": 1
+    }
+  },
+  {
+    "name": "KeyRotate-structural",
+    "schema": "KeyRotate",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "secret": "synthetic_test_only"
+    }
+  },
+  {
+    "name": "VersionedAction-structural",
+    "schema": "VersionedAction",
+    "valid": true,
+    "value": {
+      "expected_version": 1
+    }
+  },
+  {
+    "name": "RouteTarget-structural",
+    "schema": "RouteTarget",
+    "valid": true,
+    "value": {
+      "provider": "exa",
+      "profile": "common"
+    }
+  },
+  {
+    "name": "RoutePolicy-structural",
+    "schema": "RoutePolicy",
+    "valid": true,
+    "value": {
+      "capability": "search",
+      "revision": 1,
+      "enabled": false,
+      "targets": [],
+      "allow_duplicate_cost": false,
+      "max_attempts": 1,
+      "deadline_seconds": 1,
+      "created_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "RouteReplace-structural",
+    "schema": "RouteReplace",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "enabled": false,
+      "targets": [],
+      "allow_duplicate_cost": false,
+      "max_attempts": 1,
+      "deadline_seconds": 1
+    }
+  },
+  {
+    "name": "RoutePreviewRequest-structural",
+    "schema": "RoutePreviewRequest",
+    "valid": true,
+    "value": {
+      "operation": "search",
+      "request": {
+        "query": "synthetic_test_only"
+      }
+    }
+  },
+  {
+    "name": "RoutePreview-structural",
+    "schema": "RoutePreview",
+    "valid": true,
+    "value": {
+      "route_revision": 0,
+      "eligible": [],
+      "exclusions": [],
+      "warnings": []
+    }
+  },
+  {
+    "name": "AccountUsage-structural",
+    "schema": "AccountUsage",
+    "valid": true,
+    "value": {
+      "provider": "exa",
+      "account_id": "synthetic_id",
+      "key_id": null,
+      "source": "upstream",
+      "observed_at": null,
+      "freshness": "fresh",
+      "unit": "micro_usd",
+      "period_start": null,
+      "period_end": null,
+      "used": null,
+      "reserved": 0,
+      "limit_kind": "finite",
+      "limit": 10000000,
+      "remaining": null,
+      "unavailable_reason": null
+    }
+  },
+  {
+    "name": "OverviewMetrics-structural",
+    "schema": "OverviewMetrics",
+    "valid": true,
+    "value": {
+      "queued_jobs": 0,
+      "active_slots_held": 0,
+      "waiting_requests": 0,
+      "requests_last_minute": 0,
+      "errors_last_minute": 0,
+      "uncertain_jobs": 0,
+      "observed_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "UsageView-structural",
+    "schema": "UsageView",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null,
+      "overview": {
+        "queued_jobs": 0,
+        "active_slots_held": 0,
+        "waiting_requests": 0,
+        "requests_last_minute": 0,
+        "errors_last_minute": 0,
+        "uncertain_jobs": 0,
+        "observed_at": "2026-10-22T08:00:00Z"
+      }
+    }
+  },
+  {
+    "name": "UsageRefresh-structural",
+    "schema": "UsageRefresh",
+    "valid": true,
+    "value": {}
+  },
+  {
+    "name": "UsageRefreshResult-structural",
+    "schema": "UsageRefreshResult",
+    "valid": true,
+    "value": {
+      "status": "refreshed",
+      "observed_at": "2026-10-22T08:00:00Z",
+      "next_refresh_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "RequestStatus-structural",
+    "schema": "RequestStatus",
+    "valid": true,
+    "value": "accepted"
+  },
+  {
+    "name": "RequestRecord-structural",
+    "schema": "RequestRecord",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "operation": "search",
+      "status": "accepted",
+      "source_provider": null,
+      "route_revision": 0,
+      "created_at": "2026-10-22T08:00:00Z",
+      "completed_at": null,
+      "duration_ms": null,
+      "result_count": null,
+      "failure_count": null,
+      "partial": null,
+      "error": null,
+      "billing_uncertain": false,
+      "usage": []
+    }
+  },
+  {
+    "name": "Attempt-structural",
+    "schema": "Attempt",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "attempt_number": 1,
+      "provider": "exa",
+      "account_id": "synthetic_id",
+      "credential_version_id": "synthetic_id",
+      "transmission_state": "not_sent",
+      "upstream_request_id": null,
+      "http_status": null,
+      "retry_reason": null,
+      "duration_ms": 0,
+      "billing_uncertain": false,
+      "created_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "RequestDetail-structural",
+    "schema": "RequestDetail",
+    "valid": true,
+    "value": {
+      "request": {
+        "id": "synthetic_id",
+        "operation": "search",
+        "status": "accepted",
+        "source_provider": null,
+        "route_revision": 0,
+        "created_at": "2026-10-22T08:00:00Z",
+        "completed_at": null,
+        "duration_ms": null,
+        "result_count": null,
+        "failure_count": null,
+        "partial": null,
+        "error": null,
+        "billing_uncertain": false,
+        "usage": []
+      },
+      "attempts": []
+    }
+  },
+  {
+    "name": "ClientToken-structural",
+    "schema": "ClientToken",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "principal_id": "synthetic_id",
+      "label": "synthetic_test_only",
+      "scopes": [
+        "read"
+      ],
+      "created_at": "2026-10-22T08:00:00Z",
+      "expires_at": "2026-10-22T08:00:00Z",
+      "revoked_at": null,
+      "version": 1
+    }
+  },
+  {
+    "name": "TokenCreate-structural",
+    "schema": "TokenCreate",
+    "valid": true,
+    "value": {
+      "label": "synthetic_test_only",
+      "scopes": [
+        "read"
+      ],
+      "expires_at": "2026-10-22T08:00:00Z"
+    }
+  },
+  {
+    "name": "TokenCreated-structural",
+    "schema": "TokenCreated",
+    "valid": true,
+    "value": {
+      "token": {
+        "id": "synthetic_id",
+        "principal_id": "synthetic_id",
+        "label": "synthetic_test_only",
+        "scopes": [
+          "read"
+        ],
+        "created_at": "2026-10-22T08:00:00Z",
+        "expires_at": "2026-10-22T08:00:00Z",
+        "revoked_at": null,
+        "version": 1
+      },
+      "token_value": "synthetic_test_onlyxxxxxxxxxxxxx"
+    }
+  },
+  {
+    "name": "Limits-structural",
+    "schema": "Limits",
+    "valid": true,
+    "value": {
+      "synchronous_concurrency": 1,
+      "synchronous_waiting": 0,
+      "principal_requests_per_minute": 1,
+      "research_queued": 1,
+      "research_active": 1,
+      "principal_research_active": 1,
+      "request_bytes": 1024,
+      "response_bytes": 1024,
+      "observation_seconds": 60,
+      "max_polls": 1
+    }
+  },
+  {
+    "name": "Retention-structural",
+    "schema": "Retention",
+    "valid": true,
+    "value": {
+      "request_days": 1,
+      "research_content_days": 1,
+      "audit_days": 1,
+      "idempotency_days": 90
+    }
+  },
+  {
+    "name": "BuildInfo-structural",
+    "schema": "BuildInfo",
+    "valid": true,
+    "value": {
+      "version": "synthetic_test_only",
+      "target": "synthetic_test_only",
+      "contract_hash": "synthetic_test_onlyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "schema_version": 1
+    }
+  },
+  {
+    "name": "Settings-structural",
+    "schema": "Settings",
+    "valid": true,
+    "value": {
+      "version": 1,
+      "limits": {
+        "synchronous_concurrency": 1,
+        "synchronous_waiting": 0,
+        "principal_requests_per_minute": 1,
+        "research_queued": 1,
+        "research_active": 1,
+        "principal_research_active": 1,
+        "request_bytes": 1024,
+        "response_bytes": 1024,
+        "observation_seconds": 60,
+        "max_polls": 1
+      },
+      "retention": {
+        "request_days": 1,
+        "research_content_days": 1,
+        "audit_days": 1,
+        "idempotency_days": 90
+      },
+      "readiness": {
+        "ready": false,
+        "database": "ready",
+        "secret_store": "unlocked",
+        "assets": "ready",
+        "bind_scope": "loopback",
+        "nonloopback_safety_configured": false,
+        "network_safety_reason": null,
+        "providers": []
+      },
+      "build": {
+        "version": "synthetic_test_only",
+        "target": "synthetic_test_only",
+        "contract_hash": "synthetic_test_onlyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "schema_version": 1
+      },
+      "protected_fields": []
+    }
+  },
+  {
+    "name": "SettingsPatch-structural",
+    "schema": "SettingsPatch",
+    "valid": true,
+    "value": {
+      "expected_version": 1
+    }
+  },
+  {
+    "name": "ConnectionInfo-structural",
+    "schema": "ConnectionInfo",
+    "valid": true,
+    "value": {
+      "rest_base_url": "http://127.0.0.1:8789/v1",
+      "mcp_url": "http://127.0.0.1:8789/mcp",
+      "protocol_versions": [
+        "2026-07-28",
+        "2025-11-25"
+      ],
+      "authentication": "preconfigured_bearer",
+      "oauth_supported": false,
+      "capabilities": {
+        "contract_version": "synthetic_test_only",
+        "contract_hash": "synthetic_test_onlyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "capabilities": []
+      },
+      "readiness": {
+        "ready": false,
+        "database": "ready",
+        "secret_store": "unlocked",
+        "assets": "ready",
+        "bind_scope": "loopback",
+        "nonloopback_safety_configured": false,
+        "network_safety_reason": null,
+        "providers": []
+      },
+      "examples": []
+    }
+  },
+  {
+    "name": "AuditEvent-structural",
+    "schema": "AuditEvent",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "actor_principal_id": "synthetic_id",
+      "action": "synthetic_test_only",
+      "entity_id": null,
+      "created_at": "2026-10-22T08:00:00Z",
+      "changes": {}
+    }
+  },
+  {
+    "name": "Liveness-structural",
+    "schema": "Liveness",
+    "valid": true,
+    "value": {
+      "status": "ok"
+    }
+  },
+  {
+    "name": "Acknowledgement-structural",
+    "schema": "Acknowledgement",
+    "valid": true,
+    "value": {
+      "ok": true
+    }
+  },
+  {
+    "name": "EmptyInput-structural",
+    "schema": "EmptyInput",
+    "valid": true,
+    "value": {}
+  },
+  {
+    "name": "JobList-structural",
+    "schema": "JobList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "AccountList-structural",
+    "schema": "AccountList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "ProviderKeyList-structural",
+    "schema": "ProviderKeyList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "RoutePolicyList-structural",
+    "schema": "RoutePolicyList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "RequestRecordList-structural",
+    "schema": "RequestRecordList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "ClientTokenList-structural",
+    "schema": "ClientTokenList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "AuditEventList-structural",
+    "schema": "AuditEventList",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "OpenApiDocument-structural",
+    "schema": "OpenApiDocument",
+    "valid": true,
+    "value": {}
+  },
+  {
+    "name": "research-explicit-original-defaults",
+    "schema": "ResearchCreate",
+    "valid": true,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "profile": "exa_auto",
+      "observation_seconds": 3600
+    }
+  },
+  {
+    "name": "research-tavily-mini",
+    "schema": "ResearchCreate",
+    "valid": true,
+    "value": {
+      "input": "A synthetic report",
+      "profile": "tavily_mini",
+      "budget": {
+        "mode": "estimated",
+        "unit": "tavily_credit",
+        "amount": 110,
+        "acknowledge_estimated_budget": true
+      }
+    }
+  },
+  {
+    "name": "research-unresolved-profile-awaits-frozen-context",
+    "schema": "ResearchCreate",
+    "valid": true,
+    "value": {
+      "input": "A synthetic report",
+      "budget": {
+        "mode": "estimated",
+        "unit": "tavily_credit",
+        "amount": 110,
+        "acknowledge_estimated_budget": true
+      }
+    }
+  },
+  {
+    "name": "research-owner-injection",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "owner_principal_id": "forged"
+    }
+  },
+  {
+    "name": "research-unknown-option",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "callback_url": "https://example.com"
+    }
+  },
+  {
+    "name": "research-missing-required-input",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      }
+    }
+  },
+  {
+    "name": "research-null-profile",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "profile": null
+    }
+  },
+  {
+    "name": "research-null-output-schema",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "output_schema": null
+    }
+  },
+  {
+    "name": "research-hard-budget-cannot-downgrade",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Compare public open-source search tools.",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "profile": "tavily_mini"
+    }
+  },
+  {
+    "name": "research-estimate-acknowledgement-required",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Synthetic report",
+      "profile": "tavily_mini",
+      "budget": {
+        "mode": "estimated",
+        "unit": "tavily_credit",
+        "amount": 110
+      }
+    }
+  },
+  {
+    "name": "research-pro-underfunded",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {
+      "input": "Synthetic report",
+      "profile": "tavily_pro",
+      "budget": {
+        "mode": "estimated",
+        "unit": "tavily_credit",
+        "amount": 110,
+        "acknowledge_estimated_budget": true
+      }
+    }
+  },
+  {
+    "name": "search-no-zero-limit",
+    "schema": "SearchRequest",
+    "valid": false,
+    "value": {
+      "query": "synthetic",
+      "max_results": 0
+    }
+  },
+  {
+    "name": "requests-known-empty-success",
+    "schema": "RequestRecord",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "operation": "search",
+      "status": "succeeded",
+      "source_provider": null,
+      "route_revision": 0,
+      "created_at": "2026-10-22T08:00:00Z",
+      "completed_at": null,
+      "duration_ms": null,
+      "result_count": 0,
+      "failure_count": 0,
+      "partial": false,
+      "error": null,
+      "billing_uncertain": false,
+      "usage": []
+    }
+  },
+  {
+    "name": "requests-partial-url-failure",
+    "schema": "RequestRecord",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "operation": "search",
+      "status": "succeeded",
+      "source_provider": null,
+      "route_revision": 0,
+      "created_at": "2026-10-22T08:00:00Z",
+      "completed_at": null,
+      "duration_ms": null,
+      "result_count": 1,
+      "failure_count": 1,
+      "partial": true,
+      "error": null,
+      "billing_uncertain": false,
+      "usage": []
+    }
+  },
+  {
+    "name": "requests-oversized-response",
+    "schema": "RequestRecord",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "operation": "search",
+      "status": "failed",
+      "source_provider": null,
+      "route_revision": 0,
+      "created_at": "2026-10-22T08:00:00Z",
+      "completed_at": null,
+      "duration_ms": null,
+      "result_count": null,
+      "failure_count": null,
+      "partial": null,
+      "error": {
+        "code": "response_too_large",
+        "message": "synthetic_test_only",
+        "request_id": "synthetic_id",
+        "retryable": false,
+        "retry_after_ms": null,
+        "details": {}
+      },
+      "billing_uncertain": true,
+      "usage": []
+    }
+  },
+  {
+    "name": "requests-negative-result-count",
+    "schema": "RequestRecord",
+    "valid": false,
+    "value": {
+      "id": "synthetic_id",
+      "operation": "search",
+      "status": "accepted",
+      "source_provider": null,
+      "route_revision": 0,
+      "created_at": "2026-10-22T08:00:00Z",
+      "completed_at": null,
+      "duration_ms": null,
+      "result_count": -1,
+      "failure_count": null,
+      "partial": null,
+      "error": null,
+      "billing_uncertain": false,
+      "usage": []
+    }
+  },
+  {
+    "name": "search-no-domain-wildcards",
+    "schema": "SearchRequest",
+    "valid": false,
+    "value": {
+      "query": "synthetic",
+      "include_domains": [
+        "*.example.com/path"
+      ]
+    }
+  },
+  {
+    "name": "advanced-common-no-provider-options",
+    "schema": "AdvancedSearchRequest",
+    "valid": false,
+    "value": {
+      "query": "synthetic",
+      "provider_options": {
+        "kind": "exa_deep"
+      }
+    }
+  },
+  {
+    "name": "advanced-profile-kind-match",
+    "schema": "AdvancedSearchRequest",
+    "valid": false,
+    "value": {
+      "query": "synthetic",
+      "profile": "tavily_advanced",
+      "provider_options": {
+        "kind": "exa_deep"
+      }
+    }
+  },
+  {
+    "name": "crawl-external-disabled",
+    "schema": "CrawlRequest",
+    "valid": false,
+    "value": {
+      "url": "https://example.com",
+      "allow_external": true
+    }
+  },
+  {
+    "name": "fetch-null-urls",
+    "schema": "FetchRequest",
+    "valid": false,
+    "value": {
+      "urls": null
+    }
+  },
+  {
+    "name": "usage-unlimited",
+    "schema": "AccountUsage",
+    "valid": true,
+    "value": {
+      "provider": "exa",
+      "account_id": "synthetic_id",
+      "key_id": null,
+      "source": "upstream",
+      "observed_at": null,
+      "freshness": "fresh",
+      "unit": "micro_usd",
+      "period_start": null,
+      "period_end": null,
+      "used": null,
+      "reserved": 0,
+      "limit_kind": "unlimited",
+      "limit": null,
+      "remaining": null,
+      "unavailable_reason": null
+    }
+  },
+  {
+    "name": "usage-unknown-not-zero",
+    "schema": "AccountUsage",
+    "valid": false,
+    "value": {
+      "provider": "exa",
+      "account_id": "synthetic_id",
+      "key_id": null,
+      "source": "upstream",
+      "observed_at": null,
+      "freshness": "fresh",
+      "unit": "micro_usd",
+      "period_start": null,
+      "period_end": null,
+      "used": null,
+      "reserved": 0,
+      "limit_kind": "unknown",
+      "limit": 0,
+      "remaining": 0,
+      "unavailable_reason": null
+    }
+  },
+  {
+    "name": "observation-expired-retains-holds",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "id": "job_synthetic",
+      "owner_principal_id": "principal_synthetic",
+      "created_at": "2026-10-22T08:00:00Z",
+      "updated_at": "2026-10-22T08:00:00Z",
+      "state": "observation_expired",
+      "upstream_state": "running",
+      "source_provider": "exa",
+      "upstream_job_id": null,
+      "profile": "exa_auto",
+      "route_revision": 0,
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "reservation": {
+        "unit": "micro_usd",
+        "amount": 1000000,
+        "certainty": "estimated",
+        "source": "local_reservation",
+        "observed_at": "2026-10-22T08:00:00Z",
+        "pricing_revision": "2026-10-22"
+      },
+      "active_slot_held": true,
+      "budget_hold_state": "held",
+      "capacity_release_basis": "none",
+      "upstream_may_continue": true,
+      "observation_deadline": "2026-10-22T08:00:00Z",
+      "polling_count": 0,
+      "cancel_capability": {
+        "upstream": false,
+        "observation": false,
+        "unavailable_reason": null
+      },
+      "is_partial": false,
+      "completion_reason": null,
+      "uncertainty": true,
+      "result": null,
+      "error": null,
+      "version": 1,
+      "idempotency_expires_at": null
+    }
+  },
+  {
+    "name": "submission-unknown-retains-holds",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "id": "job_synthetic",
+      "owner_principal_id": "principal_synthetic",
+      "created_at": "2026-10-22T08:00:00Z",
+      "updated_at": "2026-10-22T08:00:00Z",
+      "state": "submission_unknown",
+      "upstream_state": null,
+      "source_provider": "exa",
+      "upstream_job_id": null,
+      "profile": "exa_auto",
+      "route_revision": 0,
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "reservation": {
+        "unit": "micro_usd",
+        "amount": 1000000,
+        "certainty": "estimated",
+        "source": "local_reservation",
+        "observed_at": "2026-10-22T08:00:00Z",
+        "pricing_revision": "2026-10-22"
+      },
+      "active_slot_held": true,
+      "budget_hold_state": "held",
+      "capacity_release_basis": "none",
+      "upstream_may_continue": true,
+      "observation_deadline": "2026-10-22T08:00:00Z",
+      "polling_count": 0,
+      "cancel_capability": {
+        "upstream": false,
+        "observation": false,
+        "unavailable_reason": null
+      },
+      "is_partial": false,
+      "completion_reason": null,
+      "uncertainty": true,
+      "result": null,
+      "error": null,
+      "version": 1,
+      "idempotency_expires_at": null
+    }
+  },
+  {
+    "name": "verified-terminal-cost-unknown",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "id": "job_synthetic",
+      "owner_principal_id": "principal_synthetic",
+      "created_at": "2026-10-22T08:00:00Z",
+      "updated_at": "2026-10-22T08:00:00Z",
+      "state": "failed",
+      "upstream_state": "failed",
+      "source_provider": "exa",
+      "upstream_job_id": null,
+      "profile": "exa_auto",
+      "route_revision": 0,
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "reservation": {
+        "unit": "micro_usd",
+        "amount": 1000000,
+        "certainty": "estimated",
+        "source": "local_reservation",
+        "observed_at": "2026-10-22T08:00:00Z",
+        "pricing_revision": "2026-10-22"
+      },
+      "active_slot_held": false,
+      "budget_hold_state": "held",
+      "capacity_release_basis": "verified_terminal",
+      "upstream_may_continue": false,
+      "observation_deadline": "2026-10-22T08:00:00Z",
+      "polling_count": 0,
+      "cancel_capability": {
+        "upstream": false,
+        "observation": false,
+        "unavailable_reason": null
+      },
+      "is_partial": false,
+      "completion_reason": null,
+      "uncertainty": true,
+      "result": null,
+      "error": null,
+      "version": 1,
+      "idempotency_expires_at": null
+    }
+  },
+  {
+    "name": "capacity-override-is-not-cancellation",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "id": "job_synthetic",
+      "owner_principal_id": "principal_synthetic",
+      "created_at": "2026-10-22T08:00:00Z",
+      "updated_at": "2026-10-22T08:00:00Z",
+      "state": "submission_unknown",
+      "upstream_state": "unknown",
+      "source_provider": "exa",
+      "upstream_job_id": null,
+      "profile": "exa_auto",
+      "route_revision": 0,
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "reservation": {
+        "unit": "micro_usd",
+        "amount": 1000000,
+        "certainty": "estimated",
+        "source": "local_reservation",
+        "observed_at": "2026-10-22T08:00:00Z",
+        "pricing_revision": "2026-10-22"
+      },
+      "active_slot_held": false,
+      "budget_hold_state": "written_off",
+      "capacity_release_basis": "manual_override",
+      "upstream_may_continue": true,
+      "observation_deadline": "2026-10-22T08:00:00Z",
+      "polling_count": 0,
+      "cancel_capability": {
+        "upstream": false,
+        "observation": false,
+        "unavailable_reason": null
+      },
+      "is_partial": false,
+      "completion_reason": null,
+      "uncertainty": true,
+      "result": null,
+      "error": null,
+      "version": 1,
+      "idempotency_expires_at": null
+    }
+  },
+  {
+    "name": "manual-capacity-needs-ack",
+    "schema": "ReconcileRequest",
+    "valid": false,
+    "value": {
+      "action": "capacity_release_override",
+      "expected_version": 1,
+      "reason": "Synthetic risk acceptance",
+      "evidence_ref": "test-evidence"
+    }
+  },
+  {
+    "name": "settle-estimate-is-not-reported-cost",
+    "schema": "SettleTerminal",
+    "valid": false,
+    "value": {
+      "expected_version": 1,
+      "reason": "synthetic_test_only",
+      "evidence_ref": "synthetic_test_only",
+      "action": "settle_terminal",
+      "upstream_state": "completed",
+      "cost": {
+        "unit": "micro_usd",
+        "amount": 100,
+        "certainty": "estimated",
+        "source": "synthetic_test_only",
+        "observed_at": "2026-10-22T08:00:00Z",
+        "pricing_revision": null
+      }
+    }
+  },
+  {
+    "name": "settings-cannot-weaken-bind",
+    "schema": "SettingsPatch",
+    "valid": false,
+    "value": {
+      "expected_version": 1,
+      "bind": "0.0.0.0:8789"
+    }
+  },
+  {
+    "name": "tokens-cannot-forge-principal",
+    "schema": "TokenCreate",
+    "valid": false,
+    "value": {
+      "label": "synthetic_test_only",
+      "scopes": [
+        "read"
+      ],
+      "expires_at": "2026-10-22T08:00:00Z",
+      "principal_id": "another_principal"
+    }
+  },
+  {
+    "name": "stale-expected-version-shape",
+    "schema": "CancelRequest",
+    "valid": false,
+    "value": {
+      "mode": "observation",
+      "expected_version": 0
+    }
+  }
+]

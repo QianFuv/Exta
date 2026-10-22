@@ -1,0 +1,4218 @@
+{
+  "$defs": {
+    "Account": {
+      "additionalProperties": false,
+      "properties": {
+        "billing_state": {
+          "enum": [
+            "eligible",
+            "blocked",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "external_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "quota_policy": {
+          "$ref": "#/$defs/QuotaPolicy"
+        },
+        "verification_state": {
+          "enum": [
+            "unverified",
+            "verified"
+          ],
+          "type": "string"
+        },
+        "version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "label",
+        "external_ref",
+        "verification_state",
+        "billing_state",
+        "enabled",
+        "quota_policy",
+        "version",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "AccountCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "external_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "quota_policy": {
+          "$ref": "#/$defs/QuotaPolicy"
+        },
+        "verification_state": {
+          "enum": [
+            "unverified",
+            "verified"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "label",
+        "quota_policy",
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "AccountList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/Account"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "AccountPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "external_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "quota_policy": {
+          "$ref": "#/$defs/QuotaPolicy"
+        },
+        "verification_state": {
+          "enum": [
+            "unverified",
+            "verified"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_version"
+      ],
+      "type": "object"
+    },
+    "AccountUsage": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "else": {
+            "properties": {
+              "limit": {
+                "type": "null"
+              },
+              "remaining": {
+                "type": "null"
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "limit_kind": {
+                "const": "finite"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "limit": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              }
+            }
+          }
+        }
+      ],
+      "description": "finite requires a numeric limit; unlimited/unknown have null limit and remaining. Missing Exa service-key permission uses unavailable_reason=service_permission_missing, never a fabricated balance.",
+      "properties": {
+        "account_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "freshness": {
+          "enum": [
+            "fresh",
+            "stale",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "key_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit_kind": {
+          "enum": [
+            "finite",
+            "unlimited",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "period_end": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "period_start": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "remaining": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reserved": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "enum": [
+            "upstream",
+            "local",
+            "estimate"
+          ],
+          "type": "string"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "$ref": "#/$defs/UsageUnit"
+        },
+        "used": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "provider",
+        "account_id",
+        "key_id",
+        "source",
+        "observed_at",
+        "freshness",
+        "unit",
+        "period_start",
+        "period_end",
+        "used",
+        "reserved",
+        "limit_kind",
+        "limit",
+        "remaining",
+        "unavailable_reason"
+      ],
+      "type": "object"
+    },
+    "Acknowledgement": {
+      "additionalProperties": false,
+      "properties": {
+        "ok": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "type": "object"
+    },
+    "AdminPermission": {
+      "enum": [
+        "admin:read",
+        "admin:accounts:write",
+        "admin:keys:write",
+        "admin:routes:write",
+        "admin:usage:refresh",
+        "admin:research:create",
+        "admin:research:cancel",
+        "admin:research:observe",
+        "admin:research:reconcile",
+        "admin:tokens:write",
+        "admin:settings:write",
+        "admin:audit:read"
+      ],
+      "type": "string"
+    },
+    "AdvancedSearchRequest": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "common"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "provider_options"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "exa_deep"
+              }
+            },
+            "required": [
+              "profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider_options": {
+                "properties": {
+                  "kind": {
+                    "const": "exa_deep"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "tavily_advanced"
+              }
+            },
+            "required": [
+              "profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider_options": {
+                "properties": {
+                  "kind": {
+                    "const": "tavily_advanced"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "description": "provider_options.kind must equal the selected non-common profile. Common profile rejects provider_options. No semantic downgrade.",
+      "properties": {
+        "content_mode": {
+          "default": "snippet",
+          "enum": [
+            "snippet",
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        },
+        "exclude_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "include_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "max_results": {
+          "default": 10,
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "profile": {
+          "default": "common",
+          "enum": [
+            "common",
+            "exa_deep",
+            "tavily_advanced"
+          ],
+          "type": "string"
+        },
+        "provider_options": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExaDeepOptions"
+            },
+            {
+              "$ref": "#/$defs/TavilyAdvancedOptions"
+            }
+          ]
+        },
+        "query": {
+          "maxLength": 16000,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "ApiError": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/ErrorDetail"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "type": "object"
+    },
+    "AttachUpstreamId": {
+      "additionalProperties": false,
+      "description": "Server independently verifies provider/account/correlation before attaching. Neither hold is released.",
+      "properties": {
+        "action": {
+          "const": "attach_upstream_id",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1024,
+          "minLength": 8,
+          "type": "string"
+        },
+        "upstream_job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_version",
+        "reason",
+        "evidence_ref",
+        "action",
+        "upstream_job_id"
+      ],
+      "type": "object"
+    },
+    "Attempt": {
+      "additionalProperties": false,
+      "description": "Sanitized metadata only; no query, content, credentials or headers.",
+      "properties": {
+        "account_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "attempt_number": {
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "billing_uncertain": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "credential_version_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "duration_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "retry_reason": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transmission_state": {
+          "enum": [
+            "not_sent",
+            "possibly_sent",
+            "response_received"
+          ],
+          "type": "string"
+        },
+        "upstream_request_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "attempt_number",
+        "provider",
+        "account_id",
+        "credential_version_id",
+        "transmission_state",
+        "upstream_request_id",
+        "http_status",
+        "retry_reason",
+        "duration_ms",
+        "billing_uncertain",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "AuditEvent": {
+      "additionalProperties": false,
+      "description": "Redacted audit event; reason/evidence references are bounded, with no raw credentials or research input.",
+      "properties": {
+        "action": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "actor_principal_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "changes": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "actor_principal_id",
+        "action",
+        "entity_id",
+        "created_at",
+        "changes"
+      ],
+      "type": "object"
+    },
+    "AuditEventList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AuditEvent"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "BudgetHoldState": {
+      "enum": [
+        "held",
+        "settled",
+        "released_unspent",
+        "written_off"
+      ],
+      "type": "string"
+    },
+    "BudgetWriteOff": {
+      "additionalProperties": false,
+      "description": "Debits the full reservation as spent/uncertain without restoring allowance; does not release capacity.",
+      "properties": {
+        "acknowledge_upstream_may_bill": {
+          "const": true,
+          "type": "boolean"
+        },
+        "action": {
+          "const": "budget_write_off",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1024,
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_version",
+        "reason",
+        "evidence_ref",
+        "action",
+        "acknowledge_upstream_may_bill"
+      ],
+      "type": "object"
+    },
+    "BuildInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "type": "string"
+        },
+        "schema_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "target": {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "target",
+        "contract_hash",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "CancelCapability": {
+      "additionalProperties": false,
+      "properties": {
+        "observation": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upstream": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "upstream",
+        "observation",
+        "unavailable_reason"
+      ],
+      "type": "object"
+    },
+    "CancelRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "upstream",
+            "observation"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "expected_version"
+      ],
+      "type": "object"
+    },
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/Capability"
+          },
+          "maxItems": 6,
+          "minItems": 0,
+          "type": "array"
+        },
+        "contract_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "type": "string"
+        },
+        "contract_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "contract_hash",
+        "capabilities"
+      ],
+      "type": "object"
+    },
+    "Capability": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "default_limits": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "hard_limits": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/$defs/CapabilityProfile"
+          },
+          "maxItems": 6,
+          "minItems": 0,
+          "type": "array"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "enabled",
+        "profiles",
+        "constraints",
+        "default_limits",
+        "hard_limits",
+        "unavailable_reason"
+      ],
+      "type": "object"
+    },
+    "CapabilityProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_modes": {
+          "items": {
+            "enum": [
+              "hard",
+              "estimated"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "type": "array"
+        },
+        "cancellation": {
+          "$ref": "#/$defs/CancelCapability"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "profile",
+        "provider",
+        "cancellation",
+        "budget_modes",
+        "enabled",
+        "unavailable_reason"
+      ],
+      "type": "object"
+    },
+    "CapacityOverride": {
+      "additionalProperties": false,
+      "description": "Distinct audited risk override; retains unknown upstream state and never claims cancellation or refunds.",
+      "properties": {
+        "acknowledge_upstream_may_continue": {
+          "const": true,
+          "type": "boolean"
+        },
+        "action": {
+          "const": "capacity_release_override",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1024,
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_version",
+        "reason",
+        "evidence_ref",
+        "action",
+        "acknowledge_upstream_may_continue"
+      ],
+      "type": "object"
+    },
+    "CapacityReleaseBasis": {
+      "enum": [
+        "none",
+        "proven_non_submission",
+        "verified_terminal",
+        "manual_override"
+      ],
+      "type": "string"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "source_provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "url",
+        "source_provider"
+      ],
+      "type": "object"
+    },
+    "ClientScope": {
+      "enum": [
+        "read",
+        "execute",
+        "research:create",
+        "research:read",
+        "research:cancel",
+        "research:observe"
+      ],
+      "type": "string"
+    },
+    "ClientToken": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "principal_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/ClientScope"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "type": "array"
+        },
+        "version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "principal_id",
+        "label",
+        "scopes",
+        "created_at",
+        "expires_at",
+        "revoked_at",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ClientTokenList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ClientToken"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "ConnectionInfo": {
+      "additionalProperties": false,
+      "description": "Cookie-safe capability/profile/contract source. Examples contain placeholders only; no live token or service secret.",
+      "properties": {
+        "authentication": {
+          "const": "preconfigured_bearer",
+          "type": "string"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "examples": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "command": {
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              "title": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "command"
+            ],
+            "type": "object"
+          },
+          "maxItems": 8,
+          "minItems": 0,
+          "type": "array"
+        },
+        "mcp_url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        },
+        "oauth_supported": {
+          "const": false,
+          "type": "boolean"
+        },
+        "protocol_versions": {
+          "items": {
+            "enum": [
+              "2026-07-28",
+              "2025-11-25"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "readiness": {
+          "$ref": "#/$defs/Readiness"
+        },
+        "rest_base_url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rest_base_url",
+        "mcp_url",
+        "protocol_versions",
+        "authentication",
+        "oauth_supported",
+        "capabilities",
+        "readiness",
+        "examples"
+      ],
+      "type": "object"
+    },
+    "CrawlRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_external": {
+          "const": false,
+          "default": false,
+          "type": "boolean"
+        },
+        "exclude_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "exclude_paths": {
+          "items": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "extraction_profile": {
+          "default": "basic",
+          "enum": [
+            "basic",
+            "advanced"
+          ],
+          "type": "string"
+        },
+        "format": {
+          "default": "markdown",
+          "enum": [
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        },
+        "instructions": {
+          "maxLength": 4000,
+          "minLength": 0,
+          "type": "string"
+        },
+        "limit": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_breadth": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_depth": {
+          "default": 2,
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "select_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "select_paths": {
+          "items": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "EmptyInput": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "ErrorCode": {
+      "enum": [
+        "invalid_json",
+        "invalid_request",
+        "authentication_required",
+        "invalid_token",
+        "forbidden",
+        "origin_rejected",
+        "csrf_invalid",
+        "target_blocked",
+        "not_found",
+        "method_not_allowed",
+        "idempotency_conflict",
+        "revision_conflict",
+        "cancel_not_supported",
+        "job_state_conflict",
+        "request_too_large",
+        "unsupported_parameter",
+        "unsupported_capability",
+        "budget_guarantee_unavailable",
+        "local_rate_limited",
+        "upstream_rate_limited",
+        "upstream_failure",
+        "upstream_protocol_error",
+        "submission_outcome_unknown",
+        "capacity_unavailable",
+        "provider_unavailable",
+        "quota_unavailable",
+        "secret_store_locked",
+        "storage_unavailable",
+        "deadline_exceeded",
+        "response_too_large"
+      ],
+      "type": "string"
+    },
+    "ErrorDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "details": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "message": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "retry_after_ms": {
+          "anyOf": [
+            {
+              "maximum": 86400000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "upstream_http_status": {
+          "maximum": 599,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "upstream_tag": {
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "request_id",
+        "retryable",
+        "retry_after_ms",
+        "details"
+      ],
+      "type": "object"
+    },
+    "EstimatedBudget": {
+      "additionalProperties": false,
+      "description": "mini requires amount \u003e= 110; pro requires \u003e= 250. Reservation is an estimate, never a provider-enforced cap.",
+      "properties": {
+        "acknowledge_estimated_budget": {
+          "const": true,
+          "type": "boolean"
+        },
+        "amount": {
+          "maximum": 250,
+          "minimum": 110,
+          "type": "integer"
+        },
+        "mode": {
+          "const": "estimated",
+          "type": "string"
+        },
+        "unit": {
+          "const": "tavily_credit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "unit",
+        "amount",
+        "acknowledge_estimated_budget"
+      ],
+      "type": "object"
+    },
+    "ExaDeepOptions": {
+      "additionalProperties": false,
+      "description": "Provider-pinned options. Category company/people cannot use publication filters; people cannot use exclude_domains. Runtime semantic validation rejects incompatible combinations before admission.",
+      "properties": {
+        "additional_queries": {
+          "items": {
+            "maxLength": 16000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 0,
+          "type": "array"
+        },
+        "category": {
+          "enum": [
+            "company",
+            "people",
+            "publication",
+            "news",
+            "tweet",
+            "personal site",
+            "financial report"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "const": "exa_deep",
+          "type": "string"
+        },
+        "output_schema": {
+          "$ref": "#/$defs/OutputSchema"
+        },
+        "published_after": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "published_before": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FetchRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "default": "text",
+          "enum": [
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        },
+        "max_chars": {
+          "default": 20000,
+          "maximum": 1000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "profile": {
+          "default": "common",
+          "enum": [
+            "common"
+          ],
+          "type": "string"
+        },
+        "urls": {
+          "items": {
+            "format": "uri",
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^https?://",
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "urls"
+      ],
+      "type": "object"
+    },
+    "HardBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "maximum": 100000000,
+          "minimum": 1000000,
+          "type": "integer"
+        },
+        "mode": {
+          "const": "hard",
+          "type": "string"
+        },
+        "unit": {
+          "const": "micro_usd",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "unit",
+        "amount"
+      ],
+      "type": "object"
+    },
+    "Hostname": {
+      "description": "Hostname only; no wildcard/path. Security validation additionally rejects internal/reserved names and every private DNS answer.",
+      "maxLength": 253,
+      "minLength": 1,
+      "pattern": "^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?[.])*[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$",
+      "type": "string"
+    },
+    "IdempotencyKey": {
+      "description": "Opaque client retry key. Scope is stable principal plus research_create, shared by REST, admin and MCP; never log its clear value.",
+      "maxLength": 128,
+      "minLength": 8,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$",
+      "type": "string"
+    },
+    "ItemFailure": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "input_index": {
+          "maximum": 99,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "message": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "input_index",
+        "code",
+        "message",
+        "retryable",
+        "provider"
+      ],
+      "type": "object"
+    },
+    "Job": {
+      "additionalProperties": false,
+      "description": "Stopping observation never releases unsettled slot/budget holds. completion_reason and upstream_state are open provider strings, not success indicators. Result may be null when still running or content retention expired. Reading encrypted content with unavailable master key returns secret_store_locked.",
+      "properties": {
+        "active_slot_held": {
+          "type": "boolean"
+        },
+        "budget": {
+          "$ref": "#/$defs/ResearchBudget"
+        },
+        "budget_hold_state": {
+          "$ref": "#/$defs/BudgetHoldState"
+        },
+        "cancel_capability": {
+          "$ref": "#/$defs/CancelCapability"
+        },
+        "capacity_release_basis": {
+          "$ref": "#/$defs/CapacityReleaseBasis"
+        },
+        "completion_reason": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorDetail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "idempotency_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_partial": {
+          "type": "boolean"
+        },
+        "observation_deadline": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "owner_principal_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "polling_count": {
+          "maximum": 120,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "profile": {
+          "enum": [
+            "exa_auto",
+            "tavily_mini",
+            "tavily_pro"
+          ],
+          "type": "string"
+        },
+        "reservation": {
+          "$ref": "#/$defs/UsageAmount"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResearchReport"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "route_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "state": {
+          "$ref": "#/$defs/JobState"
+        },
+        "uncertainty": {
+          "type": "boolean"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "upstream_job_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upstream_may_continue": {
+          "type": "boolean"
+        },
+        "upstream_state": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "owner_principal_id",
+        "created_at",
+        "updated_at",
+        "state",
+        "upstream_state",
+        "source_provider",
+        "upstream_job_id",
+        "profile",
+        "route_revision",
+        "budget",
+        "reservation",
+        "active_slot_held",
+        "budget_hold_state",
+        "capacity_release_basis",
+        "upstream_may_continue",
+        "observation_deadline",
+        "polling_count",
+        "cancel_capability",
+        "is_partial",
+        "completion_reason",
+        "uncertainty",
+        "result",
+        "error",
+        "version",
+        "idempotency_expires_at"
+      ],
+      "type": "object"
+    },
+    "JobDetail": {
+      "additionalProperties": false,
+      "description": "The detail endpoint accepts events_cursor/events_limit for the append-only event timeline. Job mutations return Job; detail returns JobDetail.",
+      "properties": {
+        "events": {
+          "items": {
+            "$ref": "#/$defs/JobEvent"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "events_next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "job": {
+          "$ref": "#/$defs/Job"
+        }
+      },
+      "required": [
+        "job",
+        "events",
+        "events_next_cursor"
+      ],
+      "type": "object"
+    },
+    "JobEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "action_ref": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actor_principal_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "from_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        "to_state": {
+          "$ref": "#/$defs/JobState"
+        }
+      },
+      "required": [
+        "id",
+        "created_at",
+        "from_state",
+        "to_state",
+        "reason",
+        "actor_principal_id",
+        "action_ref"
+      ],
+      "type": "object"
+    },
+    "JobList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/Job"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "JobState": {
+      "enum": [
+        "queued",
+        "submitting",
+        "submission_unknown",
+        "accepted",
+        "running",
+        "cancel_requested",
+        "observation_expired",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "KeyCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "secret": {
+          "maxLength": 4096,
+          "minLength": 8,
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "account_id",
+        "label",
+        "secret",
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "KeyPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_version"
+      ],
+      "type": "object"
+    },
+    "KeyRotate": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "secret": {
+          "maxLength": 4096,
+          "minLength": 8,
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "expected_version",
+        "secret"
+      ],
+      "type": "object"
+    },
+    "Limits": {
+      "additionalProperties": false,
+      "properties": {
+        "max_polls": {
+          "maximum": 120,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "observation_seconds": {
+          "maximum": 3600,
+          "minimum": 60,
+          "type": "integer"
+        },
+        "principal_requests_per_minute": {
+          "maximum": 60,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "principal_research_active": {
+          "const": 1,
+          "type": "integer"
+        },
+        "request_bytes": {
+          "maximum": 1048576,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "research_active": {
+          "maximum": 2,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "research_queued": {
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "response_bytes": {
+          "maximum": 8388608,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "synchronous_concurrency": {
+          "maximum": 16,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "synchronous_waiting": {
+          "maximum": 64,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "synchronous_concurrency",
+        "synchronous_waiting",
+        "principal_requests_per_minute",
+        "research_queued",
+        "research_active",
+        "principal_research_active",
+        "request_bytes",
+        "response_bytes",
+        "observation_seconds",
+        "max_polls"
+      ],
+      "type": "object"
+    },
+    "Liveness": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "ok",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "type": "object"
+    },
+    "MapRequest": {
+      "additionalProperties": false,
+      "description": "Same-host traversal, Tavily only. Safe regular-expression policy is checked before dispatch.",
+      "properties": {
+        "allow_external": {
+          "const": false,
+          "default": false,
+          "type": "boolean"
+        },
+        "exclude_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "exclude_paths": {
+          "items": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "instructions": {
+          "maxLength": 4000,
+          "minLength": 0,
+          "type": "string"
+        },
+        "limit": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_breadth": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_depth": {
+          "default": 2,
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "select_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "select_paths": {
+          "items": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "OpenApiDocument": {
+      "additionalProperties": true,
+      "description": "The complete audited canonical OpenAPI document, served byte-equivalently as JSON.",
+      "type": "object"
+    },
+    "Operation": {
+      "enum": [
+        "search",
+        "advanced_search",
+        "fetch",
+        "map",
+        "crawl",
+        "research_create"
+      ],
+      "type": "string"
+    },
+    "OutputSchema": {
+      "additionalProperties": true,
+      "description": "JSON Schema 2020-12 object; at most 16 KiB UTF-8, nesting depth 8, 128 properties per object. Only local fragment $ref values; remote loading disabled. Reject unsupported provider schema keywords before admission.",
+      "maxProperties": 128,
+      "type": "object"
+    },
+    "OverviewMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "active_slots_held": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "errors_last_minute": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "queued_jobs": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests_last_minute": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uncertain_jobs": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "waiting_requests": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "queued_jobs",
+        "active_slots_held",
+        "waiting_requests",
+        "requests_last_minute",
+        "errors_last_minute",
+        "uncertain_jobs",
+        "observed_at"
+      ],
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "common",
+        "exa_deep",
+        "tavily_advanced",
+        "exa_auto",
+        "tavily_mini",
+        "tavily_pro"
+      ],
+      "type": "string"
+    },
+    "Provider": {
+      "enum": [
+        "exa",
+        "tavily"
+      ],
+      "type": "string"
+    },
+    "ProviderKey": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "billing_state": {
+          "enum": [
+            "eligible",
+            "blocked",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "breaker": {
+          "enum": [
+            "closed",
+            "open",
+            "half_open"
+          ],
+          "type": "string"
+        },
+        "cooldown_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "fingerprint": {
+          "maxLength": 64,
+          "minLength": 16,
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "last_four": {
+          "maxLength": 4,
+          "minLength": 4,
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "retained_credential_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retirement_state": {
+          "enum": [
+            "active",
+            "retiring",
+            "retired"
+          ],
+          "type": "string"
+        },
+        "validity": {
+          "enum": [
+            "valid",
+            "unknown",
+            "invalid"
+          ],
+          "type": "string"
+        },
+        "version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "account_id",
+        "provider",
+        "label",
+        "fingerprint",
+        "last_four",
+        "enabled",
+        "validity",
+        "billing_state",
+        "cooldown_until",
+        "breaker",
+        "retirement_state",
+        "retained_credential_count",
+        "version",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "ProviderKeyList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProviderKey"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "QuotaPolicy": {
+      "additionalProperties": false,
+      "description": "No budget configured means no upstream dispatch; currency units are never combined.",
+      "properties": {
+        "active_jobs": {
+          "maximum": 2,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "allocation": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "per_operation_reservation": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unit": {
+          "$ref": "#/$defs/UsageUnit"
+        }
+      },
+      "required": [
+        "unit",
+        "allocation",
+        "per_operation_reservation",
+        "active_jobs"
+      ],
+      "type": "object"
+    },
+    "Readiness": {
+      "additionalProperties": false,
+      "description": "Network diagnostics never relax startup checks. Nonloopback operation requires explicit TLS/reverse-proxy, authentication and trusted Origin configuration; missing requirements reject startup. Loopback mode does not require these nonloopback settings.",
+      "properties": {
+        "assets": {
+          "enum": [
+            "ready",
+            "missing"
+          ],
+          "type": "string"
+        },
+        "bind_scope": {
+          "enum": [
+            "loopback",
+            "nonloopback"
+          ],
+          "type": "string"
+        },
+        "database": {
+          "enum": [
+            "ready",
+            "unavailable",
+            "incompatible"
+          ],
+          "type": "string"
+        },
+        "network_safety_reason": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nonloopback_safety_configured": {
+          "type": "boolean"
+        },
+        "providers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "provider": {
+                "$ref": "#/$defs/Provider"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 512,
+                    "minLength": 0,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "provider",
+              "enabled",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "type": "array"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "secret_store": {
+          "enum": [
+            "unlocked",
+            "locked"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "ready",
+        "database",
+        "secret_store",
+        "assets",
+        "bind_scope",
+        "nonloopback_safety_configured",
+        "network_safety_reason",
+        "providers"
+      ],
+      "type": "object"
+    },
+    "ReconcileRequest": {
+      "description": "Exactly one action per versioned request. Budget write-off and capacity override require separate acknowledgements/audit events.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/AttachUpstreamId"
+        },
+        {
+          "$ref": "#/$defs/SettleTerminal"
+        },
+        {
+          "$ref": "#/$defs/BudgetWriteOff"
+        },
+        {
+          "$ref": "#/$defs/CapacityOverride"
+        }
+      ]
+    },
+    "RequestDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/Attempt"
+          },
+          "maxItems": 3,
+          "minItems": 0,
+          "type": "array"
+        },
+        "request": {
+          "$ref": "#/$defs/RequestRecord"
+        }
+      },
+      "required": [
+        "request",
+        "attempts"
+      ],
+      "type": "object"
+    },
+    "RequestMeta": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_count": {
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "duration_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "request_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "route_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_provider": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provider"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage": {
+          "items": {
+            "$ref": "#/$defs/UsageAmount"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 0,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "request_id",
+        "operation",
+        "route_revision",
+        "source_provider",
+        "duration_ms",
+        "attempt_count",
+        "warnings",
+        "usage"
+      ],
+      "type": "object"
+    },
+    "RequestRecord": {
+      "additionalProperties": false,
+      "description": "Counts and partial are null until a trustworthy result summary is known; zero means known empty, never unknown. Partial is true only for usable output with failed items or an explicit partial completion. Oversized upstream responses fail with response_too_large and preserve billing uncertainty; they do not fabricate an empty or partial success. Raw request and result content is not retained in this record.",
+      "properties": {
+        "billing_uncertain": {
+          "type": "boolean"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorDetail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "failure_count": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "partial": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result_count": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "route_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_provider": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provider"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/RequestStatus"
+        },
+        "usage": {
+          "items": {
+            "$ref": "#/$defs/UsageAmount"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "operation",
+        "status",
+        "source_provider",
+        "route_revision",
+        "created_at",
+        "completed_at",
+        "duration_ms",
+        "result_count",
+        "failure_count",
+        "partial",
+        "error",
+        "billing_uncertain",
+        "usage"
+      ],
+      "type": "object"
+    },
+    "RequestRecordList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/RequestRecord"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "RequestStatus": {
+      "enum": [
+        "accepted",
+        "running",
+        "succeeded",
+        "failed",
+        "uncertain"
+      ],
+      "type": "string"
+    },
+    "ResearchBudget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/HardBudget"
+        },
+        {
+          "$ref": "#/$defs/EstimatedBudget"
+        }
+      ]
+    },
+    "ResearchCreate": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "exa_auto"
+              }
+            },
+            "required": [
+              "profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "budget": {
+                "$ref": "#/$defs/HardBudget"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "enum": [
+                  "tavily_mini",
+                  "tavily_pro"
+                ]
+              }
+            },
+            "required": [
+              "profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "budget": {
+                "$ref": "#/$defs/EstimatedBudget"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "tavily_pro"
+              }
+            },
+            "required": [
+              "profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "budget": {
+                "properties": {
+                  "amount": {
+                    "minimum": 250
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "supersedes_job_id"
+            ]
+          },
+          "then": {
+            "required": [
+              "acknowledge_duplicate_charge"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "acknowledge_duplicate_charge"
+            ]
+          },
+          "then": {
+            "required": [
+              "supersedes_job_id"
+            ]
+          }
+        }
+      ],
+      "description": "Binding lookup precedes current configuration/admission. Missing optional fields use persisted original defaults during replay. Budget is always explicit; UI defaults exa_auto to a hard USD 1 cap. Superseding requires both fields and an owned prior job; never automatic.",
+      "properties": {
+        "acknowledge_duplicate_charge": {
+          "const": true,
+          "type": "boolean"
+        },
+        "budget": {
+          "$ref": "#/$defs/ResearchBudget"
+        },
+        "input": {
+          "maxLength": 32000,
+          "minLength": 1,
+          "type": "string"
+        },
+        "observation_seconds": {
+          "default": 3600,
+          "maximum": 3600,
+          "minimum": 60,
+          "type": "integer"
+        },
+        "output_schema": {
+          "$ref": "#/$defs/OutputSchema"
+        },
+        "profile": {
+          "default": "exa_auto",
+          "enum": [
+            "exa_auto",
+            "tavily_mini",
+            "tavily_pro"
+          ],
+          "type": "string"
+        },
+        "supersedes_job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input",
+        "budget"
+      ],
+      "type": "object"
+    },
+    "ResearchExecutionSnapshot": {
+      "additionalProperties": false,
+      "description": "Internal execution provenance frozen on first admission, separate from replay identity. Includes the immutable route policy and original provider/account/credential reference; contains no credential or raw input. Replay never replaces it with current routing.",
+      "properties": {
+        "account_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "credential_version_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "pricing_revision": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "reserved_amount": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reserved_unit": {
+          "$ref": "#/$defs/UsageUnit"
+        },
+        "route_policy": {
+          "$ref": "#/$defs/RoutePolicy"
+        },
+        "source_provider": {
+          "$ref": "#/$defs/Provider"
+        }
+      },
+      "required": [
+        "source_provider",
+        "account_id",
+        "credential_version_id",
+        "route_policy",
+        "pricing_revision",
+        "reserved_unit",
+        "reserved_amount"
+      ],
+      "type": "object",
+      "x-internal": true
+    },
+    "ResearchReplayContext": {
+      "additionalProperties": false,
+      "description": "Internal persistence contract, never returned by an endpoint. Freeze atomically with the binding and keep for its full lifetime. Replay uses this context before consulting current config; missing or unreadable context fails closed. Route revision is separate execution provenance and is excluded from the intent digest.",
+      "properties": {
+        "canonicalization_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "defaults": {
+          "$ref": "#/$defs/ResearchReplayDefaults"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "semantic_config_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canonicalization_version",
+        "schema_version",
+        "semantic_config_version",
+        "defaults"
+      ],
+      "type": "object",
+      "x-internal": true
+    },
+    "ResearchReplayDefaults": {
+      "additionalProperties": false,
+      "description": "Only omitted optional intent fields may use these original defaults. Required input and budget are never restored from prior intent. Defaults are captured even when the original request supplies an explicit value.",
+      "properties": {
+        "observation_seconds": {
+          "maximum": 3600,
+          "minimum": 60,
+          "type": "integer"
+        },
+        "profile": {
+          "enum": [
+            "exa_auto",
+            "tavily_mini",
+            "tavily_pro"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "observation_seconds"
+      ],
+      "type": "object"
+    },
+    "ResearchReport": {
+      "additionalProperties": false,
+      "properties": {
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "maxItems": 500,
+          "minItems": 0,
+          "type": "array"
+        },
+        "markdown": {
+          "anyOf": [
+            {
+              "maxLength": 4000000,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "structured_output": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "maxProperties": 128,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "markdown",
+        "structured_output",
+        "citations"
+      ],
+      "type": "object"
+    },
+    "ResumeRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "observation_seconds": {
+          "maximum": 3600,
+          "minimum": 60,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "observation_seconds",
+        "expected_version"
+      ],
+      "type": "object"
+    },
+    "Retention": {
+      "additionalProperties": false,
+      "description": "Unresolved jobs/credentials/holds/bindings are never expired by ordinary retention.",
+      "properties": {
+        "audit_days": {
+          "maximum": 90,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "idempotency_days": {
+          "const": 90,
+          "type": "integer"
+        },
+        "request_days": {
+          "maximum": 30,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "research_content_days": {
+          "maximum": 30,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "request_days",
+        "research_content_days",
+        "audit_days",
+        "idempotency_days"
+      ],
+      "type": "object"
+    },
+    "RetrievalResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "failures": {
+          "items": {
+            "$ref": "#/$defs/ItemFailure"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "meta": {
+          "$ref": "#/$defs/RequestMeta"
+        },
+        "partial": {
+          "type": "boolean"
+        },
+        "provider_output": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/RetrievalResult"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "meta",
+        "results",
+        "failures",
+        "partial"
+      ],
+      "type": "object"
+    },
+    "RetrievalResult": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "maxLength": 1000000,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_format": {
+          "anyOf": [
+            {
+              "enum": [
+                "text",
+                "markdown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_metadata": {
+          "additionalProperties": true,
+          "maxProperties": 128,
+          "type": "object"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "maxLength": 32000,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "snippet_kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "source_excerpt",
+                "generated_summary"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^https?://",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "url",
+        "snippet",
+        "snippet_kind",
+        "content",
+        "content_format",
+        "published_at",
+        "source_provider",
+        "provider_metadata"
+      ],
+      "type": "object"
+    },
+    "RoutePolicy": {
+      "additionalProperties": false,
+      "description": "allow_duplicate_cost applies only to synchronous operations. It never changes research creation uncertainty behavior.",
+      "properties": {
+        "allow_duplicate_cost": {
+          "type": "boolean"
+        },
+        "capability": {
+          "$ref": "#/$defs/Operation"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "deadline_seconds": {
+          "maximum": 165,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_attempts": {
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "revision": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/RouteTarget"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "capability",
+        "revision",
+        "enabled",
+        "targets",
+        "allow_duplicate_cost",
+        "max_attempts",
+        "deadline_seconds",
+        "created_at"
+      ],
+      "type": "object"
+    },
+    "RoutePolicyList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/RoutePolicy"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "RoutePreview": {
+      "additionalProperties": false,
+      "properties": {
+        "eligible": {
+          "items": {
+            "$ref": "#/$defs/RouteTarget"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "type": "array"
+        },
+        "exclusions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "field": {
+                "anyOf": [
+                  {
+                    "maxLength": 128,
+                    "minLength": 0,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "provider": {
+                "$ref": "#/$defs/Provider"
+              },
+              "reason": {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "field",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "route_revision": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "warnings": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 0,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "route_revision",
+        "eligible",
+        "exclusions",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "RoutePreviewRequest": {
+      "description": "Local validation and routing only: no reservation, key validation or upstream request.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "search",
+              "type": "string"
+            },
+            "request": {
+              "$ref": "#/$defs/SearchRequest"
+            }
+          },
+          "required": [
+            "operation",
+            "request"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "advanced_search",
+              "type": "string"
+            },
+            "request": {
+              "$ref": "#/$defs/AdvancedSearchRequest"
+            }
+          },
+          "required": [
+            "operation",
+            "request"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "fetch",
+              "type": "string"
+            },
+            "request": {
+              "$ref": "#/$defs/FetchRequest"
+            }
+          },
+          "required": [
+            "operation",
+            "request"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "map",
+              "type": "string"
+            },
+            "request": {
+              "$ref": "#/$defs/MapRequest"
+            }
+          },
+          "required": [
+            "operation",
+            "request"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "crawl",
+              "type": "string"
+            },
+            "request": {
+              "$ref": "#/$defs/CrawlRequest"
+            }
+          },
+          "required": [
+            "operation",
+            "request"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "research_create",
+              "type": "string"
+            },
+            "request": {
+              "$ref": "#/$defs/ResearchCreate"
+            }
+          },
+          "required": [
+            "operation",
+            "request"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RouteReplace": {
+      "additionalProperties": false,
+      "description": "All six operation policies are seeded at revision 1. Policies are disabled or replaced, never deleted. The first update uses the seeded revision.",
+      "properties": {
+        "allow_duplicate_cost": {
+          "type": "boolean"
+        },
+        "deadline_seconds": {
+          "maximum": 165,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "description": "Must equal the current RoutePolicy.revision; stale revisions return 409 revision_conflict.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_attempts": {
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/RouteTarget"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "expected_version",
+        "enabled",
+        "targets",
+        "allow_duplicate_cost",
+        "max_attempts",
+        "deadline_seconds"
+      ],
+      "type": "object"
+    },
+    "RouteTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        }
+      },
+      "required": [
+        "provider",
+        "profile"
+      ],
+      "type": "object"
+    },
+    "SearchRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "content_mode": {
+          "default": "snippet",
+          "enum": [
+            "snippet",
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        },
+        "exclude_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "include_domains": {
+          "items": {
+            "$ref": "#/$defs/Hostname"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "max_results": {
+          "default": 10,
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "profile": {
+          "default": "common",
+          "enum": [
+            "common"
+          ],
+          "type": "string"
+        },
+        "query": {
+          "maxLength": 16000,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "Session": {
+      "additionalProperties": false,
+      "description": "CSRF token delivered in the response body, held in memory; never store bearer/session credentials in browser storage. Session refresh preserves principal identity.",
+      "properties": {
+        "csrf_token": {
+          "maxLength": 128,
+          "minLength": 32,
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/$defs/AdminPermission"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "principal_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "principal_id",
+        "permissions",
+        "expires_at",
+        "csrf_token"
+      ],
+      "type": "object"
+    },
+    "SessionCreate": {
+      "additionalProperties": false,
+      "description": "Login needs an exact allowed Origin and a local operator credential; no pre-session CSRF token exists. Rate-limited. A wrong credential returns 401 invalid_token; a missing or expired existing session returns 401 authentication_required.",
+      "properties": {
+        "credential": {
+          "maxLength": 512,
+          "minLength": 16,
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "credential"
+      ],
+      "type": "object"
+    },
+    "Settings": {
+      "additionalProperties": false,
+      "description": "Cookie-safe local readiness feeds Overview. Protected network/bind/data/master-key settings are diagnostics only, never patchable here.",
+      "properties": {
+        "build": {
+          "$ref": "#/$defs/BuildInfo"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "protected_fields": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "readiness": {
+          "$ref": "#/$defs/Readiness"
+        },
+        "retention": {
+          "$ref": "#/$defs/Retention"
+        },
+        "version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "limits",
+        "retention",
+        "readiness",
+        "build",
+        "protected_fields"
+      ],
+      "type": "object"
+    },
+    "SettingsPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "retention": {
+          "$ref": "#/$defs/Retention"
+        }
+      },
+      "required": [
+        "expected_version"
+      ],
+      "type": "object"
+    },
+    "SettleTerminal": {
+      "additionalProperties": false,
+      "description": "Requires independent verification of termination. Only a reported cost settles budget; null retains financial hold.",
+      "properties": {
+        "action": {
+          "const": "settle_terminal",
+          "type": "string"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/UsageAmount"
+                },
+                {
+                  "properties": {
+                    "amount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "certainty": {
+                      "const": "reported"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1024,
+          "minLength": 8,
+          "type": "string"
+        },
+        "upstream_state": {
+          "enum": [
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_version",
+        "reason",
+        "evidence_ref",
+        "action",
+        "upstream_state",
+        "cost"
+      ],
+      "type": "object"
+    },
+    "TavilyAdvancedOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "country": {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        },
+        "end_date": {
+          "format": "date",
+          "type": "string"
+        },
+        "include_answer": {
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "tavily_advanced",
+          "type": "string"
+        },
+        "start_date": {
+          "format": "date",
+          "type": "string"
+        },
+        "topic": {
+          "enum": [
+            "general",
+            "news",
+            "finance"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "TokenCreate": {
+      "additionalProperties": false,
+      "description": "Server derives stable owner principal from the admin session. Caller cannot nominate another owner or grant admin scopes.",
+      "properties": {
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/ClientScope"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "scopes",
+        "expires_at"
+      ],
+      "type": "object"
+    },
+    "TokenCreated": {
+      "additionalProperties": false,
+      "properties": {
+        "token": {
+          "$ref": "#/$defs/ClientToken"
+        },
+        "token_value": {
+          "description": "One-time reveal only. Never returned by list/read, never logged or persisted in browser storage.",
+          "maxLength": 256,
+          "minLength": 32,
+          "type": "string"
+        }
+      },
+      "required": [
+        "token",
+        "token_value"
+      ],
+      "type": "object"
+    },
+    "UsageAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "certainty": {
+          "$ref": "#/$defs/UsageCertainty"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "pricing_revision": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/UsageUnit"
+        }
+      },
+      "required": [
+        "unit",
+        "amount",
+        "certainty",
+        "source",
+        "observed_at",
+        "pricing_revision"
+      ],
+      "type": "object"
+    },
+    "UsageCertainty": {
+      "enum": [
+        "reported",
+        "estimated",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "UsageRefresh": {
+      "additionalProperties": false,
+      "properties": {
+        "account_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "key_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "UsageRefreshResult": {
+      "additionalProperties": false,
+      "properties": {
+        "next_refresh_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "refreshed",
+            "coalesced"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "observed_at",
+        "next_refresh_at"
+      ],
+      "type": "object"
+    },
+    "UsageUnit": {
+      "enum": [
+        "micro_usd",
+        "tavily_credit"
+      ],
+      "type": "string"
+    },
+    "UsageView": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AccountUsage"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overview": {
+          "$ref": "#/$defs/OverviewMetrics"
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor",
+        "overview"
+      ],
+      "type": "object"
+    },
+    "VersionedAction": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "expected_version"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://exta.invalid/contract",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47"
+}

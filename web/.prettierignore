@@ -1,0 +1,6 @@
+src/generated/
+dist/
+coverage/
+node_modules/
+test-results/
+playwright-report/
