@@ -1,0 +1,188 @@
+name: Verify Windows and Linux x64
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ inputs.version == '' }}
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: -mod=readonly
+
+jobs:
+  changes:
+    name: Change identification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+      - name: Record verification scope
+        run: |
+          printf '## Exta verification\n\nSource: `%s`\n\nTargets: `windows/amd64`, `linux/amd64`\n\nAll required quality and runtime gates run for this source.\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          git diff-tree --root --no-commit-id --name-only -r HEAD
+  linux:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: 1.26.10
+          cache: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm install --global npm@12.2.0
+      - run: npm ci --prefix web
+      - name: Frontend quality and contract
+        run: |
+          npm run typecheck --prefix web
+          npm exec --prefix web -- tsc --noEmit -p web/tsconfig.e2e.json
+          npm run lint --prefix web
+          npm run format:check --prefix web
+          npm exec --prefix web -- prettier --check web/e2e web/playwright.config.ts web/tsconfig.e2e.json
+          npm run test --prefix web -- --run
+          node --test tools/embed/build.test.mjs
+          go run ./tools/check
+      - name: Build production UI once
+        run: npm run build --prefix web
+      - name: Go verification with Linux race detector
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go vet ./cmd/... ./internal/... ./tests/... ./tools/...
+          go test -race ./cmd/... ./internal/... ./tests/... ./tools/... -count=1 -timeout=10m
+      - name: Build the two standalone targets
+        run: |
+          mkdir -p artifacts
+          go run ./tools/release verify --output artifacts/candidate --version "${CANDIDATE_VERSION:-ci-$GITHUB_SHA}"
+          cp internal/webassets/production.zip artifacts/candidate/production.zip
+        env:
+          CANDIDATE_VERSION: ${{ inputs.version }}
+      - name: Native Linux acceptance
+        env:
+          EXTA_SMOKE_BINARY: ${{ github.workspace }}/artifacts/candidate/exta-linux-amd64
+        run: go test ./tools/release -run '^TestPackagedRuntime$' -v -count=1 -timeout=150s
+      - name: Install Chromium on the disposable runner
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Production browser acceptance
+        env:
+          EXTA_E2E_BINARY: ${{ github.workspace }}/artifacts/candidate/exta-linux-amd64
+        run: npm run test:e2e --prefix web
+      - name: Build and accept Linux amd64 container
+        env:
+          CANDIDATE_VERSION: ${{ inputs.version }}
+        run: |
+          docker build --platform linux/amd64 -f Dockerfile --build-arg SOURCE_SHA="$GITHUB_SHA" --build-arg VERSION="${CANDIDATE_VERSION:-ci-$GITHUB_SHA}" -t "exta-candidate:$GITHUB_SHA" artifacts/candidate
+          bash tools/release/container-smoke.sh artifacts/candidate "exta-candidate:$GITHUB_SHA" artifacts/container-evidence
+          docker save "exta-candidate:$GITHUB_SHA" -o artifacts/candidate/container-linux-amd64.tar
+          (cd artifacts/candidate && sha256sum container-linux-amd64.tar > container-SHA256SUMS)
+          cp -R artifacts/container-evidence artifacts/candidate/container-evidence
+      - name: Summarize accepted candidates
+        run: |
+          printf '## Exta Linux acceptance\n\nSource: `%s`\n\nNative, race, production browser and container gates passed.\n\n```text\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          cat artifacts/candidate/SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+          printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: candidate-windows-amd64-${{ github.sha }}
+          path: |
+            artifacts/candidate/exta-windows-amd64.exe
+            artifacts/candidate/exta-windows-amd64.exe.zip
+            artifacts/candidate/release-manifest.json
+            artifacts/candidate/SHA256SUMS
+            artifacts/candidate/production.zip
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: candidate-linux-amd64-${{ github.sha }}
+          path: artifacts/candidate/
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: browser-linux-amd64-${{ github.sha }}
+          path: web/test-results/
+          retention-days: 7
+
+  windows:
+    needs: linux
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: 1.26.10
+          cache: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: candidate-windows-amd64-${{ github.sha }}
+          path: artifacts/candidate
+      - name: Verify exact Windows candidate and reuse embedded UI
+        shell: pwsh
+        run: |
+          $manifest = Get-Content artifacts/candidate/release-manifest.json -Raw | ConvertFrom-Json
+          $artifact = $manifest.artifacts | Where-Object target -eq 'windows/amd64'
+          if (@($artifact).Count -ne 1) { throw 'Missing unique Windows candidate' }
+          $actual = (Get-FileHash artifacts/candidate/exta-windows-amd64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $artifact.sha256) { throw 'Windows candidate checksum mismatch' }
+          $bundle = (Get-FileHash artifacts/candidate/production.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($bundle -ne $manifest.source_files.'internal/webassets/production.zip') { throw 'Embedded archive checksum mismatch' }
+          Copy-Item artifacts/candidate/production.zip internal/webassets/production.zip
+      - name: Windows Go and native acceptance
+        shell: pwsh
+        run: |
+          go test ./cmd/... ./internal/... ./tests/... ./tools/... -count=1 -timeout=10m
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:EXTA_SMOKE_BINARY = Join-Path $pwd 'artifacts/candidate/exta-windows-amd64.exe'
+          go test ./tools/release -run '^TestPackagedRuntime$' -v -count=1 -timeout=150s
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: npm install --global npm@12.2.0
+      - run: npm ci --prefix web
+      - name: Install Chromium on the disposable runner
+        working-directory: web
+        run: npx playwright install chromium
+      - name: Production browser acceptance
+        shell: pwsh
+        run: |
+          $env:EXTA_E2E_BINARY = Join-Path $pwd 'artifacts/candidate/exta-windows-amd64.exe'
+          npm run test:e2e --prefix web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: browser-windows-amd64-${{ github.sha }}
+          path: web/test-results/
+          retention-days: 7
+      - name: Summarize Windows acceptance
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash artifacts/candidate/exta-windows-amd64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          @('## Exta Windows acceptance', '', "Source: $env:GITHUB_SHA", 'Target: windows/amd64', "Binary SHA256: $hash", 'Native and production browser gates passed.') | Add-Content $env:GITHUB_STEP_SUMMARY

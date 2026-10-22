@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-v0.1.0
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'QianFuv/Exta' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/verify.yml
+    with:
+      version: 0.1.0
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: candidate-linux-amd64-${{ github.sha }}
+          path: candidate
+      - name: Check accepted artifact identities
+        working-directory: candidate
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          test "$(jq -r .head release-manifest.json)" = "$SOURCE_SHA"
+          test "$(jq -r .version release-manifest.json)" = 0.1.0
+          test "$(jq -r '.artifacts | map(.target) | sort | join(",")' release-manifest.json)" = linux/amd64,windows/amd64
+          sha256sum --check SHA256SUMS
+          sha256sum --check container-SHA256SUMS
+          docker load --input container-linux-amd64.tar
+          test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "exta-candidate:$SOURCE_SHA")" = "$SOURCE_SHA"
+      - name: Publish accepted container and GitHub release
+        working-directory: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          GH_REPO: QianFuv/Exta
+        run: |
+          releases="$(gh api repos/QianFuv/Exta/releases --paginate --jq '.[].tag_name')"
+          if grep -Fxq v0.1.0 <<< "$releases"; then echo 'v0.1.0 already exists; refusing replacement' >&2; exit 1; fi
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          image=ghcr.io/qianfuv/exta
+          docker tag "exta-candidate:$SOURCE_SHA" "$image:0.1.0"
+          docker tag "exta-candidate:$SOURCE_SHA" "$image:sha-$SOURCE_SHA"
+          docker push "$image:0.1.0"
+          docker push "$image:sha-$SOURCE_SHA"
+          digest="$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image:0.1.0" | grep '^ghcr.io/qianfuv/exta@sha256:' | head -n 1)"
+          test -n "$digest"
+          printf '%s\n' "$digest" > container-digest.txt
+          printf 'Exta 0.1.0\n\nSource: %s\n\nWindows/Linux amd64 native, Linux race, production browser and Linux container acceptance passed in Actions run %s.\n\nContainer: `%s`\nVersion tag: `%s:0.1.0`\nSource tag: `%s:sha-%s`\n\nSee docs/docker.md for private persistent state, TLS and Compose instructions. No server is deployed. No application license has been assigned; dependency notices accompany the archives.\n' "$SOURCE_SHA" "$GITHUB_RUN_ID" "$digest" "$image" "$image" "$SOURCE_SHA" > release-notes.md
+          gh release create v0.1.0 --target "$SOURCE_SHA" --title 'Exta v0.1.0' --notes-file release-notes.md \
+            exta-windows-amd64.exe.zip exta-linux-amd64.zip SHA256SUMS release-manifest.json container-digest.txt
+          printf '## Exta release\n\nSource: `%s`\n\nContainer: `%s`\n\n[GitHub v0.1.0](https://github.com/QianFuv/Exta/releases/tag/v0.1.0)\n' "$SOURCE_SHA" "$digest" >> "$GITHUB_STEP_SUMMARY"

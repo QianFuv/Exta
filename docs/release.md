@@ -27,6 +27,17 @@ Set the environment variable using the host shell's syntax. Smoke copies the exe
 
 Native and browser evidence must identify the executable hash. Cross-build success alone is build-only. Windows tests cannot establish Linux execution or race coverage. Missing isolated Linux prerequisites must be reported without starting or changing unrelated services. Only schema 1 exists; no-op migration evidence does not establish an actual schema-upgrade interruption result.
 
+Production browser acceptance uses the existing Playwright installation and the real executable:
+
+```text
+EXTA_E2E_BINARY=<absolute native executable path>
+npm run test:e2e --prefix web
+```
+
+The harness creates private temporary state, seeds offline Research bindings, blocks credential dispatch, and starts only its own process. It verifies cookie login/logout, CSRF rejection, management routes and chunks, concurrent account edits, token creation/revocation, a real accepted replay whose response is deliberately lost, same-key recovery, unsent cancellation, independent risk overrides and safe report rendering. Axe checks and desktop/mobile captures cover the exercised screens. Cleanup checks task/reservation counts and zero dispatch evidence. It does not certify live provider responses or simulate a new paid create from the browser. `EXTA_GO_BINARY` optionally selects the installed Go executable for fixture setup.
+
 CI uses locked dependencies and caches, builds the frontend once, checks Go with the Linux race detector, cross-builds only the two supported targets, then runs native/browser acceptance on the corresponding x64 runners. It publishes no release or tag. Local workflow preparation is not a claim that hosted CI has run.
+
+The separate manually dispatched `Release` workflow is restricted to `QianFuv/Exta` on `main`. It reuses all verification gates with version `0.1.0`, including isolated Linux container acceptance, before uploading the two archives/checksums and the tested Linux image to `ghcr.io/qianfuv/exta`. Its concurrency policy never cancels a release in progress. Artifact names identify platform and source SHA; manifests supply binary/archive SHA-256 values, and job summaries retain the source and verification scope. A publication failure requires checking the existing release, tags and package before retrying. Package public visibility must be verified separately. See [container persistence and TLS setup](docker.md).
 
 An interrupted output directory without final manifest/checksums is not verified. Use a new directory per candidate. Rebuild after any source change. Historical candidates and user runtime data are never cleaned by the release tool.

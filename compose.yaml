@@ -1,0 +1,18 @@
+services:
+  exta:
+    image: ${EXTA_IMAGE:?Set the verified image tag or digest}
+    platform: linux/amd64
+    user: "${EXTA_UID:?Set the state owner's UID}:${EXTA_GID:?Set the state owner's GID}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports:
+      - "127.0.0.1:8789:8789"
+    volumes:
+      - type: bind
+        source: ./exta-data
+        target: /var/lib/exta
+        bind:
+          create_host_path: false
+    stop_grace_period: 45s
+    restart: unless-stopped
