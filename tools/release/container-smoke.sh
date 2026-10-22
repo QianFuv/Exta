@@ -9,6 +9,7 @@ temporary="$(mktemp -d)"
 container="exta-acceptance-${GITHUB_RUN_ID:-local}-${RANDOM}"
 cleanup() {
   docker rm -f "$container" "$container-second" >/dev/null 2>&1 || true
+  if test -d "$temporary/notices"; then chmod -R u+rwX "$temporary/notices"; fi
   rm -rf "$temporary"
 }
 trap cleanup EXIT
