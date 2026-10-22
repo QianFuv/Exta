@@ -31,6 +31,9 @@ func (service *Service) Capabilities(ctx context.Context) (domain.Capabilities, 
 				}
 				entry := domain.CapabilityProfile{Provider: provider, Profile: profile, BudgetModes: []string{}, Cancellation: domain.CancelCapability{}}
 				minimum := providers.ReservationAmount(provider, providers.Input{Operation: route.Capability, Profile: string(profile), MaxResults: 10, Urls: []string{"https://example.com"}, Limit: 50, ExtractionProfile: "basic"})
+				if operation == "research_create" {
+					minimum = map[domain.Profile]int64{"exa_auto": 1000000, "tavily_mini": 110, "tavily_pro": 250}[profile]
+				}
 				available, err := service.Store.Available(ctx, string(provider), minimum)
 				if err != nil {
 					return result, err
@@ -41,7 +44,7 @@ func (service *Service) Capabilities(ctx context.Context) (domain.Capabilities, 
 					}
 				}
 				if operation == "research_create" {
-					entry.Enabled = entry.Enabled && service.ResearchEnabled
+					entry.Enabled = entry.Enabled && service.Research != nil
 					entry.Cancellation.Observation = true
 					entry.Cancellation.Upstream = provider == "exa"
 					if provider == "exa" {
@@ -85,8 +88,13 @@ func (service *Service) Capabilities(ctx context.Context) (domain.Capabilities, 
 			hard["max_depth"] = 3
 			hard["max_breadth"] = 100
 		case "research_create":
-			defaults["profile"] = "exa_auto"
-			defaults["micro_usd_cap"] = 1000000
+			if len(route.Targets) > 0 {
+				defaults["profile"] = route.Targets[0].Profile
+			}
+			defaults["max_attempts"] = min(2, route.MaxAttempts)
+			defaults["deadline_seconds"] = min(30, route.DeadlineSeconds)
+			hard["max_attempts"] = 2
+			hard["deadline_seconds"] = 30
 			hard["observation_seconds"] = 3600
 		}
 		item.DefaultLimits = json.RawMessage(store.JSON(defaults))

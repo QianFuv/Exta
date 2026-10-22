@@ -28,6 +28,7 @@ type action func(http.ResponseWriter, *http.Request, store.Identity) (any, error
 
 // Register adds retrieval, metadata and MCP routes to the existing management mux.
 func Register(mux *http.ServeMux, auth *security.Auth, core *service.Service, usage *service.UsageService, options Options) error {
+	registerResearch(mux, auth, core)
 	register := func(pattern, permission string, admin bool, handler action) {
 		mux.HandleFunc(pattern, func(writer http.ResponseWriter, request *http.Request) {
 			var identity store.Identity

@@ -9,6 +9,7 @@ import (
 
 	"exta/internal/domain"
 	"exta/internal/providers"
+	"exta/internal/research"
 	"exta/internal/scheduler"
 	"exta/internal/security"
 	"exta/internal/store"
@@ -16,12 +17,12 @@ import (
 
 // Service is shared by REST, MCP and administrator operations.
 type Service struct {
-	Store           *store.Store
-	Clients         map[domain.Provider]*providers.Client
-	Queue           scheduler.Queue
-	URLs            security.UrlPolicy
-	Wait            func(context.Context, time.Duration) error
-	ResearchEnabled bool
+	Store    *store.Store
+	Clients  map[domain.Provider]*providers.Client
+	Queue    scheduler.Queue
+	URLs     security.UrlPolicy
+	Wait     func(context.Context, time.Duration) error
+	Research *research.Engine
 }
 
 // New creates local orchestration; constructing clients never contacts an upstream.
@@ -36,7 +37,7 @@ func New(state *store.Store, clients map[domain.Provider]*providers.Client, urls
 			clients[provider] = client
 		}
 	}
-	return &Service{Store: state, Clients: clients, URLs: urls, Wait: waitContext}, nil
+	return &Service{Store: state, Clients: clients, URLs: urls, Wait: waitContext, Research: &research.Engine{Store: state, Clients: clients}}, nil
 }
 
 func waitContext(ctx context.Context, duration time.Duration) error {

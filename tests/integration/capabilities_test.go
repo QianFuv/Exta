@@ -97,3 +97,31 @@ func TestCapabilitiesExposePersistedLimitsThroughBothProtocols(t *testing.T) {
 	}
 	assertCount(t, state, "SELECT count(*) FROM budget_reservations", 0)
 }
+
+func TestResearchCapabilitiesDescribeFrozenPolicyBounds(t *testing.T) {
+	state, owner, _, _ := foundation(t)
+	addTavily(t, state, owner)
+	route, err := state.Route(t.Context(), "research_create")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = state.SaveRoute(t.Context(), owner, "research_create", domain.RouteReplace{ExpectedVersion: route.Revision, Enabled: true, Targets: []domain.RouteTarget{{Provider: "tavily", Profile: "tavily_mini"}}, MaxAttempts: 3, DeadlineSeconds: 60})
+	if err != nil {
+		t.Fatal(err)
+	}
+	core, _ := retrievalService(t, state, nil, newMockProvider(t))
+	result, err := core.Capabilities(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, capability := range result.Capabilities {
+		if capability.Operation == "research_create" {
+			var defaults, hard map[string]any
+			_ = json.Unmarshal(capability.DefaultLimits, &defaults)
+			_ = json.Unmarshal(capability.HardLimits, &hard)
+			if defaults["profile"] != "tavily_mini" || defaults["max_attempts"] != float64(2) || defaults["deadline_seconds"] != float64(30) || hard["max_attempts"] != float64(2) {
+				t.Fatalf("false Research policy: %v %v", defaults, hard)
+			}
+		}
+	}
+}

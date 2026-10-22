@@ -1,10 +1,11 @@
 # Exta contract candidate
 
-This is the T1 implementation of approved planning revision 2. `openapi.yaml` is
+This is the shared contract from approved planning revision 2, with the approved
+Research upstream-identifier compatibility correction. `openapi.yaml` is
 the canonical OpenAPI 3.1 document, written in the JSON subset of YAML. Its byte
-SHA256 is recorded in `contract-manifest.json`. The controller's S4 acceptance is
-still required before T2 backend/frontend writing starts. This file records
-resolved details, not a new approval or a claim that the service exists.
+SHA256 is recorded in `contract-manifest.json`. Backend implementation proceeds
+under the accepted contract. Frontend work is paused; this document does not
+claim frontend acceptance.
 
 ## Generation and verification
 
@@ -28,6 +29,11 @@ download with `GOTOOLCHAIN=local`. Tests never require provider credentials.
 
 Generated outputs are `schemas/exta.json`, `schemas/mcp-tools.json`,
 `internal/domain/{types.gen.go,schemas.gen.json}` and `web/src/generated/`.
+During the frontend pause, `go run ./tools/contract generate --backend-only`
+and `check --backend-only` validate examples and generate/compare only the API
+schemas and Go types. They never invoke Node or write frontend files. The manifest
+retains the frontend's original hash and marks `frontend_deferred` until frontend
+generation is explicitly resumed. A backend check is not a full frontend check.
 Go tagged unions and arbitrary JSON values use `json.RawMessage` aliases to keep
 their wire representation intact; the named variant types are generated from
 the same schemas. Validate before decoding. Optional nullable patch fields use
