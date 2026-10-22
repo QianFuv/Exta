@@ -340,7 +340,7 @@ func (engine *Engine) Reconcile(ctx context.Context, actor, id string, raw []byt
 			if input.Cost != nil {
 				cost = pointer(int64(*input.Cost.Amount))
 			}
-			if observation.Report != nil {
+			if observation.Report != nil && !item.ContentPurged {
 				item.ResultCipher, err = engine.Store.Vault.Seal(id+"/result", []byte(store.JSON(observation.Report)))
 				if err != nil {
 					return err
