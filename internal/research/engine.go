@@ -31,6 +31,7 @@ type record struct {
 	CancelPending             bool                             `json:"cancel_pending"`
 	CancelSent                bool                             `json:"cancel_sent"`
 	ObservationStopped        bool                             `json:"observation_stopped"`
+	ContentPurged             bool                             `json:"content_purged,omitempty"`
 	Action                    string                           `json:"action"`
 	RawID                     string                           `json:"-"`
 	Lease                     string                           `json:"-"`
@@ -100,6 +101,9 @@ func (engine *Engine) expose(item record, content bool) (domain.Job, error) {
 }
 
 func (engine *Engine) saveTx(ctx context.Context, tx *sql.Tx, item *record, from domain.JobState, reason, actor string) error {
+	if err := store.AdvanceActivityTx(ctx, tx); err != nil {
+		return err
+	}
 	hold, err := store.ReservationTx(ctx, tx, item.ReservationID)
 	if err != nil {
 		return err

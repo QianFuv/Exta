@@ -91,8 +91,8 @@ func TestInterruptedRequestRetainsReservationAcrossRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	var activity int
-	if err = state.DB.QueryRow("SELECT generation FROM activity_fence").Scan(&activity); err != nil || activity != 1 {
-		t.Fatalf("missing transmission fence: %d %v", activity, err)
+	if err = state.DB.QueryRow("SELECT generation FROM activity_fence").Scan(&activity); err != nil || activity != 2 {
+		t.Fatalf("request acceptance and transmission must both fence rollback: %d %v", activity, err)
 	}
 }
 

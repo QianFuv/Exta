@@ -246,7 +246,7 @@ func (engine *Engine) Accept(ctx context.Context, owner, key string, raw []byte)
 		if err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE activity_fence SET generation=generation+1 WHERE id=1"); err != nil {
+		if err = store.AdvanceActivityTx(ctx, tx); err != nil {
 			return err
 		}
 		return engine.eventTx(ctx, tx, job, "", "accepted_locally", owner)

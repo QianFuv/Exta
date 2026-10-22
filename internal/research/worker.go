@@ -173,9 +173,6 @@ func (engine *Engine) claim(ctx context.Context) (record, bool, error) {
 			item.Action = "create"
 			item.Attempts++
 			item.Job.State = "submitting"
-			if _, err = tx.ExecContext(ctx, "UPDATE activity_fence SET generation=generation+1 WHERE id=1"); err != nil {
-				return err
-			}
 		} else if item.RawID == "" {
 			item.Action = "reconcile"
 		} else if item.CancelPending && !item.CancelSent {

@@ -20,7 +20,10 @@ type RequestFilter struct {
 func (state *Store) StartRequest(ctx context.Context, principal string, item domain.RequestRecord) error {
 	return state.Write(ctx, func(tx *sql.Tx) error {
 		_, err := tx.ExecContext(ctx, "INSERT INTO requests VALUES(?,?,?,?)", item.Id, principal, JSON(item), item.CreatedAt)
-		return err
+		if err != nil {
+			return err
+		}
+		return AdvanceActivityTx(ctx, tx)
 	})
 }
 
@@ -30,8 +33,7 @@ func (state *Store) StartAttempt(ctx context.Context, requestId string, item dom
 		if _, err := tx.ExecContext(ctx, "INSERT INTO attempts VALUES(?,?,?,?)", item.Id, requestId, item.AttemptNumber, JSON(item)); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, "UPDATE activity_fence SET generation=generation+1 WHERE id=1")
-		return err
+		return AdvanceActivityTx(ctx, tx)
 	})
 }
 
