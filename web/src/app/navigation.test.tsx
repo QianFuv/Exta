@@ -37,7 +37,8 @@ describe("application shell", () => {
   it("defaults to Chinese and switches to English", async () => {
     renderApp("/overview", { locale: "zh" });
     expect(await screen.findByRole("heading", { name: "概览", level: 1 })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "切换语言" }));
+    await userEvent.click(screen.getByRole("button", { name: "切换语言: English" }));
+    expect(screen.getByRole("button", { name: "Switch language: 中文" })).toHaveTextContent("中文");
     expect(await screen.findByRole("heading", { name: "Overview", level: 1 })).toBeInTheDocument();
     expect(window.localStorage.getItem("exta.locale")).toBe("en");
     expect(document.documentElement.lang).toBe("en-US");

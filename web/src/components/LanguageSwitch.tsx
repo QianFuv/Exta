@@ -15,7 +15,7 @@ export function LanguageSwitch() {
       className="button button-ghost"
       onClick={() => setLocale(next)}
       lang={next === "en" ? "en" : "zh-CN"}
-      aria-label={t("language.switchTo")}
+      aria-label={`${t("language.switchTo")}: ${next === "en" ? "English" : "中文"}`}
     >
       {next === "en" ? "English" : "中文"}
     </button>
