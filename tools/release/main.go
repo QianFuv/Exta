@@ -400,6 +400,12 @@ func run(args []string) error {
 	if err = os.Mkdir(filepath.Join(destination, "licenses"), 0700); err != nil {
 		return err
 	}
+	targets := []string{"windows/amd64", "linux/amd64"}
+	for _, target := range targets {
+		if _, err = command(ctx, buildEnvironment(target), goBinary, "list", "-deps", "./cmd/exta"); err != nil {
+			return err
+		}
+	}
 	inventory, err := licenses(ctx, goBinary, destination)
 	if err != nil {
 		return err
@@ -426,7 +432,7 @@ func run(args []string) error {
 		return err
 	}
 	buildFlags := []string{"build", "-mod=readonly", "-buildvcs=false", "-trimpath", "-ldflags=-s -w -X main.version=" + *version}
-	for _, target := range []string{"windows/amd64", "linux/amd64"} {
+	for _, target := range targets {
 		fmt.Println("Building " + target)
 		name := "exta-" + strings.ReplaceAll(target, "/", "-")
 		if strings.HasPrefix(target, "windows/") {
