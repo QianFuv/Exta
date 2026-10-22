@@ -104,6 +104,10 @@ func managementHandlerWithCore(state *store.Store, auth *security.Auth, configur
 		if err != nil {
 			return nil, err
 		}
+		items, err = filterProvider(request, items, func(item domain.Account) domain.Provider { return item.Provider })
+		if err != nil {
+			return nil, err
+		}
 		items, cursor, err := page(request, items, func(item domain.Account) string { return item.CreatedAt + "/" + item.Id })
 		return domain.AccountList{Items: items, NextCursor: cursor}, err
 	})
@@ -123,6 +127,10 @@ func managementHandlerWithCore(state *store.Store, auth *security.Auth, configur
 	})
 	register("GET /v1/admin/keys", "admin:read", 200, func(_ http.ResponseWriter, request *http.Request, _ store.Identity, _ domain.Session) (any, error) {
 		items, err := state.Keys(request.Context())
+		if err != nil {
+			return nil, err
+		}
+		items, err = filterProvider(request, items, func(item domain.ProviderKey) domain.Provider { return item.Provider })
 		if err != nil {
 			return nil, err
 		}
@@ -227,6 +235,23 @@ func body[T any](state *store.Store, writer http.ResponseWriter, request *http.R
 	}
 	value, _, err := security.ReadJSON[T](writer, request, schema, int64(settings.Limits.RequestBytes))
 	return value, err
+}
+
+func filterProvider[T any](request *http.Request, items []T, provider func(T) domain.Provider) ([]T, error) {
+	values, supplied := request.URL.Query()["provider"]
+	if !supplied {
+		return items, nil
+	}
+	if len(values) != 1 || (values[0] != "exa" && values[0] != "tavily") {
+		return nil, store.Reject("invalid_request", 400, "Provider must be exa or tavily")
+	}
+	selected := []T{}
+	for _, item := range items {
+		if provider(item) == domain.Provider(values[0]) {
+			selected = append(selected, item)
+		}
+	}
+	return selected, nil
 }
 
 func page[T any](request *http.Request, items []T, order func(T) string) ([]T, *string, error) {
