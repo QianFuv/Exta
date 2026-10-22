@@ -19,7 +19,8 @@ test "$(docker image inspect --format '{{.Config.User}}' "$image")" = 65532:6553
 docker create --name "$container" "$image" version >/dev/null
 docker cp "$container:/exta" "$temporary/exta"
 cmp "$candidate/exta-linux-amd64" "$temporary/exta"
-docker cp "$container:/usr/share/exta" "$temporary/notices"
+mkdir "$temporary/notices"
+docker cp "$container:/usr/share/exta" - | tar -x -C "$temporary/notices" --strip-components=1 --no-same-owner --delay-directory-restore
 cmp "$candidate/dependency-inventory.json" "$temporary/notices/dependency-inventory.json"
 cmp "$candidate/frontend-provenance.json" "$temporary/notices/frontend-provenance.json"
 diff -r "$candidate/licenses" "$temporary/notices/licenses"
