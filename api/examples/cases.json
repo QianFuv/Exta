@@ -1826,5 +1826,59 @@
       "mode": "observation",
       "expected_version": 0
     }
+  },
+  {
+    "name": "upstream-id-official-punctuation",
+    "schema": "AttachUpstreamId",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "Synthetic recovered task",
+      "evidence_ref": "synthetic-provider-capture",
+      "action": "attach_upstream_id",
+      "upstream_job_id": ".task:with-punctuation_1"
+    }
+  },
+  {
+    "name": "upstream-id-official-200",
+    "schema": "AttachUpstreamId",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "reason": "Synthetic recovered task",
+      "evidence_ref": "synthetic-provider-capture",
+      "action": "attach_upstream_id",
+      "upstream_job_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  {
+    "name": "upstream-id-reject-201",
+    "schema": "AttachUpstreamId",
+    "valid": false,
+    "value": {
+      "expected_version": 1,
+      "reason": "Synthetic recovered task",
+      "evidence_ref": "synthetic-provider-capture",
+      "action": "attach_upstream_id",
+      "upstream_job_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  {
+    "name": "upstream-id-reject-path-separator",
+    "schema": "AttachUpstreamId",
+    "valid": false,
+    "value": {
+      "expected_version": 1,
+      "reason": "Synthetic recovered task",
+      "evidence_ref": "synthetic-provider-capture",
+      "action": "attach_upstream_id",
+      "upstream_job_id": "../another-task"
+    }
+  },
+  {
+    "name": "local-id-remains-restricted",
+    "schema": "ResearchCreate",
+    "valid": false,
+    "value": {"input":"Synthetic research", "budget":{"mode":"hard","unit":"micro_usd","amount":1000000}, "supersedes_job_id":"task.with:punctuation", "acknowledge_duplicate_charge":true}
   }
 ]

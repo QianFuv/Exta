@@ -30,10 +30,12 @@ type exampleCase struct {
 }
 
 type artifactManifest struct {
-	ContractVersion string            `json:"contract_version"`
-	ContractSHA256  string            `json:"contract_sha256"`
-	Generator       string            `json:"generator"`
-	Files           map[string]string `json:"files"`
+	ContractVersion        string            `json:"contract_version"`
+	ContractSHA256         string            `json:"contract_sha256"`
+	Generator              string            `json:"generator"`
+	Files                  map[string]string `json:"files"`
+	FrontendContractSHA256 string            `json:"frontend_contract_sha256,omitempty"`
+	FrontendDeferred       bool              `json:"frontend_deferred,omitempty"`
 }
 
 // main executes the explicit generate or read-only check action.
@@ -45,8 +47,9 @@ func main() {
 }
 
 func run(arguments []string) error {
-	if len(arguments) != 1 || (arguments[0] != "generate" && arguments[0] != "check") {
-		return errors.New("usage: go run ./tools/contract generate|check (from repository root)")
+	backendOnly := len(arguments) == 2 && arguments[1] == "--backend-only"
+	if (len(arguments) != 1 && !backendOnly) || (arguments[0] != "generate" && arguments[0] != "check") {
+		return errors.New("usage: go run ./tools/contract generate|check [--backend-only] (from repository root)")
 	}
 	source, err := os.ReadFile("api/openapi.yaml")
 	if err != nil {
@@ -59,11 +62,32 @@ func run(arguments []string) error {
 	if err = validate(contract); err != nil {
 		return err
 	}
-	artifacts, err := generate(contract, digest(source))
+	artifacts, err := generate(contract, digest(source), backendOnly)
 	if err != nil {
 		return err
 	}
 	manifest := artifactManifest{ContractVersion: "1.0.0", ContractSHA256: digest(source), Generator: "exta-contract-v1/openapi-typescript-7.13.0/defaultNonNullable=false", Files: map[string]string{}}
+	if backendOnly {
+		previousBytes, err := os.ReadFile("api/contract-manifest.json")
+		if err != nil {
+			return err
+		}
+		var previous artifactManifest
+		if err = json.Unmarshal(previousBytes, &previous); err != nil {
+			return err
+		}
+		manifest.Generator = "exta-contract-v1/backend-only"
+		manifest.FrontendContractSHA256 = previous.FrontendContractSHA256
+		if manifest.FrontendContractSHA256 == "" {
+			manifest.FrontendContractSHA256 = previous.ContractSHA256
+		}
+		manifest.FrontendDeferred = manifest.FrontendContractSHA256 != manifest.ContractSHA256
+		for path, hash := range previous.Files {
+			if strings.HasPrefix(path, "web/") {
+				manifest.Files[path] = hash
+			}
+		}
+	}
 	for path, content := range artifacts {
 		manifest.Files[path] = digest(content)
 	}
@@ -223,7 +247,7 @@ func validateInvariants(contract document) error {
 	return nil
 }
 
-func generate(contract document, hash string) (map[string][]byte, error) {
+func generate(contract document, hash string, backendOnly bool) (map[string][]byte, error) {
 	artifacts := map[string][]byte{}
 	definitions := rewriteReferences(schemaMap(contract))
 	schemas := document{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": schemaAddress, "$defs": definitions, "x-contract-sha256": hash}
@@ -239,6 +263,9 @@ func generate(contract document, hash string) (map[string][]byte, error) {
 		return nil, err
 	}
 	artifacts["api/schemas/mcp-tools.json"] = jsonBytes(tools)
+	if backendOnly {
+		return artifacts, nil
+	}
 	temporary, err := os.MkdirTemp("", "exta-contract-")
 	if err != nil {
 		return nil, err

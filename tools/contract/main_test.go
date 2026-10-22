@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -20,6 +21,22 @@ func loadTestContract(t *testing.T) document {
 		t.Fatal(err)
 	}
 	return contract
+}
+
+func TestBackendGenerationExcludesFrontendArtifacts(t *testing.T) {
+	contract := loadTestContract(t)
+	artifacts, err := generate(contract, "synthetic_hash", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(artifacts) != 4 {
+		t.Fatalf("backend artifacts %d", len(artifacts))
+	}
+	for path := range artifacts {
+		if strings.HasPrefix(path, "web/") {
+			t.Fatalf("frontend generated under backend-only: %s", path)
+		}
+	}
 }
 
 func TestAdminResearchCannotLoseAuthorizationOrReplayContract(t *testing.T) {

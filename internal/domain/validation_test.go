@@ -6,6 +6,21 @@ import (
 	"testing"
 )
 
+func TestUpstreamIdentifiersPreserveOfficialExaDomain(t *testing.T) {
+	for _, id := range []string{".task:with-punctuation_1", strings.Repeat("a", 200), ".", ".."} {
+		input, _ := json.Marshal(map[string]any{"action": "attach_upstream_id", "expected_version": 1, "reason": "Synthetic recovered task", "evidence_ref": "synthetic-provider-capture", "upstream_job_id": id})
+		if err := ValidateJSON("AttachUpstreamId", input); err != nil {
+			t.Fatalf("official ID %q: %v", id, err)
+		}
+	}
+	for _, id := range []string{"", strings.Repeat("a", 201), "task/other", "task%2Fother", "task?query", "task#fragment"} {
+		input, _ := json.Marshal(map[string]any{"action": "attach_upstream_id", "expected_version": 1, "reason": "Synthetic recovered task", "evidence_ref": "synthetic-provider-capture", "upstream_job_id": id})
+		if ValidateJSON("AttachUpstreamId", input) == nil {
+			t.Fatalf("unsafe ID accepted: %q", id)
+		}
+	}
+}
+
 func TestResearchInputCannotOverrideIdentityOrDowngradeBudget(t *testing.T) {
 	cases := []struct {
 		name  string

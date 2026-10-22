@@ -690,7 +690,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "advanced_search",
     "x-permission": "execute"
   },
@@ -1015,7 +1015,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "capabilities",
     "x-permission": "read"
   },
@@ -1587,7 +1587,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "crawl",
     "x-permission": "execute"
   },
@@ -2097,7 +2097,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "fetch",
     "x-permission": "execute"
   },
@@ -2654,7 +2654,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "map",
     "x-permission": "execute"
   },
@@ -3061,9 +3061,9 @@
             "upstream_job_id": {
               "anyOf": [
                 {
-                  "maxLength": 128,
+                  "maxLength": 200,
                   "minLength": 1,
-                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+                  "pattern": "^[A-Za-z0-9_.:-]+$",
                   "type": "string"
                 },
                 {
@@ -3276,7 +3276,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "researchCancel",
     "x-permission": "research:cancel"
   },
@@ -3873,9 +3873,9 @@
             "upstream_job_id": {
               "anyOf": [
                 {
-                  "maxLength": 128,
+                  "maxLength": 200,
                   "minLength": 1,
-                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+                  "pattern": "^[A-Za-z0-9_.:-]+$",
                   "type": "string"
                 },
                 {
@@ -4088,7 +4088,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "researchCreate",
     "x-permission": "research:create"
   },
@@ -4492,9 +4492,9 @@
             "upstream_job_id": {
               "anyOf": [
                 {
-                  "maxLength": 128,
+                  "maxLength": 200,
                   "minLength": 1,
-                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+                  "pattern": "^[A-Za-z0-9_.:-]+$",
                   "type": "string"
                 },
                 {
@@ -4811,7 +4811,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "researchGet",
     "x-permission": "research:read"
   },
@@ -5226,9 +5226,9 @@
             "upstream_job_id": {
               "anyOf": [
                 {
-                  "maxLength": 128,
+                  "maxLength": 200,
                   "minLength": 1,
-                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+                  "pattern": "^[A-Za-z0-9_.:-]+$",
                   "type": "string"
                 },
                 {
@@ -5471,7 +5471,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "researchList",
     "x-permission": "research:read"
   },
@@ -5876,9 +5876,9 @@
             "upstream_job_id": {
               "anyOf": [
                 {
-                  "maxLength": 128,
+                  "maxLength": 200,
                   "minLength": 1,
-                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+                  "pattern": "^[A-Za-z0-9_.:-]+$",
                   "type": "string"
                 },
                 {
@@ -6091,7 +6091,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "researchResumeObservation",
     "x-permission": "research:observe"
   },
@@ -6619,7 +6619,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
+    "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
     "x-operation-id": "search",
     "x-permission": "execute"
   }

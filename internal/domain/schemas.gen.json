@@ -577,9 +577,9 @@
           "type": "string"
         },
         "upstream_job_id": {
-          "maxLength": 128,
+          "maxLength": 200,
           "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "pattern": "^[A-Za-z0-9_.:-]+$",
           "type": "string"
         }
       },
@@ -1834,9 +1834,9 @@
         "upstream_job_id": {
           "anyOf": [
             {
-              "maxLength": 128,
+              "maxLength": 200,
               "minLength": 1,
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "pattern": "^[A-Za-z0-9_.:-]+$",
               "type": "string"
             },
             {
@@ -4214,5 +4214,5 @@
   },
   "$id": "https://exta.invalid/contract",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-contract-sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47"
+  "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512"
 }
