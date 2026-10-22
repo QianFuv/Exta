@@ -73,6 +73,30 @@ func TestAssetsValidateAndConfineNavigationFallback(t *testing.T) {
 }
 
 func TestAssetsRejectCorruptionAndBackendOnlyCannotClaimUI(t *testing.T) {
+	nullFiles, _ := assetFixture(t)
+	var nullMetadata map[string]any
+	if err := json.Unmarshal(nullFiles["manifest.json"].Data, &nullMetadata); err != nil {
+		t.Fatal(err)
+	}
+	nullMetadata["bundle_sha256"] = nil
+	nullData, nullErr := json.Marshal(nullMetadata)
+	if nullErr != nil {
+		t.Fatal(nullErr)
+	}
+	nullFiles["manifest.json"].Data = nullData
+	if _, err := Load(nullFiles); err == nil {
+		t.Fatal("null namespace bypassed validation")
+	}
+	delete(nullMetadata, "bundle_sha256")
+	nullMetadata["BUNDLE_SHA256"] = nil
+	nullData, nullErr = json.Marshal(nullMetadata)
+	if nullErr != nil {
+		t.Fatal(nullErr)
+	}
+	nullFiles["manifest.json"].Data = nullData
+	if _, err := Load(nullFiles); err == nil {
+		t.Fatal("case-variant null namespace bypassed validation")
+	}
 	files, script := assetFixture(t)
 	files[script].Data = []byte("corrupted")
 	if _, err := Load(files); err == nil {
@@ -83,7 +107,7 @@ func TestAssetsRejectCorruptionAndBackendOnlyCannotClaimUI(t *testing.T) {
 	if _, err := Load(files); err == nil {
 		t.Fatal("accepted unmanifested asset")
 	}
-	bundle, err := Embedded()
+	bundle, err := Load(fstest.MapFS{"manifest.json": {Data: []byte(`{"format":1,"mode":"backend-only","files":{},"routes":[]}`)}})
 	if err != nil || bundle.Available() {
 		t.Fatalf("paused frontend claimed ready: %v", err)
 	}
@@ -91,5 +115,43 @@ func TestAssetsRejectCorruptionAndBackendOnlyCannotClaimUI(t *testing.T) {
 	bundle.ServeHTTP(response, httptest.NewRequest("GET", "/app/", nil))
 	if response.Code != 404 {
 		t.Fatal("backend-only candidate served placeholder UI")
+	}
+}
+
+func TestBundleNamespaceAuthenticatesCompleteRelativeGraph(t *testing.T) {
+	script := []byte(`import "./lazy.js";`)
+	lazy := []byte(`export const loaded = true;`)
+	first, second := sha256.Sum256(script), sha256.Sum256(lazy)
+	firstHash, secondHash := hex.EncodeToString(first[:]), hex.EncodeToString(second[:])
+	namespace := sha256.Sum256([]byte("assets/app.js\x00" + firstHash + "\nassets/lazy.js\x00" + secondHash + "\n"))
+	hash := hex.EncodeToString(namespace[:])
+	prefix := "assets/" + hash + "/"
+	files := fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>UI</title>")}, prefix + "assets/app.js": {Data: script}, prefix + "assets/lazy.js": {Data: lazy}}
+	metadata := manifest{Format: 1, Mode: "production", BundleSHA256: &hash, Files: map[string]asset{}, Routes: []string{"/app/"}}
+	for name, file := range files {
+		sum := sha256.Sum256(file.Data)
+		metadata.Files[name] = asset{Size: len(file.Data), SHA256: hex.EncodeToString(sum[:]), Immutable: name != "index.html"}
+	}
+	writeManifest := func() {
+		data, err := json.Marshal(metadata)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files["manifest.json"] = &fstest.MapFile{Data: data}
+	}
+	writeManifest()
+	if _, err := Load(files); err != nil {
+		t.Fatal(err)
+	}
+	delete(files, prefix+"assets/lazy.js")
+	delete(metadata.Files, prefix+"assets/lazy.js")
+	writeManifest()
+	if _, err := Load(files); err == nil {
+		t.Fatal("accepted incomplete graph under old namespace")
+	}
+	metadata.BundleSHA256 = new(string)
+	writeManifest()
+	if _, err := Load(files); err == nil {
+		t.Fatal("invalid namespace fell back to legacy validation")
 	}
 }

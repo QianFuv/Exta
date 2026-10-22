@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node ../tools/embed/build.mjs",
     "typecheck": "tsc -b",
     "test": "vitest",
     "test:e2e": "playwright test",

@@ -17,6 +17,7 @@ import (
 	"exta/internal/domain"
 	"exta/internal/security"
 	"exta/internal/store"
+	"exta/internal/webassets"
 )
 
 const restoreMarkerName = "restore-operation.json"
@@ -178,7 +179,12 @@ func doctor(ctx context.Context, directory string, output io.Writer) error {
 			add("port", "available at the instant of this local bind; not reserved", portErr)
 		}
 	}
-	checks = append(checks, check{"assets", "deferred", "backend-only candidate; embedded UI acceptance is deferred"})
+	bundle, assetErr := webassets.Embedded()
+	if assetErr == nil && !bundle.Available() {
+		checks = append(checks, check{"assets", "deferred", "backend-only build"})
+	} else {
+		add("assets", "embedded production bundle integrity verified; browser acceptance recorded separately", assetErr)
+	}
 	if err := json.NewEncoder(output).Encode(struct {
 		Build  domain.BuildInfo `json:"build"`
 		Checks []check          `json:"checks"`

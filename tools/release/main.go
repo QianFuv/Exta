@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"debug/buildinfo"
 	"debug/elf"
-	"debug/macho"
 	"debug/pe"
 	"encoding/hex"
 	"encoding/json"
@@ -106,12 +105,18 @@ func writeJSON(path string, value any) error {
 
 func sourceFiles() (map[string]string, error) {
 	files := map[string]string{}
-	for _, root := range []string{"cmd", "internal", "tests", "tools", "api", "go.mod", "go.sum"} {
+	for _, root := range []string{"cmd", "internal", "tests", "tools", "api", "web", "go.mod", "go.sum", ".node-version", ".npmrc"} {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 			if entry.IsDir() {
+				if root == "web" && (entry.Name() == "node_modules" || entry.Name() == "dist" || entry.Name() == "test-results" || entry.Name() == "playwright-report" || entry.Name() == "coverage") {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if root == "web" && strings.HasSuffix(path, ".tsbuildinfo") {
 				return nil
 			}
 			if entry.Type()&fs.ModeSymlink != 0 {
@@ -237,21 +242,8 @@ func binaryImports(path, target string) ([]string, error) {
 		if len(imports) > 0 {
 			return nil, errors.New("Linux candidate unexpectedly links shared libraries")
 		}
-	case "darwin":
-		file, err := macho.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		defer file.Close()
-		imports, err = file.ImportedLibraries()
-		if err != nil {
-			return nil, err
-		}
-		for _, name := range imports {
-			if !strings.HasPrefix(name, "/usr/lib/") && !strings.HasPrefix(name, "/System/Library/") {
-				return nil, errors.New("macOS candidate links a non-system library")
-			}
-		}
+	default:
+		return nil, errors.New("unsupported release target")
 	}
 	for _, name := range imports {
 		if strings.Contains(strings.ToLower(name), "sqlite") || strings.Contains(strings.ToLower(name), "node") {
@@ -275,6 +267,26 @@ func archive(destination, binary string) error {
 	}
 	for _, entry := range entries {
 		paths = append(paths, "licenses/"+entry.Name())
+	}
+	if _, err := os.Stat(filepath.Join(destination, "frontend-provenance.json")); err == nil {
+		paths = append(paths, "frontend-provenance.json")
+		err = filepath.WalkDir(filepath.Join(destination, "frontend-licenses"), func(name string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			relative, err := filepath.Rel(destination, name)
+			if err == nil {
+				paths = append(paths, filepath.ToSlash(relative))
+			}
+			return err
+		})
+		if err != nil {
+			file.Close()
+			return err
+		}
 	}
 	for _, path := range paths {
 		content, err := os.ReadFile(filepath.Join(destination, filepath.FromSlash(path)))
@@ -310,11 +322,11 @@ func archive(destination, binary string) error {
 
 func run(args []string) error {
 	if len(args) == 0 || args[0] != "verify" {
-		return errors.New("usage: release verify --backend-only --output <new-directory> [--version value]")
+		return errors.New("usage: release verify --output <new-directory> [--version value] [--backend-only]")
 	}
 	flags := flag.NewFlagSet("release verify", flag.ContinueOnError)
 	output := flags.String("output", "", "New artifact directory")
-	version := flags.String("version", "backend-candidate", "Embedded application version")
+	version := flags.String("version", "candidate", "Embedded application version")
 	backendOnly := flags.Bool("backend-only", false, "Explicitly defer embedded UI acceptance")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
@@ -326,12 +338,20 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	bundle, err := webassets.Load(os.DirFS("internal/webassets/bundle"))
+	frontend, err := openFrontend()
+	if err != nil {
+		return err
+	}
+	bundleFiles, err := fs.Sub(frontend, "bundle")
+	if err != nil {
+		return err
+	}
+	bundle, err := webassets.Load(bundleFiles)
 	if err != nil {
 		return err
 	}
 	if !*backendOnly && !bundle.Available() {
-		return errors.New("production release requires verified embedded UI; use --backend-only for the paused frontend candidate")
+		return errors.New("production release requires verified embedded UI")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
@@ -365,6 +385,11 @@ func run(args []string) error {
 	if hex.EncodeToString(contractDigest[:]) != contract.SHA256 {
 		return errors.New("source contract hash differs from manifest")
 	}
+	if bundle.Available() {
+		if err := verifyFrontend(contract.SHA256); err != nil {
+			return err
+		}
+	}
 	destination, err := filepath.Abs(*output)
 	if err != nil {
 		return err
@@ -382,7 +407,12 @@ func run(args []string) error {
 	if err = writeJSON(filepath.Join(destination, "dependency-inventory.json"), inventory); err != nil {
 		return err
 	}
-	notes := "Exta local backend candidate. No publication, signing or live provider validation. Frontend acceptance is deferred. Native runtime evidence must be recorded separately; cross-build success is not runtime acceptance. Linux race was not executed: WSL is reserved for authorized maintenance. Application license is not declared; this inventory makes no licensing grant. Dependency license texts are included as found in the locked module sources.\n"
+	if bundle.Available() {
+		if err := copyFrontendEvidence(destination); err != nil {
+			return err
+		}
+	}
+	notes := "Exta local candidate for Windows/Linux x64. No publication, signing or live provider validation. Native runtime and browser evidence must be recorded separately and tied to each binary hash; cross-build success is not runtime acceptance. Application license is not declared; this inventory makes no licensing grant. Dependency license texts are included from locked Go and shipped frontend packages.\n"
 	if err = os.WriteFile(filepath.Join(destination, "RELEASE-NOTES.txt"), []byte(notes), 0600); err != nil {
 		return err
 	}
@@ -396,7 +426,7 @@ func run(args []string) error {
 		return err
 	}
 	buildFlags := []string{"build", "-mod=readonly", "-buildvcs=false", "-trimpath", "-ldflags=-s -w -X main.version=" + *version}
-	for _, target := range []string{"windows/amd64", "linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"} {
+	for _, target := range []string{"windows/amd64", "linux/amd64"} {
 		fmt.Println("Building " + target)
 		name := "exta-" + strings.ReplaceAll(target, "/", "-")
 		if strings.HasPrefix(target, "windows/") {

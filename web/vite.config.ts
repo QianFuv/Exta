@@ -27,7 +27,8 @@ function mockWorkerPlugin(): Plugin {
 }
 
 export default defineConfig({
-  base: "/app/",
+  base: "./",
+  publicDir: false,
   plugins: [react(), mockWorkerPlugin()],
   build: {
     manifest: true,

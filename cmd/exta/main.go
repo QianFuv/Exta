@@ -58,9 +58,6 @@ func defaultDirectory() string {
 	if err != nil {
 		return ""
 	}
-	if runtime.GOOS == "darwin" {
-		return filepath.Join(home, "Library", "Application Support", "Exta")
-	}
 	if directory := os.Getenv("XDG_DATA_HOME"); filepath.IsAbs(directory) {
 		return filepath.Join(directory, "exta")
 	}

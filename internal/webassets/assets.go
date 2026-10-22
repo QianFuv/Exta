@@ -2,9 +2,10 @@
 package webassets
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/sha256"
-	"embed"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,8 +25,8 @@ import (
 	"exta/internal/store"
 )
 
-//go:embed bundle
-var embedded embed.FS
+//go:embed production.zip
+var embedded []byte
 
 type asset struct {
 	Size      int    `json:"size"`
@@ -33,10 +35,11 @@ type asset struct {
 }
 
 type manifest struct {
-	Format int              `json:"format"`
-	Mode   string           `json:"mode"`
-	Files  map[string]asset `json:"files"`
-	Routes []string         `json:"routes"`
+	Format       int              `json:"format"`
+	Mode         string           `json:"mode"`
+	Files        map[string]asset `json:"files"`
+	Routes       []string         `json:"routes"`
+	BundleSHA256 *string          `json:"bundle_sha256,omitempty"`
 }
 
 // Bundle retains only manifest-verified bytes; it never reads adjacent runtime files.
@@ -52,7 +55,12 @@ var embeddedError error
 // Embedded returns the immutable build bundle, including an explicit backend-only mode.
 func Embedded() (*Bundle, error) {
 	embeddedOnce.Do(func() {
-		root, err := fs.Sub(embedded, "bundle")
+		archive, err := zip.NewReader(bytes.NewReader(embedded), int64(len(embedded)))
+		if err != nil {
+			embeddedError = err
+			return
+		}
+		root, err := fs.Sub(archive, "bundle")
 		if err != nil {
 			embeddedError = err
 			return
@@ -80,8 +88,23 @@ func Load(source fs.FS) (*Bundle, error) {
 	if decoder.Decode(new(any)) != io.EOF {
 		return nil, errors.New("invalid asset manifest envelope")
 	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	for name := range fields {
+		if strings.EqualFold(name, "bundle_sha256") && name != "bundle_sha256" {
+			return nil, errors.New("noncanonical asset bundle digest field")
+		}
+	}
+	if _, present := fields["bundle_sha256"]; present && result.manifest.BundleSHA256 == nil {
+		return nil, errors.New("null asset bundle digest")
+	}
 	if result.manifest.Format != 1 {
 		return nil, errors.New("unsupported asset manifest format")
+	}
+	if result.manifest.BundleSHA256 != nil && (result.manifest.Mode != "production" || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(*result.manifest.BundleSHA256)) {
+		return nil, errors.New("invalid asset bundle digest")
 	}
 	if result.manifest.Mode == "backend-only" {
 		if len(result.manifest.Files) != 0 || len(result.manifest.Routes) != 0 {
@@ -105,10 +128,16 @@ func Load(source fs.FS) (*Bundle, error) {
 		}
 	}
 	total := 0
+	assetNames := []string{}
+	caseNames := map[string]bool{}
 	for name, entry := range result.manifest.Files {
-		if !fs.ValidPath(name) || strings.ContainsAny(name, "\\%?#") || name == "manifest.json" || name != "index.html" && !strings.HasPrefix(name, "assets/") {
+		if !fs.ValidPath(name) || strings.ContainsAny(name, "\\%?#\x00\r\n\t") || name == "manifest.json" || name != "index.html" && !strings.HasPrefix(name, "assets/") {
 			return nil, errors.New("asset path is outside the bundle namespace")
 		}
+		if caseNames[strings.ToLower(name)] {
+			return nil, errors.New("case-colliding asset paths")
+		}
+		caseNames[strings.ToLower(name)] = true
 		if entry.Size < 1 || entry.Size > 16<<20 || len(entry.SHA256) != 64 {
 			return nil, errors.New("invalid asset size or digest")
 		}
@@ -120,7 +149,14 @@ func Load(source fs.FS) (*Bundle, error) {
 		if len(content) != entry.Size || hex.EncodeToString(digest[:]) != entry.SHA256 {
 			return nil, errors.New("asset integrity mismatch")
 		}
-		if entry.Immutable && (name == "index.html" || !strings.Contains(path.Base(name), entry.SHA256[:8])) {
+		if result.manifest.BundleSHA256 != nil && name != "index.html" {
+			prefix := "assets/" + *result.manifest.BundleSHA256 + "/"
+			if !strings.HasPrefix(name, prefix) {
+				return nil, errors.New("asset outside content-addressed bundle")
+			}
+			assetNames = append(assetNames, strings.TrimPrefix(name, prefix))
+		}
+		if entry.Immutable && (name == "index.html" || result.manifest.BundleSHA256 == nil && !strings.Contains(path.Base(name), entry.SHA256[:8])) {
 			return nil, errors.New("immutable asset lacks a content hash in its name")
 		}
 		total += len(content)
@@ -128,6 +164,17 @@ func Load(source fs.FS) (*Bundle, error) {
 			return nil, errors.New("asset bundle exceeds limit")
 		}
 		result.contents[name] = content
+	}
+	if result.manifest.BundleSHA256 != nil {
+		sort.Strings(assetNames)
+		digest := sha256.New()
+		for _, name := range assetNames {
+			entry := result.manifest.Files["assets/"+*result.manifest.BundleSHA256+"/"+name]
+			io.WriteString(digest, name+"\x00"+entry.SHA256+"\n")
+		}
+		if len(assetNames) == 0 || hex.EncodeToString(digest.Sum(nil)) != *result.manifest.BundleSHA256 {
+			return nil, errors.New("asset bundle namespace integrity mismatch")
+		}
 	}
 	err = fs.WalkDir(source, ".", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
