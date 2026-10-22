@@ -6,6 +6,9 @@ LABEL org.opencontainers.image.title="Exta" \
   org.opencontainers.image.revision="${SOURCE_SHA}" \
   org.opencontainers.image.version="${VERSION}"
 COPY --chmod=0555 exta-linux-amd64 /exta
+COPY --chmod=0444 dependency-inventory.json frontend-provenance.json /usr/share/exta/
+COPY --chmod=0555 licenses/ /usr/share/exta/licenses/
+COPY --chmod=0555 frontend-licenses/ /usr/share/exta/frontend-licenses/
 ENV HOME=/var/lib/exta
 USER 65532:65532
 EXPOSE 8789

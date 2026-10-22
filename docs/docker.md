@@ -2,7 +2,7 @@
 
 The image packages the exact accepted Linux executable; it does not rebuild application code. Its digest-pinned [Distroless static Debian 13 nonroot base](https://github.com/GoogleContainerTools/distroless) supplies trusted CA certificates without a shell or package manager. The image runs as UID/GID 65532 by default. No container or host deployment is performed by the release workflow.
 
-The candidate registry destination is `ghcr.io/qianfuv/exta`. Repository and package visibility must be confirmed before the first upload. Tags `0.1.0` and `sha-<source-sha>` and the registry digest will be recorded only after native Linux/race, Windows, browser and container gates pass. No image is currently claimed as published.
+The authorized public registry destination is `ghcr.io/qianfuv/exta`. Tags `0.1.0` and `sha-<source-sha>` and the registry digest are recorded only after native Linux/race, Windows, browser and container gates pass. Confirm the published package is publicly readable before distributing its pull command. Dependency inventories and Go/frontend license notices are readable under `/usr/share/exta/` in the image.
 
 Build locally on an isolated Linux amd64 Docker host after release verification:
 

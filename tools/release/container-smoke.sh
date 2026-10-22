@@ -19,6 +19,11 @@ test "$(docker image inspect --format '{{.Config.User}}' "$image")" = 65532:6553
 docker create --name "$container" "$image" version >/dev/null
 docker cp "$container:/exta" "$temporary/exta"
 cmp "$candidate/exta-linux-amd64" "$temporary/exta"
+docker cp "$container:/usr/share/exta" "$temporary/notices"
+cmp "$candidate/dependency-inventory.json" "$temporary/notices/dependency-inventory.json"
+cmp "$candidate/frontend-provenance.json" "$temporary/notices/frontend-provenance.json"
+diff -r "$candidate/licenses" "$temporary/notices/licenses"
+diff -r "$candidate/frontend-licenses" "$temporary/notices/frontend-licenses"
 docker rm "$container" >/dev/null
 docker run --rm --network none "$image" version > "$evidence/version.json"
 
