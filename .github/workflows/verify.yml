@@ -62,6 +62,7 @@ jobs:
           npm exec --prefix web -- prettier --check web/e2e web/playwright.config.ts web/tsconfig.e2e.json
           npm run test --prefix web -- --run
           node --test tools/embed/build.test.mjs
+          python -B -m unittest discover -s tools/release -p 'test_publish.py'
           go run ./tools/check
       - name: Build production UI once
         run: npm run build --prefix web
