@@ -154,7 +154,7 @@ func (client *Client) Exchange(ctx context.Context, method, path, credential str
 		return nil, outcome
 	}
 	var body io.Reader
-	if method != http.MethodGet {
+	if method != http.MethodGet && payload != nil {
 		body = bytes.NewReader(encoded)
 	}
 	request, err := http.NewRequestWithContext(ctx, method, client.origin+path, body)
@@ -218,8 +218,14 @@ func (client *Client) Exchange(ctx context.Context, method, path, credential str
 		RequestId string `json:"requestId"`
 		SnakeId   string `json:"request_id"`
 		Tag       string `json:"tag"`
+		Error     struct {
+			Code string `json:"code"`
+		} `json:"error"`
 	}
 	_ = json.Unmarshal(data, &envelope)
+	if strings.HasPrefix(path, "/agent/") && envelope.Tag == "" {
+		envelope.Tag = envelope.Error.Code
+	}
 	id := envelope.RequestId
 	if id == "" {
 		id = envelope.SnakeId
