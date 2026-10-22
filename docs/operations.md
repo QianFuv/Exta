@@ -2,6 +2,8 @@
 
 Commands use an absolute external `--data-dir`. Provider calls are never part of doctor, backup, restore or migration. Stop the service explicitly before operating on its state; these commands refuse a held directory lock and never stop another process.
 
+On Windows, executable startup sets its own process token's default owner to the process user. This keeps files and SQLite sidecars user-owned even when an elevated process would otherwise create Administrators-owned objects. It does not enable privileges, change host policy or repair existing files; strict owner, DACL and reparse checks remain active.
+
 Initialization creates missing directories with owner-only access at creation. An existing empty directory must already be private; an insecure directory is rejected rather than tightened in place because previously opened handles cannot be revoked. Choose a new leaf in that case. Existing nonempty directories are preserved.
 
 - `exta doctor --data-dir <path>` reports local permission/configuration/TLS, schema/integrity, encrypted-state and point-in-time port checks. It validates embedded production assets; browser acceptance remains separate execution evidence.
