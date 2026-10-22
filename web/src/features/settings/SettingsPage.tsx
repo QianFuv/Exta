@@ -1,0 +1,305 @@
+/** Non-secret limits/retention editing plus build, schema and readiness diagnostics. */
+import { useId, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiFailure, call, useApi } from "../../lib/api";
+import type { Schemas } from "../../lib/api";
+import { CONTRACT_SHA256 } from "../../generated/client.gen";
+import { useI18n } from "../../lib/i18n";
+import type { MessageKey } from "../../lib/messages";
+import { useSession } from "../../lib/session";
+import { Badge, InlineError, Notice, QueryView } from "../../components/Feedback";
+import { useNotify } from "../../components/Notifications";
+import { PageHeader, PermissionHint, RequirePermission, Section } from "../../components/Page";
+import { ReadinessList } from "../overview/ReadinessList";
+
+type Settings = Schemas["Settings"];
+type EditableLimit = Exclude<keyof Schemas["Limits"], "principal_research_active">;
+type EditableRetention = Exclude<keyof Schemas["Retention"], "idempotency_days">;
+
+const LIMIT_FIELDS: ReadonlyArray<{ name: EditableLimit; minimum: number; maximum: number }> = [
+  { name: "synchronous_concurrency", minimum: 1, maximum: 16 },
+  { name: "synchronous_waiting", minimum: 0, maximum: 64 },
+  { name: "principal_requests_per_minute", minimum: 1, maximum: 60 },
+  { name: "research_queued", minimum: 1, maximum: 100 },
+  { name: "research_active", minimum: 1, maximum: 2 },
+  { name: "request_bytes", minimum: 1024, maximum: 1048576 },
+  { name: "response_bytes", minimum: 1024, maximum: 8388608 },
+  { name: "observation_seconds", minimum: 60, maximum: 3600 },
+  { name: "max_polls", minimum: 1, maximum: 120 },
+];
+
+const RETENTION_FIELDS: ReadonlyArray<{
+  name: EditableRetention;
+  minimum: number;
+  maximum: number;
+}> = [
+  { name: "request_days", minimum: 1, maximum: 30 },
+  { name: "research_content_days", minimum: 1, maximum: 30 },
+  { name: "audit_days", minimum: 1, maximum: 90 },
+];
+
+/**
+ * Settings page.
+ *
+ * @returns Page element.
+ */
+export function SettingsPage() {
+  const { t } = useI18n();
+  return (
+    <>
+      <PageHeader title={t("settings.title")} description={t("settings.description")} />
+      <RequirePermission permission="admin:read">
+        <SettingsContent />
+      </RequirePermission>
+    </>
+  );
+}
+
+/**
+ * Loaded settings.
+ *
+ * @returns Sections.
+ */
+function SettingsContent() {
+  const { t } = useI18n();
+  const api = useApi();
+  const settings = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => call(api.GET("/v1/admin/settings")),
+  });
+  return (
+    <QueryView query={settings}>
+      {(data) => (
+        <>
+          <Section title={t("settings.diagnostics")}>
+            <BuildDiagnostics settings={data} />
+            <ReadinessList readiness={data.readiness} />
+          </Section>
+          <LimitsForm key={data.version} settings={data} />
+          <Section title={t("settings.protected")} description={t("settings.protectedDescription")}>
+            {data.protected_fields.length === 0 ? (
+              <p className="muted">—</p>
+            ) : (
+              <ul className="plain-list">
+                {data.protected_fields.map((field) => (
+                  <li key={field}>
+                    <code>{field}</code>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+        </>
+      )}
+    </QueryView>
+  );
+}
+
+/**
+ * Build/version/contract diagnostics, flagging a UI/server contract mismatch.
+ *
+ * @param props - Settings.
+ * @returns Diagnostics list.
+ */
+function BuildDiagnostics({ settings }: { settings: Settings }) {
+  const { t } = useI18n();
+  const isMismatch = settings.build.contract_hash !== CONTRACT_SHA256;
+  return (
+    <>
+      {isMismatch ? (
+        <Notice tone="danger" role="alert" title={t("settings.contractMismatch")}>
+          {t("settings.contractMismatchDetail")}
+        </Notice>
+      ) : null}
+      <dl className="details-grid">
+        <dt>{t("settings.version")}</dt>
+        <dd>
+          <code>{settings.build.version}</code>
+        </dd>
+        <dt>{t("settings.target")}</dt>
+        <dd>
+          <code>{settings.build.target}</code>
+        </dd>
+        <dt>{t("settings.schemaVersion")}</dt>
+        <dd>{settings.build.schema_version}</dd>
+        <dt>{t("settings.serverContract")}</dt>
+        <dd>
+          <code className="hash">{settings.build.contract_hash}</code>{" "}
+          <Badge tone={isMismatch ? "danger" : "neutral"}>
+            {isMismatch ? t("settings.mismatch") : t("settings.matchesUi")}
+          </Badge>
+        </dd>
+        <dt>{t("settings.uiContract")}</dt>
+        <dd>
+          <code className="hash">{CONTRACT_SHA256}</code>
+        </dd>
+      </dl>
+    </>
+  );
+}
+
+/**
+ * Versioned limits and retention form.
+ *
+ * @param props - Current settings.
+ * @returns Section element.
+ */
+function LimitsForm({ settings }: { settings: Settings }) {
+  const { t, formatNumber } = useI18n();
+  const api = useApi();
+  const { can, csrfToken } = useSession();
+  const queryClient = useQueryClient();
+  const notify = useNotify();
+  const formId = useId();
+  const canWrite = can("admin:settings:write");
+  const [limits, setLimits] = useState<Record<EditableLimit, string>>(
+    () =>
+      Object.fromEntries(
+        LIMIT_FIELDS.map((field) => [field.name, String(settings.limits[field.name])]),
+      ) as Record<EditableLimit, string>,
+  );
+  const [retention, setRetention] = useState<Record<EditableRetention, string>>(
+    () =>
+      Object.fromEntries(
+        RETENTION_FIELDS.map((field) => [field.name, String(settings.retention[field.name])]),
+      ) as Record<EditableRetention, string>,
+  );
+
+  const isInRange = (text: string, minimum: number, maximum: number) => {
+    const value = Number(text);
+    return /^\d+$/.test(text) && value >= minimum && value <= maximum;
+  };
+  const isValid =
+    LIMIT_FIELDS.every((field) => isInRange(limits[field.name], field.minimum, field.maximum)) &&
+    RETENTION_FIELDS.every((field) =>
+      isInRange(retention[field.name], field.minimum, field.maximum),
+    );
+
+  const save = useMutation({
+    mutationFn: () =>
+      call(
+        api.PATCH("/v1/admin/settings", {
+          params: { header: { "X-Exta-CSRF": csrfToken } },
+          body: {
+            expected_version: settings.version,
+            limits: {
+              synchronous_concurrency: Number(limits.synchronous_concurrency),
+              synchronous_waiting: Number(limits.synchronous_waiting),
+              principal_requests_per_minute: Number(limits.principal_requests_per_minute),
+              research_queued: Number(limits.research_queued),
+              research_active: Number(limits.research_active),
+              principal_research_active: 1,
+              request_bytes: Number(limits.request_bytes),
+              response_bytes: Number(limits.response_bytes),
+              observation_seconds: Number(limits.observation_seconds),
+              max_polls: Number(limits.max_polls),
+            },
+            retention: {
+              request_days: Number(retention.request_days),
+              research_content_days: Number(retention.research_content_days),
+              audit_days: Number(retention.audit_days),
+              idempotency_days: 90,
+            },
+          },
+        }),
+      ),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["settings"], updated);
+      notify("info", t("settings.saved"));
+    },
+    onError: (error) => {
+      if (error instanceof ApiFailure && error.status === 409) {
+        void queryClient.invalidateQueries({ queryKey: ["settings"] });
+      }
+    },
+  });
+
+  const renderField = (
+    name: string,
+    value: string,
+    minimum: number,
+    maximum: number,
+    onChange: (value: string) => void,
+  ) => {
+    const isFieldValid = isInRange(value, minimum, maximum);
+    return (
+      <div className="field" key={name}>
+        <label htmlFor={`${formId}-${name}`}>{t(`settings.field.${name}` as MessageKey)}</label>
+        <input
+          id={`${formId}-${name}`}
+          inputMode="numeric"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          disabled={!canWrite || save.isPending}
+          aria-invalid={!isFieldValid}
+          aria-describedby={`${formId}-${name}-range`}
+        />
+        <p id={`${formId}-${name}-range`} className="field-hint">
+          {formatNumber(minimum)}–{formatNumber(maximum)}
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <Section
+      title={t("settings.limitsTitle")}
+      description={t("settings.limitsDescription", { version: settings.version })}
+    >
+      <PermissionHint permission="admin:settings:write" />
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canWrite && isValid && !save.isPending) {
+            save.mutate();
+          }
+        }}
+      >
+        <fieldset className="fieldset">
+          <legend>{t("settings.limits")}</legend>
+          <div className="field-grid">
+            {LIMIT_FIELDS.map((field) =>
+              renderField(field.name, limits[field.name], field.minimum, field.maximum, (value) =>
+                setLimits((current) => ({ ...current, [field.name]: value })),
+              ),
+            )}
+            <div className="field">
+              <span className="field-label">{t("settings.field.principal_research_active")}</span>
+              <p className="readonly-value">1</p>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset className="fieldset">
+          <legend>{t("settings.retention")}</legend>
+          <div className="field-grid">
+            {RETENTION_FIELDS.map((field) =>
+              renderField(
+                field.name,
+                retention[field.name],
+                field.minimum,
+                field.maximum,
+                (value) => setRetention((current) => ({ ...current, [field.name]: value })),
+              ),
+            )}
+            <div className="field">
+              <span className="field-label">{t("settings.field.idempotency_days")}</span>
+              <p className="readonly-value">90</p>
+            </div>
+          </div>
+          <p className="field-hint">{t("settings.retentionNote")}</p>
+        </fieldset>
+        <InlineError error={save.error} />
+        <div className="button-row">
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={!canWrite || !isValid || save.isPending}
+          >
+            {save.isPending ? t("common.working") : t("common.save")}
+          </button>
+        </div>
+      </form>
+    </Section>
+  );
+}
