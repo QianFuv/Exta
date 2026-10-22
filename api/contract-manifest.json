@@ -1,15 +1,13 @@
 {
   "contract_version": "1.0.0",
   "contract_sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512",
-  "generator": "exta-contract-v1/backend-only",
+  "generator": "exta-contract-v1/openapi-typescript-7.13.0/defaultNonNullable=false",
   "files": {
     "api/schemas/exta.json": "40ab5c98c39797ac567b0c5d5d973b2295495db3f2d40aa34aa5490278ada213",
     "api/schemas/mcp-tools.json": "4ae3f7c27d531f2508d42335898696d095fbd927a18fd7ea787e12038d1393ce",
     "internal/domain/schemas.gen.json": "40ab5c98c39797ac567b0c5d5d973b2295495db3f2d40aa34aa5490278ada213",
     "internal/domain/types.gen.go": "b1eb97683c664d650d965fc4f24946e6b8b9b6fbd7d3ee9dd53752a47f3280b0",
-    "web/src/generated/client.gen.tsx": "f0fbac91a3322b57b01e76865101c74aebd5105740d6931502e682d0bc948b97",
-    "web/src/generated/types.gen.ts": "2967d5675666cbd43b3e04fcd6850807bdd87c89b57b5cfa037908fc35f67c45"
-  },
-  "frontend_contract_sha256": "26c443aa7084fea8bcb6563660080f1081d81c3329f2a4d3843faa5107859a47",
-  "frontend_deferred": true
+    "web/src/generated/client.gen.tsx": "07d369eabfa8d7d19728e2e09d59e2b3ac586dcb610d102c84daf89f1decf18f",
+    "web/src/generated/types.gen.ts": "b11b200b5b80185bc8dcd2a18b250dd48b95a264e6ca0eb5cd0ab150e71bc6c9"
+  }
 }
