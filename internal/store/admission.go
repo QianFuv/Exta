@@ -159,8 +159,10 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 		if _, err = tx.ExecContext(ctx, "SAVEPOINT account_admission"); err != nil {
 			return result, err
 		}
-		if err = consumeRate(ctx, tx, "account", account.Id, now, units, rate, burst); err == nil {
-			err = consumeRate(ctx, tx, "key", keyId, now, units, rate, burst)
+		if !input.Research {
+			if err = consumeRate(ctx, tx, "account", account.Id, now, units, rate, burst); err == nil {
+				err = consumeRate(ctx, tx, "key", keyId, now, units, rate, burst)
+			}
 		}
 		if err != nil {
 			var fault *Fault
@@ -190,6 +192,12 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 			return Reservation{}, err
 		}
 		for _, gate := range [][2]string{{"account", account.Id}, {"key", keyId}} {
+			if input.Research {
+				if _, err = tx.ExecContext(ctx, "UPDATE runtime_gates SET next_order=(SELECT coalesce(max(next_order),0)+1 FROM runtime_gates WHERE scope=?) WHERE scope=? AND entity_id=?", gate[0], gate[0], gate[1]); err != nil {
+					return Reservation{}, err
+				}
+				continue
+			}
 			if _, err = tx.ExecContext(ctx, `UPDATE runtime_gates SET next_order=(SELECT coalesce(max(next_order),0)+1 FROM runtime_gates WHERE scope=?),half_open=CASE WHEN breaker_ms>0 THEN ? ELSE 0 END,probe_owner=CASE WHEN breaker_ms>0 THEN ? ELSE '' END WHERE scope=? AND entity_id=?`, gate[0], now+180000, result.Id, gate[0], gate[1]); err != nil {
 				return Reservation{}, err
 			}
@@ -273,49 +281,145 @@ func (state *Store) Settle(ctx context.Context, id string, cost *int64, certaint
 // GateFailure applies account/key scope without revoking a rotated credential by mistake.
 func (state *Store) GateFailure(ctx context.Context, scope, id, credential, kind string, cooldown time.Duration) error {
 	return state.Write(ctx, func(tx *sql.Tx) error {
-		if scope != "account" && scope != "key" {
-			return Reject("invalid_request", 400, "Unknown gate scope")
-		}
-		now := state.Now().UnixMilli()
-		if kind == "invalid" {
-			if _, err := tx.ExecContext(ctx, "UPDATE credential_versions SET validity='invalid' WHERE id=?", credential); err != nil {
-				return err
-			}
-			_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET validity='invalid',half_open=0 WHERE scope='key' AND entity_id=? AND EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?)", id, id, credential)
-			return err
-		}
-		if kind == "quota" {
-			_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET blocked=1,half_open=0 WHERE scope=? AND entity_id=? AND (scope='account' OR EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?))", scope, id, id, credential)
-			return err
-		}
-		if kind == "rate" {
-			_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET cooldown_ms=max(cooldown_ms,?),half_open=0 WHERE scope=? AND entity_id=?", now+cooldown.Milliseconds(), scope, id)
-			return err
-		}
-		if kind == "transient" {
-			_, err := tx.ExecContext(ctx, `UPDATE runtime_gates SET failures=CASE WHEN window_ms>? THEN failures+1 ELSE 1 END,window_ms=CASE WHEN window_ms>? THEN window_ms ELSE ? END,breaker_ms=CASE WHEN (window_ms>? AND failures>=4) OR half_open>0 THEN ? ELSE breaker_ms END,generation=generation+CASE WHEN (window_ms>? AND failures>=4) OR half_open>0 THEN 1 ELSE 0 END,half_open=0,probe_owner='' WHERE scope=? AND entity_id=?`, now-60000, now-60000, now, now-60000, now+30000, now-60000, scope, id)
-			return err
-		}
-		return Reject("invalid_request", 400, "Unknown gate failure")
+		return state.GateFailureTx(ctx, tx, scope, id, credential, kind, cooldown)
 	})
+}
+
+// GateFailureTx persists an upstream gate together with durable research evidence.
+func (state *Store) GateFailureTx(ctx context.Context, tx *sql.Tx, scope, id, credential, kind string, cooldown time.Duration) error {
+	if scope != "account" && scope != "key" {
+		return Reject("invalid_request", 400, "Unknown gate scope")
+	}
+	now := state.Now().UnixMilli()
+	if kind == "invalid" {
+		if _, err := tx.ExecContext(ctx, "UPDATE credential_versions SET validity='invalid' WHERE id=?", credential); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET validity='invalid',half_open=0 WHERE scope='key' AND entity_id=? AND EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?)", id, id, credential)
+		return err
+	}
+	if kind == "quota" {
+		_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET blocked=1,half_open=0 WHERE scope=? AND entity_id=? AND (scope='account' OR EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?))", scope, id, id, credential)
+		return err
+	}
+	if kind == "rate" {
+		_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET cooldown_ms=max(cooldown_ms,?),half_open=0 WHERE scope=? AND entity_id=?", now+cooldown.Milliseconds(), scope, id)
+		return err
+	}
+	if kind == "transient" {
+		_, err := tx.ExecContext(ctx, `UPDATE runtime_gates SET failures=CASE WHEN window_ms>? THEN failures+1 ELSE 1 END,window_ms=CASE WHEN window_ms>? THEN window_ms ELSE ? END,breaker_ms=CASE WHEN (window_ms>? AND failures>=4) OR half_open>0 THEN ? ELSE breaker_ms END,generation=generation+CASE WHEN (window_ms>? AND failures>=4) OR half_open>0 THEN 1 ELSE 0 END,half_open=0,probe_owner='' WHERE scope=? AND entity_id=?`, now-60000, now-60000, now, now-60000, now+30000, now-60000, scope, id)
+		return err
+	}
+	return Reject("invalid_request", 400, "Unknown gate failure")
 }
 
 // GateSuccess closes a circuit but does not erase billing blocks or rate cooldowns.
 func (state *Store) GateSuccess(ctx context.Context, reservation Reservation) error {
 	return state.Write(ctx, func(tx *sql.Tx) error {
-		for _, gate := range [][2]string{{"account", reservation.AccountId}, {"key", reservation.KeyId}} {
-			generation := reservation.AccountGateGeneration
-			if gate[0] == "key" {
-				generation = reservation.KeyGateGeneration
-			}
-			if _, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET failures=0,breaker_ms=0,half_open=0,probe_owner='' WHERE scope=? AND entity_id=? AND generation=? AND (breaker_ms=0 OR probe_owner=?)", gate[0], gate[1], generation, reservation.Id); err != nil {
-				return err
-			}
+		return state.GateSuccessTx(ctx, tx, reservation)
+	})
+}
+
+// GateSuccessTx closes a matching probe with the same transaction as job evidence.
+func (state *Store) GateSuccessTx(ctx context.Context, tx *sql.Tx, reservation Reservation) error {
+	for _, gate := range [][2]string{{"account", reservation.AccountId}, {"key", reservation.KeyId}} {
+		generation := reservation.AccountGateGeneration
+		if gate[0] == "key" {
+			generation = reservation.KeyGateGeneration
 		}
-		if _, err := tx.ExecContext(ctx, "UPDATE credential_versions SET validity='valid' WHERE id=? AND validity<>'invalid'", reservation.CredentialVersionId); err != nil {
+		if _, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET failures=0,breaker_ms=0,half_open=0,probe_owner='' WHERE scope=? AND entity_id=? AND generation=? AND (breaker_ms=0 OR probe_owner=?)", gate[0], gate[1], generation, reservation.Id); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET validity='valid' WHERE scope='key' AND validity<>'invalid' AND entity_id=? AND EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?)", reservation.KeyId, reservation.KeyId, reservation.CredentialVersionId)
+	}
+	if _, err := tx.ExecContext(ctx, "UPDATE credential_versions SET validity='valid' WHERE id=? AND validity<>'invalid'", reservation.CredentialVersionId); err != nil {
 		return err
+	}
+	_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET validity='valid' WHERE scope='key' AND validity<>'invalid' AND entity_id=? AND EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?)", reservation.KeyId, reservation.KeyId, reservation.CredentialVersionId)
+	return err
+}
+
+// ResearchDispatch charges shared wire-attempt rates without reserving money again.
+func (state *Store) ResearchDispatch(ctx context.Context, reservationID string, isCreate bool, probeOwner string) (Reservation, error) {
+	var hold Reservation
+	err := state.Write(ctx, func(tx *sql.Tx) error {
+		var err error
+		hold, err = ReservationTx(ctx, tx, reservationID)
+		if err != nil {
+			return err
+		}
+		return state.ResearchDispatchTx(ctx, tx, &hold, isCreate, probeOwner)
 	})
+	return hold, err
+}
+
+// ResearchDispatchTx enforces pinned identity and provider/account/key wire gates.
+func (state *Store) ResearchDispatchTx(ctx context.Context, tx *sql.Tx, hold *Reservation, isCreate bool, probeOwner string) error {
+	now := state.Now().UnixMilli()
+	var until int64
+	err := tx.QueryRowContext(ctx, `SELECT coalesce(max(max(cooldown_ms,breaker_ms,CASE WHEN probe_owner<>? THEN half_open ELSE 0 END)),0) FROM runtime_gates WHERE (scope='provider' AND entity_id=?) OR (scope='account' AND entity_id=?) OR (scope='key' AND entity_id=?)`, probeOwner, hold.Provider, hold.AccountId, hold.KeyId).Scan(&until)
+	if err != nil {
+		return err
+	}
+	if until > now {
+		fault := Reject("upstream_rate_limited", 429, "Shared provider dispatch is cooling down")
+		fault.RetryAfterMs = until - now
+		return fault
+	}
+	var validity string
+	if err = tx.QueryRowContext(ctx, "SELECT validity FROM credential_versions WHERE id=?", hold.CredentialVersionId).Scan(&validity); err != nil {
+		return err
+	}
+	if validity == "invalid" {
+		return Reject("provider_unavailable", 503, "Original credential is invalid")
+	}
+	if isCreate {
+		var blocked int
+		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM runtime_gates WHERE blocked=1 AND ((scope='account' AND entity_id=?) OR (scope='key' AND entity_id=?))", hold.AccountId, hold.KeyId).Scan(&blocked); err != nil {
+			return err
+		}
+		if blocked > 0 {
+			return Reject("quota_unavailable", 503, "Original provider allocation is blocked")
+		}
+	}
+	rate, burst, units := int64(60), int64(5), int64(1)
+	if hold.Provider == "exa" {
+		rate, burst = 600, 10
+		if isCreate {
+			units = 2
+		}
+	}
+	if _, err = tx.ExecContext(ctx, "SAVEPOINT research_wire_rate"); err != nil {
+		return err
+	}
+	rateErr := consumeRate(ctx, tx, "account", hold.AccountId, now, units, rate, burst)
+	if rateErr == nil {
+		rateErr = consumeRate(ctx, tx, "key", hold.KeyId, now, units, rate, burst)
+	}
+	if rateErr != nil {
+		if _, err = tx.ExecContext(ctx, "ROLLBACK TO research_wire_rate"); err != nil {
+			return err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, "RELEASE research_wire_rate"); err != nil {
+		return err
+	}
+	if rateErr != nil {
+		return rateErr
+	}
+	for _, gate := range [][2]string{{"account", hold.AccountId}, {"key", hold.KeyId}} {
+		var generation int64
+		if err = tx.QueryRowContext(ctx, "SELECT generation FROM runtime_gates WHERE scope=? AND entity_id=?", gate[0], gate[1]).Scan(&generation); err != nil {
+			return err
+		}
+		if gate[0] == "account" {
+			hold.AccountGateGeneration = generation
+		} else {
+			hold.KeyGateGeneration = generation
+		}
+		if _, err = tx.ExecContext(ctx, "UPDATE runtime_gates SET half_open=?,probe_owner=? WHERE scope=? AND entity_id=? AND breaker_ms>0", now+180000, probeOwner, gate[0], gate[1]); err != nil {
+			return err
+		}
+	}
+	hold.Id = probeOwner
+	return nil
 }
