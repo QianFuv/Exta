@@ -47,20 +47,21 @@ type Input struct {
 
 // Outcome separates response data, transmission evidence, retry policy and accounting.
 type Outcome struct {
-	Results             []domain.RetrievalResult
-	Failures            []domain.ItemFailure
-	Output              *json.RawMessage
-	Warnings            []string
-	Cost                *int64
-	Certainty           string
-	Transmission        string
-	Status              int
-	RequestId           *string
-	Duration            time.Duration
-	Failure             *store.Fault
-	CanRetry, IsUnspent bool
-	GateScope, GateKind string
-	Cooldown            time.Duration
+	Results                         []domain.RetrievalResult
+	Failures                        []domain.ItemFailure
+	Output                          *json.RawMessage
+	Warnings                        []string
+	Cost                            *int64
+	Certainty                       string
+	Transmission                    string
+	Status                          int
+	RequestId                       *string
+	Duration                        time.Duration
+	Failure                         *store.Fault
+	CanRetry, IsUnspent             bool
+	RetryProhibited, SharedCooldown bool
+	GateScope, GateKind             string
+	Cooldown                        time.Duration
 }
 
 // Client always addresses a fixed provider origin; transport injection is for local fixtures.
@@ -195,6 +196,14 @@ func (client *Client) Exchange(ctx context.Context, method, path, credential str
 	outcome.Transmission = "response_received"
 	outcome.IsUnspent = false
 	outcome.Status = response.StatusCode
+	outcome.RetryProhibited = response.StatusCode == 400 || response.StatusCode == 403 || response.StatusCode == 422
+	if response.StatusCode == 429 {
+		outcome.GateScope, outcome.GateKind, outcome.SharedCooldown = "account", "rate", true
+		outcome.Cooldown = RetryAfter(response.Header.Get("Retry-After"), client.Now())
+		if outcome.Cooldown == 0 {
+			outcome.Cooldown = time.Second
+		}
+	}
 	data, readErr := io.ReadAll(io.LimitReader(response.Body, limit+1))
 	outcome.Duration = time.Since(started)
 	if readErr != nil {
@@ -253,6 +262,7 @@ func (client *Client) Exchange(ctx context.Context, method, path, credential str
 			outcome.CanRetry = true
 			outcome.GateScope = "account"
 			outcome.GateKind = "rate"
+			outcome.SharedCooldown = client.Provider != "exa" || envelope.Tag != "RATE_LIMIT_EXCEEDED"
 			outcome.Cooldown = RetryAfter(response.Header.Get("Retry-After"), client.Now())
 			if outcome.Cooldown == 0 {
 				outcome.Cooldown = time.Second

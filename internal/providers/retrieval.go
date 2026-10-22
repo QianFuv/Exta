@@ -30,6 +30,12 @@ func (client *Client) Retrieve(ctx context.Context, credential string, input Inp
 }
 
 func (client *Client) retrievalPayload(ctx context.Context, input Input) (string, map[string]any, *store.Fault) {
+	if client.Provider == "exa" && (input.ContentMode == "markdown" || input.Operation == "fetch" && input.Format == "markdown") {
+		return "", nil, store.Reject("unsupported_parameter", 422, "Exa does not guarantee Markdown extraction")
+	}
+	if len(input.ProviderOptions) == 0 {
+		input.ProviderOptions = json.RawMessage(`{}`)
+	}
 	if input.Profile != "common" && !(input.Operation == "advanced_search" && (client.Provider == "exa" && input.Profile == "exa_deep" || client.Provider == "tavily" && input.Profile == "tavily_advanced")) {
 		return "", nil, store.Reject("unsupported_capability", 422, "Requested profile cannot be downgraded to this provider")
 	}
@@ -328,6 +334,9 @@ func (client *Client) normalize(input Input, data []byte, outcome Outcome) Outco
 				if status.Error != nil && safeIdentifier.MatchString(status.Error.Tag) {
 					code = status.Error.Tag
 					canRetry = code == "CRAWL_TIMEOUT" || code == "CRAWL_FAILED"
+					if status.Error.Status != nil && *status.Error.Status >= 400 && *status.Error.Status < 500 && *status.Error.Status != 408 && *status.Error.Status != 429 {
+						canRetry = false
+					}
 				}
 				failed[status.Id] = domain.ItemFailure{Url: status.Id, Code: code, Message: "Provider could not retrieve this URL", Retryable: canRetry, Provider: client.Provider}
 			}
@@ -349,14 +358,6 @@ func (client *Client) normalize(input Input, data []byte, outcome Outcome) Outco
 				}
 			}
 			if !found {
-				for _, status := range envelope.Statuses {
-					if status.Id == link && status.Status == "success" {
-						found = true
-						break
-					}
-				}
-			}
-			if !found {
 				outcome.Failures = append(outcome.Failures, domain.ItemFailure{Url: link, InputIndex: domain.Integer(index), Code: "result_missing", Message: "Provider omitted a result for this URL", Provider: client.Provider})
 			}
 		}
@@ -371,9 +372,6 @@ func (client *Client) normalize(input Input, data []byte, outcome Outcome) Outco
 	if len(output) > 0 {
 		value := json.RawMessage(store.JSON(output))
 		outcome.Output = &value
-	}
-	if client.Provider == "exa" && (input.ContentMode == "markdown" || input.Format == "markdown") {
-		outcome.Warnings = append(outcome.Warnings, "Exa extraction is returned as text without a Markdown fidelity guarantee")
 	}
 	return outcome
 }
