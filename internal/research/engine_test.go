@@ -46,11 +46,7 @@ func fixture(t *testing.T) (*Engine, string, *time.Time) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	account, err := state.CreateAccount(t.Context(), owner, domain.AccountCreate{Provider: "exa", Label: "Synthetic", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100000000, PerOperationReservation: 1000000, ActiveJobs: 2}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = state.AddKey(t.Context(), owner, domain.KeyCreate{AccountId: account.Id, Label: "Synthetic", Enabled: true, Secret: "synthetic-original-research-secret"})
+	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100000000, PerOperationReservation: 1000000, ActiveJobs: 2}, Label: "Synthetic", Enabled: true, Secret: "synthetic-original-research-secret"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +316,7 @@ func TestQueuedAdmissionRechecksBillingAndCooldown(t *testing.T) {
 				t.Fatal(err)
 			}
 			var account, key string
-			if err = engine.Store.DB.QueryRow("SELECT account_id,key_id FROM budget_reservations WHERE id=?", item.ReservationID).Scan(&account, &key); err != nil {
+			if err = engine.Store.DB.QueryRow("SELECT association_ref,key_id FROM budget_reservations WHERE id=?", item.ReservationID).Scan(&account, &key); err != nil {
 				t.Fatal(err)
 			}
 			scope, entity := "account", account
@@ -580,12 +576,12 @@ func TestManualReconciliationCannotBypassSharedCooldown(t *testing.T) {
 
 func TestSuccessfulResearchClosesItsCircuitProbe(t *testing.T) {
 	engine, owner, now := fixture(t)
-	accounts, err := engine.Store.Accounts(t.Context())
+	accounts, err := engine.Store.Keys(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
 	for index := 0; index < 5; index++ {
-		if err = engine.Store.GateFailure(t.Context(), "account", accounts[0].Id, "", "transient", 0); err != nil {
+		if err = engine.Store.GateFailure(t.Context(), "account", accounts[0].AssociationRef, "", "transient", 0); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -651,7 +647,7 @@ func TestExistingJobAcquiresExclusiveCurrentCircuitProbe(t *testing.T) {
 	if err := engine.complete(t.Context(), original, providers.ResearchOutcome{ID: "upstream_1", State: "running", Outcome: providers.Outcome{Status: 200}}); err != nil {
 		t.Fatal(err)
 	}
-	account := original.Snapshot.AccountId
+	account := original.Snapshot.AssociationRef
 	for index := 0; index < 5; index++ {
 		if err := engine.Store.GateFailure(t.Context(), "account", account, "", "transient", 0); err != nil {
 			t.Fatal(err)
@@ -746,11 +742,8 @@ func TestCancelledClaimRollbackIsAnOrdinaryShutdown(t *testing.T) {
 func TestTavilyKnownIdentityPollsAndUnknownIdentityFailsClosed(t *testing.T) {
 	for _, known := range []bool{true, false} {
 		engine, owner, now := fixture(t)
-		account, err := engine.Store.CreateAccount(t.Context(), owner, domain.AccountCreate{Provider: "tavily", Label: "Synthetic Tavily", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 110, ActiveJobs: 2}})
+		_, err := engine.Store.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 110, ActiveJobs: 2}, Enabled: true, Label: "Synthetic", Secret: "synthetic-original-tavily-secret"})
 		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = engine.Store.AddKey(t.Context(), owner, domain.KeyCreate{AccountId: account.Id, Enabled: true, Label: "Synthetic", Secret: "synthetic-original-tavily-secret"}); err != nil {
 			t.Fatal(err)
 		}
 		calls := 0

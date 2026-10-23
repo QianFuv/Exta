@@ -1,11 +1,25 @@
 # Exta contract candidate
 
-This is the shared contract from approved planning revision 2, with the approved
-Research upstream-identifier compatibility correction. `openapi.yaml` is
-the canonical OpenAPI 3.1 document, written in the JSON subset of YAML. Its byte
-SHA256 is recorded in `contract-manifest.json`. Backend implementation proceeds
-under the accepted contract. Frontend work is paused; this document does not
-claim frontend acceptance.
+The current development contract uses keys as the smallest management unit.
+`openapi.yaml` is the canonical OpenAPI 3.1 document in the JSON subset of YAML;
+its normalized SHA256 is recorded in `contract-manifest.json`.
+
+Upstream keys are created directly at `/v1/admin/keys` with provider, write-only
+secret, label and optional local safety limits. There is no account resource or
+account prerequisite. `/v1/admin/usage` reports key observations separately from
+shared observations and local reservations. No v2 or legacy management adapter is
+introduced for this development redesign.
+
+Unknown common ownership does not prevent a configured key from dispatching.
+Unknown upstream balances are never summed into an independently available total.
+A reliable link can carry shared constraints as immutable metadata on keys;
+there is no separately managed parent entity. Identical credentials are rejected
+by fingerprint, and rotation does not erase existing charges or holds.
+
+The initial development schema is updated in place. Existing incompatible stores
+are rejected without conversion or deletion. This change adds no migration,
+archiving or rollback framework. REST/MCP execution, durable idempotency,
+uncertain-cost holds and transaction safety remain required.
 
 ## Generation and verification
 
@@ -29,11 +43,9 @@ download with `GOTOOLCHAIN=local`. Tests never require provider credentials.
 
 Generated outputs are `schemas/exta.json`, `schemas/mcp-tools.json`,
 `internal/domain/{types.gen.go,schemas.gen.json}` and `web/src/generated/`.
-During the frontend pause, `go run ./tools/contract generate --backend-only`
-and `check --backend-only` validate examples and generate/compare only the API
-schemas and Go types. They never invoke Node or write frontend files. The manifest
-retains the frontend's original hash and marks `frontend_deferred` until frontend
-generation is explicitly resumed. A backend check is not a full frontend check.
+The optional `--backend-only` mode validates examples and generates or compares
+only API schemas and Go types. Full product verification uses normal generation
+and requires frontend and backend contract identities to match.
 Go tagged unions and arbitrary JSON values use `json.RawMessage` aliases to keep
 their wire representation intact; the named variant types are generated from
 the same schemas. Validate before decoding. Optional nullable patch fields use
@@ -61,7 +73,8 @@ approved endpoints and management features:
   build/schema information; `GET /v1/admin/connection-info` includes capabilities
   and contract version/hash. `GET /v1/admin/usage` includes timestamped queue,
   active-slot and rate/error counters. Overview combines those with bounded
-  requests/research lists. No browser Bearer token is required. Research detail
+  request lists. Research remains an API/MCP execution capability, not an admin
+  workspace. No browser Bearer token is required. Research detail
   returns `JobDetail { job, events, events_next_cursor }`; `events_cursor` and
   `events_limit` paginate its event timeline without a new endpoint.
 - **A4–A5, session:** login body is `{ credential }`. The session response contains
@@ -166,7 +179,7 @@ T2–T4 tests must demonstrate these behaviors using local simulated providers:
 `ResearchReplayContext` and `ResearchExecutionSnapshot` are internal persistence
 schemas, with no public endpoint exposure. The former freezes versioned schema,
 canonicalization and semantic configuration plus the two optional defaults;
-the latter records the original route, provider, account, credential reference
+the latter records the original route, provider, key association, credential reference
 and reservation provenance. The replay digest includes every submitted intent
 field after filling only the two declared defaults. It never includes current
 route or session/token provenance. Preserve text and array order; compare JSON

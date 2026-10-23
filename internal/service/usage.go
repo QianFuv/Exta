@@ -14,9 +14,8 @@ import (
 )
 
 // ExaUsageConfig holds only local references and upstream identifiers, never secrets.
-// The service key is a disabled retrieval-pool entry belonging to the same account.
+// The service key is a disabled Exa retrieval-pool entry used only for management.
 type ExaUsageConfig struct {
-	AccountId      string            `json:"account_id"`
 	ServiceKeyId   string            `json:"service_key_id"`
 	UpstreamKeyIds map[string]string `json:"upstream_key_ids"`
 }
@@ -27,7 +26,7 @@ type usageFlight struct {
 	err    error
 }
 
-// UsageService provides bounded, account-coalesced read-only usage refreshes.
+// UsageService provides bounded, key-coalesced read-only usage refreshes.
 type UsageService struct {
 	Store     *store.Store
 	Clients   map[domain.Provider]*providers.Client
@@ -37,49 +36,33 @@ type UsageService struct {
 	flights   map[string]*usageFlight
 }
 
-// Refresh joins an identical active query or persists the account cooldown before dispatch.
-func (service *UsageService) Refresh(ctx context.Context, input domain.UsageRefresh) (domain.UsageRefreshResult, error) {
+// Refresh joins an identical active query or persists the key refresh cooldown before dispatch.
+func (service *UsageService) Refresh(ctx context.Context, input domain.KeyUsageRefresh) (domain.UsageRefreshResult, error) {
 	var result domain.UsageRefreshResult
-	if err := domain.ValidateJSON("UsageRefresh", []byte(store.JSON(input))); err != nil {
+	if err := domain.ValidateJSON("KeyUsageRefresh", []byte(store.JSON(input))); err != nil {
 		return result, store.Reject("invalid_request", 400, "Invalid usage refresh selection")
 	}
 	if service.Store.Vault == nil {
 		return result, store.Reject("secret_store_locked", 503, "Secret store is locked")
 	}
-	accounts, err := service.Store.Accounts(ctx)
-	if err != nil {
-		return result, err
-	}
 	keys, err := service.Store.Keys(ctx)
 	if err != nil {
 		return result, err
 	}
-	selected := []domain.Account{}
-	selectedKeys := map[string][]domain.ProviderKey{}
-	for _, account := range accounts {
-		if input.AccountId != nil && *input.AccountId != account.Id {
+	selected := []domain.UpstreamKey{}
+	ids := []string{}
+	for _, key := range keys {
+		if input.KeyId != nil && *input.KeyId != key.Id {
 			continue
 		}
-		for _, key := range keys {
-			if key.AccountId == account.Id && (input.KeyId == nil || *input.KeyId == key.Id) {
-				selectedKeys[account.Id] = append(selectedKeys[account.Id], key)
-			}
-		}
-		if input.KeyId == nil || len(selectedKeys[account.Id]) > 0 {
-			selected = append(selected, account)
-		}
+		selected = append(selected, key)
+		ids = append(ids, key.Id)
 	}
-	if len(selected) == 0 && (input.AccountId != nil || input.KeyId != nil) {
-		return result, store.Reject("not_found", 404, "Usage selection was not found")
+	if len(selected) == 0 && input.KeyId != nil {
+		return result, store.Reject("not_found", 404, "Usage key was not found")
 	}
-	count := 0
-	ids := []string{}
-	for _, account := range selected {
-		count += len(selectedKeys[account.Id])
-		ids = append(ids, account.Id)
-	}
-	if count > 100 || len(ids) > 100 {
-		return result, store.Reject("invalid_request", 400, "Refresh at most 100 keys/accounts; select a narrower scope")
+	if len(selected) > 100 {
+		return result, store.Reject("invalid_request", 400, "Refresh at most 100 keys")
 	}
 	sort.Strings(ids)
 	flightID := strings.Join(ids, ",") + "/"
@@ -117,24 +100,25 @@ func (service *UsageService) Refresh(ctx context.Context, input domain.UsageRefr
 	}
 	bounded, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	for _, account := range selected {
-		for _, key := range selectedKeys[account.Id] {
-			if bounded.Err() != nil {
-				flight.err = bounded.Err()
-				return result, flight.err
-			}
-			deadline, limited, refreshErr := service.refreshKey(bounded, account, key)
-			if refreshErr != nil {
-				err = refreshErr
-				flight.err = err
-				return result, err
-			}
-			if deadline.After(next) {
-				next = deadline
-			}
-			if limited {
-				break
-			}
+	limitedScopes := map[string]bool{}
+	for _, key := range selected {
+		if limitedScopes[key.AssociationRef] {
+			continue
+		}
+		if bounded.Err() != nil {
+			flight.err = bounded.Err()
+			return result, flight.err
+		}
+		deadline, limited, refreshErr := service.refreshKey(bounded, key)
+		if refreshErr != nil {
+			flight.err = refreshErr
+			return result, refreshErr
+		}
+		if deadline.After(next) {
+			next = deadline
+		}
+		if limited {
+			limitedScopes[key.AssociationRef] = true
 		}
 	}
 	result = domain.UsageRefreshResult{Status: "refreshed", ObservedAt: store.Stamp(service.Store.Now()), NextRefreshAt: store.Stamp(next)}
@@ -142,19 +126,19 @@ func (service *UsageService) Refresh(ctx context.Context, input domain.UsageRefr
 	return result, nil
 }
 
-func (service *UsageService) refreshKey(ctx context.Context, account domain.Account, key domain.ProviderKey) (time.Time, bool, error) {
-	sharedUntil, err := service.Store.ProviderUsageDeadline(ctx, string(account.Provider))
+func (service *UsageService) refreshKey(ctx context.Context, key domain.UpstreamKey) (time.Time, bool, error) {
+	sharedUntil, err := service.Store.ProviderUsageDeadline(ctx, string(key.Provider))
 	if err != nil || sharedUntil.After(service.Store.Now()) {
 		return sharedUntil, true, err
 	}
-	client := service.Clients[account.Provider]
+	client := service.Clients[key.Provider]
 	credentialKey, upstreamID, isDedicated := key.Id, "", false
 	reason := ""
-	if account.Provider == "exa" {
+	if key.Provider == "exa" {
 		client = service.ExaClient
 		reason = "service_credential_not_configured"
 		for _, config := range service.ExaConfig {
-			if config.AccountId == account.Id && config.UpstreamKeyIds[key.Id] != "" && config.ServiceKeyId != key.Id {
+			if config.UpstreamKeyIds[key.Id] != "" && config.ServiceKeyId != key.Id {
 				credentialKey, upstreamID, isDedicated = config.ServiceKeyId, config.UpstreamKeyIds[key.Id], true
 				reason = ""
 			}
@@ -163,7 +147,7 @@ func (service *UsageService) refreshKey(ctx context.Context, account domain.Acco
 	var credential string
 	if reason == "" {
 		var err error
-		credential, err = service.Store.UsageCredential(ctx, account.Id, credentialKey, isDedicated)
+		credential, err = service.Store.UsageCredential(ctx, credentialKey, isDedicated)
 		if err != nil {
 			reason = "usage_credential_unavailable"
 		}
@@ -173,25 +157,25 @@ func (service *UsageService) refreshKey(ctx context.Context, account domain.Acco
 	}
 	observed := store.Stamp(service.Store.Now())
 	if reason != "" {
-		return time.Time{}, false, service.Store.SaveUsage(ctx, []domain.AccountUsage{{AccountId: account.Id, KeyId: &key.Id, Provider: account.Provider, Unit: account.QuotaPolicy.Unit, Source: "upstream", ObservedAt: &observed, Freshness: "unknown", LimitKind: "unknown", UnavailableReason: &reason}})
+		return time.Time{}, false, service.Store.SaveUsage(ctx, []domain.KeyUsage{{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: "key", KeyId: &key.Id, Provider: key.Provider, Unit: key.QuotaPolicy.Unit, Source: "upstream", ObservedAt: &observed, Freshness: "unknown", LimitKind: "unknown", UnavailableReason: &reason}})
 	}
-	next, err := service.Store.ExtendUsageCooldown(ctx, account.Id, 2*time.Minute)
+	next, err := service.Store.ExtendUsageCooldown(ctx, key.AssociationRef, 2*time.Minute)
 	if err != nil {
 		return next, false, err
 	}
 	call, cancel := context.WithTimeout(ctx, 15*time.Second)
-	items, outcome := client.Usage(call, credential, account.Id, key.Id, upstreamID)
+	items, outcome := client.Usage(call, credential, key.AssociationRef, key.Id, upstreamID)
 	cancel()
 	persist, persistCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer persistCancel()
 	limited := outcome.GateKind == "rate" || outcome.Status == 429
 	if limited {
-		next, err = service.Store.ExtendUsageCooldown(persist, account.Id, outcome.Cooldown)
+		next, err = service.Store.ExtendUsageCooldown(persist, key.AssociationRef, outcome.Cooldown)
 		if err != nil {
 			return next, true, err
 		}
 		if outcome.SharedCooldown {
-			sharedUntil, err = service.Store.ExtendProviderUsageCooldown(persist, string(account.Provider), outcome.Cooldown)
+			sharedUntil, err = service.Store.ExtendProviderUsageCooldown(persist, string(key.Provider), outcome.Cooldown)
 			if err != nil {
 				return next, true, err
 			}
@@ -202,21 +186,34 @@ func (service *UsageService) refreshKey(ctx context.Context, account domain.Acco
 	}
 	if len(items) == 0 {
 		reason = "usage_configuration_invalid"
-		items = []domain.AccountUsage{{AccountId: account.Id, KeyId: &key.Id, Provider: account.Provider, Unit: account.QuotaPolicy.Unit, Source: "upstream", ObservedAt: &observed, Freshness: "unknown", LimitKind: "unknown", UnavailableReason: &reason}}
+		items = []domain.KeyUsage{{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: "key", KeyId: &key.Id, Provider: key.Provider, Unit: key.QuotaPolicy.Unit, Source: "upstream", ObservedAt: &observed, Freshness: "unknown", LimitKind: "unknown", UnavailableReason: &reason}}
 	}
-	return next, limited, service.Store.SaveUsage(persist, items)
+	observations := make([]domain.KeyUsage, 0, len(items))
+	for _, item := range items {
+		scope := "key"
+		if item.KeyId == nil {
+			scope = "shared"
+		}
+		observations = append(observations, domain.KeyUsage{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: scope, KeyId: item.KeyId, Provider: item.Provider, Source: item.Source, ObservedAt: item.ObservedAt, Freshness: item.Freshness, Unit: item.Unit, PeriodStart: item.PeriodStart, PeriodEnd: item.PeriodEnd, Used: item.Used, Reserved: item.Reserved, LimitKind: item.LimitKind, Limit: item.Limit, Remaining: item.Remaining, UnavailableReason: item.UnavailableReason})
+	}
+	return next, limited, service.Store.SaveUsage(persist, observations)
 }
 
 // ValidateExaUsage rejects duplicate mappings and malformed IDs before runtime startup.
 func ValidateExaUsage(configs []ExaUsageConfig) error {
 	seen := map[string]bool{}
+	mappedKeys := map[string]bool{}
 	identifier := regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$`)
 	for _, config := range configs {
-		if !identifier.MatchString(config.AccountId) || !identifier.MatchString(config.ServiceKeyId) || seen[config.AccountId] || len(config.UpstreamKeyIds) > 100 {
+		if !identifier.MatchString(config.ServiceKeyId) || seen[config.ServiceKeyId] || len(config.UpstreamKeyIds) > 100 {
 			return store.Reject("invalid_request", 400, "Invalid Exa usage references")
 		}
-		seen[config.AccountId] = true
+		seen[config.ServiceKeyId] = true
 		for localID, upstreamID := range config.UpstreamKeyIds {
+			if mappedKeys[localID] {
+				return store.Reject("invalid_request", 400, "Exa usage key has multiple mappings")
+			}
+			mappedKeys[localID] = true
 			for _, value := range []string{localID, upstreamID} {
 				if !identifier.MatchString(value) || localID == config.ServiceKeyId {
 					return store.Reject("invalid_request", 400, "Invalid Exa usage identifier")

@@ -10,9 +10,9 @@ export const UNRESOLVED_RESEARCH: components["schemas"]["ResearchCreate"] = {
   budget: { mode: "hard", unit: "micro_usd", amount: 1000000 },
 };
 
-export const CLEAR_ACCOUNT_REFERENCE: components["schemas"]["AccountPatch"] = {
+export const UPDATE_KEY_LIMITS: components["schemas"]["UpstreamKeyPatch"] = {
   expected_version: 1,
-  external_ref: null,
+  quota_policy: { unit: "micro_usd", allocation: 100, per_operation_reservation: 10, active_jobs: 1 },
 };
 
 export const ADMIN_RESEARCH_HEADERS: operations["adminResearchCreate"]["parameters"]["header"] = {

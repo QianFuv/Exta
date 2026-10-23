@@ -307,7 +307,6 @@
     "valid": true,
     "value": {
       "source_provider": "exa",
-      "account_id": "synthetic_id",
       "credential_version_id": "synthetic_id",
       "route_policy": {
         "capability": "search",
@@ -321,7 +320,8 @@
       },
       "pricing_revision": "synthetic_test_only",
       "reserved_unit": "micro_usd",
-      "reserved_amount": 1
+      "reserved_amount": 1,
+      "association_ref": "synthetic_id"
     }
   },
   {
@@ -647,93 +647,6 @@
     }
   },
   {
-    "name": "Account-structural",
-    "schema": "Account",
-    "valid": true,
-    "value": {
-      "id": "synthetic_id",
-      "provider": "exa",
-      "label": "synthetic_test_only",
-      "external_ref": null,
-      "verification_state": "unverified",
-      "billing_state": "eligible",
-      "enabled": false,
-      "quota_policy": {
-        "unit": "micro_usd",
-        "allocation": 0,
-        "per_operation_reservation": 0,
-        "active_jobs": 1
-      },
-      "version": 1,
-      "created_at": "2026-10-22T08:00:00Z"
-    }
-  },
-  {
-    "name": "AccountCreate-structural",
-    "schema": "AccountCreate",
-    "valid": true,
-    "value": {
-      "provider": "exa",
-      "label": "synthetic_test_only",
-      "quota_policy": {
-        "unit": "micro_usd",
-        "allocation": 0,
-        "per_operation_reservation": 0,
-        "active_jobs": 1
-      },
-      "enabled": false
-    }
-  },
-  {
-    "name": "AccountPatch-structural",
-    "schema": "AccountPatch",
-    "valid": true,
-    "value": {
-      "expected_version": 1
-    }
-  },
-  {
-    "name": "ProviderKey-structural",
-    "schema": "ProviderKey",
-    "valid": true,
-    "value": {
-      "id": "synthetic_id",
-      "account_id": "synthetic_id",
-      "provider": "exa",
-      "label": "synthetic_test_only",
-      "fingerprint": "synthetic_test_only",
-      "last_four": "synt",
-      "enabled": false,
-      "validity": "valid",
-      "billing_state": "eligible",
-      "cooldown_until": null,
-      "breaker": "closed",
-      "retirement_state": "active",
-      "retained_credential_count": 0,
-      "version": 1,
-      "created_at": "2026-10-22T08:00:00Z"
-    }
-  },
-  {
-    "name": "KeyCreate-structural",
-    "schema": "KeyCreate",
-    "valid": true,
-    "value": {
-      "account_id": "synthetic_id",
-      "label": "synthetic_test_only",
-      "secret": "synthetic_test_only",
-      "enabled": false
-    }
-  },
-  {
-    "name": "KeyPatch-structural",
-    "schema": "KeyPatch",
-    "valid": true,
-    "value": {
-      "expected_version": 1
-    }
-  },
-  {
     "name": "KeyRotate-structural",
     "schema": "KeyRotate",
     "valid": true,
@@ -810,28 +723,6 @@
     }
   },
   {
-    "name": "AccountUsage-structural",
-    "schema": "AccountUsage",
-    "valid": true,
-    "value": {
-      "provider": "exa",
-      "account_id": "synthetic_id",
-      "key_id": null,
-      "source": "upstream",
-      "observed_at": null,
-      "freshness": "fresh",
-      "unit": "micro_usd",
-      "period_start": null,
-      "period_end": null,
-      "used": null,
-      "reserved": 0,
-      "limit_kind": "finite",
-      "limit": 10000000,
-      "remaining": null,
-      "unavailable_reason": null
-    }
-  },
-  {
     "name": "OverviewMetrics-structural",
     "schema": "OverviewMetrics",
     "valid": true,
@@ -844,30 +735,6 @@
       "uncertain_jobs": 0,
       "observed_at": "2026-10-22T08:00:00Z"
     }
-  },
-  {
-    "name": "UsageView-structural",
-    "schema": "UsageView",
-    "valid": true,
-    "value": {
-      "items": [],
-      "next_cursor": null,
-      "overview": {
-        "queued_jobs": 0,
-        "active_slots_held": 0,
-        "waiting_requests": 0,
-        "requests_last_minute": 0,
-        "errors_last_minute": 0,
-        "uncertain_jobs": 0,
-        "observed_at": "2026-10-22T08:00:00Z"
-      }
-    }
-  },
-  {
-    "name": "UsageRefresh-structural",
-    "schema": "UsageRefresh",
-    "valid": true,
-    "value": {}
   },
   {
     "name": "UsageRefreshResult-structural",
@@ -914,7 +781,6 @@
       "id": "synthetic_id",
       "attempt_number": 1,
       "provider": "exa",
-      "account_id": "synthetic_id",
       "credential_version_id": "synthetic_id",
       "transmission_state": "not_sent",
       "upstream_request_id": null,
@@ -1157,24 +1023,6 @@
   {
     "name": "JobList-structural",
     "schema": "JobList",
-    "valid": true,
-    "value": {
-      "items": [],
-      "next_cursor": null
-    }
-  },
-  {
-    "name": "AccountList-structural",
-    "schema": "AccountList",
-    "valid": true,
-    "value": {
-      "items": [],
-      "next_cursor": null
-    }
-  },
-  {
-    "name": "ProviderKeyList-structural",
-    "schema": "ProviderKeyList",
     "valid": true,
     "value": {
       "items": [],
@@ -1530,50 +1378,6 @@
     }
   },
   {
-    "name": "usage-unlimited",
-    "schema": "AccountUsage",
-    "valid": true,
-    "value": {
-      "provider": "exa",
-      "account_id": "synthetic_id",
-      "key_id": null,
-      "source": "upstream",
-      "observed_at": null,
-      "freshness": "fresh",
-      "unit": "micro_usd",
-      "period_start": null,
-      "period_end": null,
-      "used": null,
-      "reserved": 0,
-      "limit_kind": "unlimited",
-      "limit": null,
-      "remaining": null,
-      "unavailable_reason": null
-    }
-  },
-  {
-    "name": "usage-unknown-not-zero",
-    "schema": "AccountUsage",
-    "valid": false,
-    "value": {
-      "provider": "exa",
-      "account_id": "synthetic_id",
-      "key_id": null,
-      "source": "upstream",
-      "observed_at": null,
-      "freshness": "fresh",
-      "unit": "micro_usd",
-      "period_start": null,
-      "period_end": null,
-      "used": null,
-      "reserved": 0,
-      "limit_kind": "unknown",
-      "limit": 0,
-      "remaining": 0,
-      "unavailable_reason": null
-    }
-  },
-  {
     "name": "observation-expired-retains-holds",
     "schema": "Job",
     "valid": true,
@@ -1879,6 +1683,197 @@
     "name": "local-id-remains-restricted",
     "schema": "ResearchCreate",
     "valid": false,
-    "value": {"input":"Synthetic research", "budget":{"mode":"hard","unit":"micro_usd","amount":1000000}, "supersedes_job_id":"task.with:punctuation", "acknowledge_duplicate_charge":true}
+    "value": {
+      "input": "Synthetic research",
+      "budget": {
+        "mode": "hard",
+        "unit": "micro_usd",
+        "amount": 1000000
+      },
+      "supersedes_job_id": "task.with:punctuation",
+      "acknowledge_duplicate_charge": true
+    }
+  },
+  {
+    "name": "key-only-UpstreamKey",
+    "schema": "UpstreamKey",
+    "valid": true,
+    "value": {
+      "id": "synthetic_id",
+      "provider": "exa",
+      "label": "synthetic_test_only",
+      "fingerprint": "synthetic_test_only",
+      "last_four": "synt",
+      "enabled": false,
+      "validity": "valid",
+      "billing_state": "eligible",
+      "cooldown_until": null,
+      "breaker": "closed",
+      "retirement_state": "active",
+      "retained_credential_count": 0,
+      "version": 1,
+      "created_at": "2026-10-22T08:00:00Z",
+      "association_ref": "synthetic_id",
+      "association_evidence": "unknown",
+      "quota_policy": {
+        "unit": "micro_usd",
+        "allocation": 0,
+        "per_operation_reservation": 0,
+        "active_jobs": 1
+      }
+    }
+  },
+  {
+    "name": "key-only-UpstreamKeyList",
+    "schema": "UpstreamKeyList",
+    "valid": true,
+    "value": {
+      "items": [
+        {
+          "id": "synthetic_id",
+          "provider": "exa",
+          "label": "synthetic_test_only",
+          "fingerprint": "synthetic_test_only",
+          "last_four": "synt",
+          "enabled": false,
+          "validity": "valid",
+          "billing_state": "eligible",
+          "cooldown_until": null,
+          "breaker": "closed",
+          "retirement_state": "active",
+          "retained_credential_count": 0,
+          "version": 1,
+          "created_at": "2026-10-22T08:00:00Z",
+          "association_ref": "synthetic_id",
+          "association_evidence": "unknown",
+          "quota_policy": {
+            "unit": "micro_usd",
+            "allocation": 0,
+            "per_operation_reservation": 0,
+            "active_jobs": 1
+          }
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "name": "key-only-UpstreamKeyCreate",
+    "schema": "UpstreamKeyCreate",
+    "valid": true,
+    "value": {
+      "provider": "exa",
+      "label": "Synthetic key",
+      "secret": "synthetic-example-only",
+      "enabled": true,
+      "quota_policy": {
+        "unit": "micro_usd",
+        "allocation": 0,
+        "per_operation_reservation": 0,
+        "active_jobs": 1
+      }
+    }
+  },
+  {
+    "name": "key-only-UpstreamKeyPatch",
+    "schema": "UpstreamKeyPatch",
+    "valid": true,
+    "value": {
+      "expected_version": 1,
+      "quota_policy": {
+        "unit": "micro_usd",
+        "allocation": 0,
+        "per_operation_reservation": 0,
+        "active_jobs": 1
+      }
+    }
+  },
+  {
+    "name": "key-only-KeyUsage",
+    "schema": "KeyUsage",
+    "valid": true,
+    "value": {
+      "provider": "exa",
+      "key_id": null,
+      "source": "upstream",
+      "observed_at": null,
+      "freshness": "fresh",
+      "unit": "micro_usd",
+      "period_start": null,
+      "period_end": null,
+      "used": null,
+      "reserved": 0,
+      "limit_kind": "unlimited",
+      "limit": null,
+      "remaining": null,
+      "unavailable_reason": null,
+      "association_ref": "synthetic_id",
+      "scope": "shared",
+      "association_evidence": "unknown"
+    }
+  },
+  {
+    "name": "key-only-KeyUsageView",
+    "schema": "KeyUsageView",
+    "valid": true,
+    "value": {
+      "items": [
+        {
+          "provider": "exa",
+          "key_id": null,
+          "source": "upstream",
+          "observed_at": null,
+          "freshness": "fresh",
+          "unit": "micro_usd",
+          "period_start": null,
+          "period_end": null,
+          "used": null,
+          "reserved": 0,
+          "limit_kind": "unlimited",
+          "limit": null,
+          "remaining": null,
+          "unavailable_reason": null,
+          "association_ref": "synthetic_id",
+          "scope": "shared",
+          "association_evidence": "unknown"
+        }
+      ],
+      "next_cursor": null,
+      "overview": {
+        "queued_jobs": 0,
+        "active_slots_held": 0,
+        "waiting_requests": 0,
+        "requests_last_minute": 0,
+        "errors_last_minute": 0,
+        "uncertain_jobs": 0,
+        "observed_at": "2026-10-22T08:00:00Z"
+      }
+    }
+  },
+  {
+    "name": "key-only-KeyUsageRefresh",
+    "schema": "KeyUsageRefresh",
+    "valid": true,
+    "value": {
+      "key_id": "synthetic_id"
+    }
+  },
+  {
+    "name": "key-only-reject-parent-account",
+    "schema": "UpstreamKeyCreate",
+    "valid": false,
+    "value": {
+      "provider": "exa",
+      "label": "Synthetic key",
+      "secret": "synthetic-example-only",
+      "enabled": true,
+      "quota_policy": {
+        "unit": "micro_usd",
+        "allocation": 0,
+        "per_operation_reservation": 0,
+        "active_jobs": 1
+      },
+      "account_id": "account_old"
+    }
   }
 ]

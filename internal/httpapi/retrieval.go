@@ -125,34 +125,34 @@ func Register(mux *http.ServeMux, auth *security.Auth, core *service.Service, us
 		if err != nil {
 			return nil, err
 		}
-		filtered := []domain.AccountUsage{}
-		provider, account := request.URL.Query().Get("provider"), request.URL.Query().Get("account_id")
+		filtered := []domain.KeyUsage{}
+		provider, selectedKey := request.URL.Query().Get("provider"), request.URL.Query().Get("key_id")
 		if provider != "" {
 			if err = domain.ValidateJSON("Provider", []byte(store.JSON(provider))); err != nil {
 				return nil, store.Reject("invalid_request", 400, "Invalid provider filter")
 			}
 		}
 		for _, item := range items {
-			if (provider == "" || provider == string(item.Provider)) && (account == "" || account == item.AccountId) {
+			if (provider == "" || provider == string(item.Provider)) && (selectedKey == "" || item.KeyId != nil && selectedKey == *item.KeyId) {
 				filtered = append(filtered, item)
 			}
 		}
-		selected, cursor, err := Page(request, filtered, func(item domain.AccountUsage) string {
+		selected, cursor, err := Page(request, filtered, func(item domain.KeyUsage) string {
 			key := ""
 			if item.KeyId != nil {
 				key = *item.KeyId
 			}
-			return item.AccountId + "/" + item.Source + "/" + key
+			return item.AssociationRef + "/" + item.Source + "/" + key
 		})
 		if err != nil {
 			return nil, err
 		}
 		_, waiting := core.Queue.Counts()
 		overview, err := core.Store.Overview(request.Context(), waiting)
-		return domain.UsageView{Items: selected, NextCursor: cursor, Overview: overview}, err
+		return domain.KeyUsageView{Items: selected, NextCursor: cursor, Overview: overview}, err
 	})
 	register("POST /v1/admin/usage/refresh", "admin:usage:refresh", true, func(writer http.ResponseWriter, request *http.Request, _ store.Identity) (any, error) {
-		input, _, err := Body[domain.UsageRefresh](core.Store, writer, request, "UsageRefresh")
+		input, _, err := Body[domain.KeyUsageRefresh](core.Store, writer, request, "KeyUsageRefresh")
 		if err != nil {
 			return nil, err
 		}

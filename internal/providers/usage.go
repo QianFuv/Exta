@@ -43,7 +43,7 @@ func usageTotal(first, second json.RawMessage) *domain.Integer {
 	return &total
 }
 
-func usageLimit(item *domain.AccountUsage, limit *domain.Integer, unlimited bool) {
+func usageLimit(item *domain.KeyUsage, limit *domain.Integer, unlimited bool) {
 	item.LimitKind = "unknown"
 	if unlimited {
 		item.LimitKind = "unlimited"
@@ -58,7 +58,7 @@ func usageLimit(item *domain.AccountUsage, limit *domain.Integer, unlimited bool
 
 // Usage returns separate key/account observations. Unknown values never become zero.
 // The Exa path requires a dedicated client and an explicit upstream key identifier.
-func (client *Client) Usage(ctx context.Context, credential, accountID, keyID, upstreamKeyID string) ([]domain.AccountUsage, Outcome) {
+func (client *Client) Usage(ctx context.Context, credential, associationID, keyID, upstreamKeyID string) ([]domain.KeyUsage, Outcome) {
 	path := "/usage"
 	if client.Provider == "exa" {
 		if client.origin != "https://admin-api.exa.ai" || !safeIdentifier.MatchString(upstreamKeyID) {
@@ -72,10 +72,11 @@ func (client *Client) Usage(ctx context.Context, credential, accountID, keyID, u
 	if client.Provider == "tavily" {
 		unit = "tavily_credit"
 	}
-	key := domain.AccountUsage{AccountId: accountID, KeyId: &keyID, Provider: client.Provider, Unit: unit, Source: "upstream", Freshness: "unknown", ObservedAt: &observed, LimitKind: "unknown"}
+	key := domain.KeyUsage{AssociationRef: associationID, AssociationEvidence: "unknown", Scope: "key", KeyId: &keyID, Provider: client.Provider, Unit: unit, Source: "upstream", Freshness: "unknown", ObservedAt: &observed, LimitKind: "unknown"}
 	account := key
 	account.KeyId = nil
-	items := []domain.AccountUsage{key}
+	account.Scope = "shared"
+	items := []domain.KeyUsage{key}
 	if client.Provider == "tavily" {
 		items = append(items, account)
 	}

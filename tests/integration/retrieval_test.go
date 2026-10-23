@@ -63,13 +63,10 @@ func retrievalService(t *testing.T, state *store.Store, exa, tavily *mockProvide
 	return core, resolver
 }
 
-func addTavily(t *testing.T, state *store.Store, principal string) domain.Account {
+func addTavily(t *testing.T, state *store.Store, principal string) domain.UpstreamKey {
 	t.Helper()
-	account, err := state.CreateAccount(t.Context(), principal, domain.AccountCreate{Provider: "tavily", Label: "Synthetic credits", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 10, ActiveJobs: 2}})
+	account, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 10, ActiveJobs: 2}, Enabled: true, Label: "Synthetic Tavily", Secret: "synthetic-tavily-key-only"})
 	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Enabled: true, Label: "Synthetic Tavily", Secret: "synthetic-tavily-key-only"}); err != nil {
 		t.Fatal(err)
 	}
 	return account
@@ -135,7 +132,7 @@ func TestRetrievalThreeAttemptsAcrossKeysAndProviders(t *testing.T) {
 	state, principal, account, _ := foundation(t)
 	addTavily(t, state, principal)
 	for _, secret := range []string{"synthetic-second-key", "synthetic-third-key"} {
-		if _, err := state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Enabled: true, Label: "Additional", Secret: secret}); err != nil {
+		if _, err := addLinkedKey(t, state, principal, account, domain.UpstreamKeyCreate{Enabled: true, Label: "Additional", Secret: secret}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -231,7 +228,7 @@ func TestRetrievalCooldownDoesNotBlockOtherProvider(t *testing.T) {
 		t.Fatalf("provider independence failed: %+v %v", result, err)
 	}
 	var until int64
-	if err = state.DB.QueryRow("SELECT cooldown_ms FROM runtime_gates WHERE scope='account' AND entity_id=?", account.Id).Scan(&until); err != nil || until < state.Now().Add(59*time.Minute).UnixMilli() {
+	if err = state.DB.QueryRow("SELECT cooldown_ms FROM runtime_gates WHERE scope='association' AND entity_id=?", account.Id).Scan(&until); err != nil || until < state.Now().Add(59*time.Minute).UnixMilli() {
 		t.Fatal("account Retry-After was not retained")
 	}
 }

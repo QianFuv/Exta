@@ -1924,281 +1924,6 @@
         "x-origin-policy": "exact_configured_origin"
       }
     },
-    "/v1/admin/accounts": {
-      "get": {
-        "operationId": "accountsList",
-        "summary": "accountsList",
-        "tags": [
-          "Administration"
-        ],
-        "security": [
-          {
-            "AdminSession": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cursor",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 1024
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 25
-            }
-          },
-          {
-            "name": "provider",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/Provider"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful resource response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccountList"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "401": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "404": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "405": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "409": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "413": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "422": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "429": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "502": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "503": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "504": {
-            "$ref": "#/components/responses/ApiError"
-          }
-        },
-        "x-permission": "admin:read",
-        "x-auth-before-use-case": true
-      },
-      "post": {
-        "operationId": "accountsCreate",
-        "summary": "accountsCreate",
-        "tags": [
-          "Administration"
-        ],
-        "security": [
-          {
-            "AdminSession": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Exta-CSRF",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 32,
-              "maxLength": 128
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Successful resource response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Account"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "401": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "404": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "405": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "409": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "413": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "422": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "429": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "502": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "503": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "504": {
-            "$ref": "#/components/responses/ApiError"
-          }
-        },
-        "x-permission": "admin:accounts:write",
-        "x-auth-before-use-case": true,
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AccountCreate"
-              }
-            }
-          }
-        },
-        "x-origin-policy": "exact_configured_origin"
-      }
-    },
-    "/v1/admin/accounts/{id}": {
-      "patch": {
-        "operationId": "accountsPatch",
-        "summary": "accountsPatch",
-        "tags": [
-          "Administration"
-        ],
-        "security": [
-          {
-            "AdminSession": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-            }
-          },
-          {
-            "name": "X-Exta-CSRF",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 32,
-              "maxLength": 128
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful resource response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Account"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "401": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "404": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "405": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "409": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "413": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "422": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "429": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "502": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "503": {
-            "$ref": "#/components/responses/ApiError"
-          },
-          "504": {
-            "$ref": "#/components/responses/ApiError"
-          }
-        },
-        "x-permission": "admin:accounts:write",
-        "x-auth-before-use-case": true,
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AccountPatch"
-              }
-            }
-          }
-        },
-        "x-origin-policy": "exact_configured_origin"
-      }
-    },
     "/v1/admin/keys": {
       "get": {
         "operationId": "keysList",
@@ -2245,7 +1970,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderKeyList"
+                  "$ref": "#/components/schemas/UpstreamKeyList"
                 }
               }
             }
@@ -2319,7 +2044,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderKey"
+                  "$ref": "#/components/schemas/UpstreamKey"
                 }
               }
             }
@@ -2368,7 +2093,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KeyCreate"
+                "$ref": "#/components/schemas/UpstreamKeyCreate"
               }
             }
           }
@@ -2417,7 +2142,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderKey"
+                  "$ref": "#/components/schemas/UpstreamKey"
                 }
               }
             }
@@ -2466,7 +2191,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KeyPatch"
+                "$ref": "#/components/schemas/UpstreamKeyPatch"
               }
             }
           }
@@ -2515,7 +2240,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderKey"
+                  "$ref": "#/components/schemas/UpstreamKey"
                 }
               }
             }
@@ -2613,7 +2338,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderKey"
+                  "$ref": "#/components/schemas/UpstreamKey"
                 }
               }
             }
@@ -2977,7 +2702,7 @@
             }
           },
           {
-            "name": "account_id",
+            "name": "key_id",
             "in": "query",
             "schema": {
               "type": "string",
@@ -2993,7 +2718,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsageView"
+                  "$ref": "#/components/schemas/KeyUsageView"
                 }
               }
             }
@@ -3118,7 +2843,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UsageRefresh"
+                "$ref": "#/components/schemas/KeyUsageRefresh"
               }
             }
           }
@@ -4046,7 +3771,6 @@
         "type": "string",
         "enum": [
           "admin:read",
-          "admin:accounts:write",
           "admin:keys:write",
           "admin:routes:write",
           "admin:usage:refresh",
@@ -5280,12 +5004,6 @@
           "source_provider": {
             "$ref": "#/components/schemas/Provider"
           },
-          "account_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
           "credential_version_id": {
             "type": "string",
             "minLength": 1,
@@ -5307,18 +5025,24 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 9007199254740991
+          },
+          "association_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
           }
         },
         "required": [
           "source_provider",
-          "account_id",
+          "association_ref",
           "credential_version_id",
           "route_policy",
           "pricing_revision",
           "reserved_unit",
           "reserved_amount"
         ],
-        "description": "Internal execution provenance frozen on first admission, separate from replay identity. Includes the immutable route policy and original provider/account/credential reference; contains no credential or raw input. Replay never replaces it with current routing.",
+        "description": "Internal execution provenance frozen on first admission, separate from replay identity. Includes the immutable route policy and original provider/key-association/credential reference; contains no credential or raw input. Replay never replaces it with current routing.",
         "x-internal": true
       },
       "Citation": {
@@ -5817,7 +5541,7 @@
           "action",
           "upstream_job_id"
         ],
-        "description": "Server independently verifies provider/account/correlation before attaching. Neither hold is released."
+        "description": "Server independently verifies provider identity and intent correlation before attaching. Neither hold is released."
       },
       "SettleTerminal": {
         "type": "object",
@@ -6294,336 +6018,6 @@
         ],
         "description": "No budget configured means no upstream dispatch; currency units are never combined."
       },
-      "Account": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
-          "provider": {
-            "$ref": "#/components/schemas/Provider"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "external_ref": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 0,
-                "maxLength": 256
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verification_state": {
-            "type": "string",
-            "enum": [
-              "unverified",
-              "verified"
-            ]
-          },
-          "billing_state": {
-            "type": "string",
-            "enum": [
-              "eligible",
-              "blocked",
-              "unknown"
-            ]
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "quota_policy": {
-            "$ref": "#/components/schemas/QuotaPolicy"
-          },
-          "version": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 9007199254740991
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "provider",
-          "label",
-          "external_ref",
-          "verification_state",
-          "billing_state",
-          "enabled",
-          "quota_policy",
-          "version",
-          "created_at"
-        ]
-      },
-      "AccountCreate": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "provider": {
-            "$ref": "#/components/schemas/Provider"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "external_ref": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 0,
-                "maxLength": 256
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verification_state": {
-            "type": "string",
-            "enum": [
-              "unverified",
-              "verified"
-            ]
-          },
-          "quota_policy": {
-            "$ref": "#/components/schemas/QuotaPolicy"
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "provider",
-          "label",
-          "quota_policy",
-          "enabled"
-        ]
-      },
-      "AccountPatch": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "expected_version": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 9007199254740991
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "external_ref": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 0,
-                "maxLength": 256
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verification_state": {
-            "type": "string",
-            "enum": [
-              "unverified",
-              "verified"
-            ]
-          },
-          "quota_policy": {
-            "$ref": "#/components/schemas/QuotaPolicy"
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "expected_version"
-        ]
-      },
-      "ProviderKey": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
-          "account_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
-          "provider": {
-            "$ref": "#/components/schemas/Provider"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "fingerprint": {
-            "type": "string",
-            "minLength": 16,
-            "maxLength": 64
-          },
-          "last_four": {
-            "type": "string",
-            "minLength": 4,
-            "maxLength": 4
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "validity": {
-            "type": "string",
-            "enum": [
-              "valid",
-              "unknown",
-              "invalid"
-            ]
-          },
-          "billing_state": {
-            "type": "string",
-            "enum": [
-              "eligible",
-              "blocked",
-              "unknown"
-            ]
-          },
-          "cooldown_until": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "breaker": {
-            "type": "string",
-            "enum": [
-              "closed",
-              "open",
-              "half_open"
-            ]
-          },
-          "retirement_state": {
-            "type": "string",
-            "enum": [
-              "active",
-              "retiring",
-              "retired"
-            ]
-          },
-          "retained_credential_count": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "version": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 9007199254740991
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "account_id",
-          "provider",
-          "label",
-          "fingerprint",
-          "last_four",
-          "enabled",
-          "validity",
-          "billing_state",
-          "cooldown_until",
-          "breaker",
-          "retirement_state",
-          "retained_credential_count",
-          "version",
-          "created_at"
-        ]
-      },
-      "KeyCreate": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "account_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "secret": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 4096,
-            "writeOnly": true
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "account_id",
-          "label",
-          "secret",
-          "enabled"
-        ]
-      },
-      "KeyPatch": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "expected_version": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 9007199254740991
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "expected_version"
-        ]
-      },
       "KeyRotate": {
         "type": "object",
         "additionalProperties": false,
@@ -6951,195 +6345,6 @@
           "warnings"
         ]
       },
-      "AccountUsage": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "provider": {
-            "$ref": "#/components/schemas/Provider"
-          },
-          "account_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
-          "key_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 128,
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "source": {
-            "type": "string",
-            "enum": [
-              "upstream",
-              "local",
-              "estimate"
-            ]
-          },
-          "observed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "freshness": {
-            "type": "string",
-            "enum": [
-              "fresh",
-              "stale",
-              "unknown"
-            ]
-          },
-          "unit": {
-            "$ref": "#/components/schemas/UsageUnit"
-          },
-          "period_start": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "period_end": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "used": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "reserved": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "limit_kind": {
-            "type": "string",
-            "enum": [
-              "finite",
-              "unlimited",
-              "unknown"
-            ]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "remaining": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "unavailable_reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 0,
-                "maxLength": 128
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "provider",
-          "account_id",
-          "key_id",
-          "source",
-          "observed_at",
-          "freshness",
-          "unit",
-          "period_start",
-          "period_end",
-          "used",
-          "reserved",
-          "limit_kind",
-          "limit",
-          "remaining",
-          "unavailable_reason"
-        ],
-        "description": "finite requires a numeric limit; unlimited/unknown have null limit and remaining. Missing Exa service-key permission uses unavailable_reason=service_permission_missing, never a fabricated balance.",
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "limit_kind": {
-                  "const": "finite"
-                }
-              }
-            },
-            "then": {
-              "properties": {
-                "limit": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 9007199254740991
-                }
-              }
-            },
-            "else": {
-              "properties": {
-                "limit": {
-                  "type": "null"
-                },
-                "remaining": {
-                  "type": "null"
-                }
-              }
-            }
-          }
-        ]
-      },
       "OverviewMetrics": {
         "type": "object",
         "additionalProperties": false,
@@ -7188,59 +6393,6 @@
           "uncertain_jobs",
           "observed_at"
         ]
-      },
-      "UsageView": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AccountUsage"
-            },
-            "minItems": 0,
-            "maxItems": 100
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 1024
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "overview": {
-            "$ref": "#/components/schemas/OverviewMetrics"
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor",
-          "overview"
-        ]
-      },
-      "UsageRefresh": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "account_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
-          "key_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          }
-        },
-        "required": []
       },
       "UsageRefreshResult": {
         "type": "object",
@@ -7428,12 +6580,6 @@
           "provider": {
             "$ref": "#/components/schemas/Provider"
           },
-          "account_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-          },
           "credential_version_id": {
             "type": "string",
             "minLength": 1,
@@ -7496,13 +6642,18 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "key_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
           }
         },
         "required": [
           "id",
           "attempt_number",
           "provider",
-          "account_id",
           "credential_version_id",
           "transmission_state",
           "upstream_request_id",
@@ -8039,66 +7190,6 @@
           "next_cursor"
         ]
       },
-      "AccountList": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Account"
-            },
-            "minItems": 0,
-            "maxItems": 100
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 1024
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor"
-        ]
-      },
-      "ProviderKeyList": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProviderKey"
-            },
-            "minItems": 0,
-            "maxItems": 100
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 1024
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor"
-        ]
-      },
       "RoutePolicyList": {
         "type": "object",
         "additionalProperties": false,
@@ -8223,6 +7314,476 @@
         "type": "object",
         "additionalProperties": true,
         "description": "The complete audited canonical OpenAPI document, served byte-equivalently as JSON."
+      },
+      "UpstreamKey": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 64
+          },
+          "last_four": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "validity": {
+            "type": "string",
+            "enum": [
+              "valid",
+              "unknown",
+              "invalid"
+            ]
+          },
+          "billing_state": {
+            "type": "string",
+            "enum": [
+              "eligible",
+              "blocked",
+              "unknown"
+            ]
+          },
+          "cooldown_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "breaker": {
+            "type": "string",
+            "enum": [
+              "closed",
+              "open",
+              "half_open"
+            ]
+          },
+          "retirement_state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "retiring",
+              "retired"
+            ]
+          },
+          "retained_credential_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "association_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          },
+          "association_evidence": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "operator_declared",
+              "provider_verified"
+            ]
+          },
+          "quota_policy": {
+            "$ref": "#/components/schemas/QuotaPolicy"
+          },
+          "shared_limit": {
+            "$ref": "#/components/schemas/QuotaPolicy"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "label",
+          "fingerprint",
+          "last_four",
+          "enabled",
+          "validity",
+          "billing_state",
+          "cooldown_until",
+          "breaker",
+          "retirement_state",
+          "retained_credential_count",
+          "version",
+          "created_at",
+          "association_ref",
+          "association_evidence",
+          "quota_policy"
+        ],
+        "description": "An independently managed upstream key. association_ref is immutable accounting metadata, never an account resource. Unknown common identity does not block configured local safety limits. shared_limit is an additional constraint for reliably linked keys; it is not an independent allocation."
+      },
+      "UpstreamKeyList": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpstreamKey"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ]
+      },
+      "UpstreamKeyCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 4096,
+            "writeOnly": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider"
+          },
+          "quota_policy": {
+            "$ref": "#/components/schemas/QuotaPolicy"
+          }
+        },
+        "required": [
+          "label",
+          "secret",
+          "enabled",
+          "provider"
+        ]
+      },
+      "UpstreamKeyPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "quota_policy": {
+            "$ref": "#/components/schemas/QuotaPolicy"
+          }
+        },
+        "required": [
+          "expected_version"
+        ]
+      },
+      "KeyUsage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/Provider"
+          },
+          "key_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "upstream",
+              "local",
+              "estimate"
+            ]
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ]
+          },
+          "unit": {
+            "$ref": "#/components/schemas/UsageUnit"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "used": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reserved": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "limit_kind": {
+            "type": "string",
+            "enum": [
+              "finite",
+              "unlimited",
+              "unknown"
+            ]
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "association_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "key",
+              "shared"
+            ]
+          },
+          "association_evidence": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "operator_declared",
+              "provider_verified"
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "association_ref",
+          "key_id",
+          "source",
+          "observed_at",
+          "freshness",
+          "unit",
+          "period_start",
+          "period_end",
+          "used",
+          "reserved",
+          "limit_kind",
+          "limit",
+          "remaining",
+          "unavailable_reason",
+          "scope",
+          "association_evidence"
+        ],
+        "description": "finite requires a numeric limit; unlimited/unknown have null limit and remaining. Missing Exa service-key permission uses unavailable_reason=service_permission_missing, never a fabricated balance.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "limit_kind": {
+                  "const": "finite"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "limit": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "limit": {
+                  "type": "null"
+                },
+                "remaining": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "KeyUsageView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyUsage"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overview": {
+            "$ref": "#/components/schemas/OverviewMetrics"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "overview"
+        ]
+      },
+      "KeyUsageRefresh": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          }
+        },
+        "required": []
       }
     },
     "securitySchemes": {
@@ -8399,7 +7960,8 @@
         "route_revision",
         "route_policy",
         "source_provider",
-        "account_id",
+        "association_ref",
+        "key_id",
         "credential_version_id",
         "transport",
         "session_id",

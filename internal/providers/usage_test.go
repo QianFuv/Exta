@@ -37,7 +37,7 @@ func TestTavilyUsageDistinguishesUnknownUnlimitedAndZero(t *testing.T) {
 				if item.PeriodStart != nil || item.PeriodEnd != nil {
 					t.Fatal("invented billing period")
 				}
-				if err := domain.ValidateJSON("AccountUsage", []byte(store.JSON(item))); err != nil {
+				if err := domain.ValidateJSON("KeyUsage", []byte(store.JSON(item))); err != nil {
 					t.Fatal(err)
 				}
 			}

@@ -357,7 +357,7 @@ func (engine *Engine) Reconcile(ctx context.Context, actor, id string, raw []byt
 			if hold.State != "held" {
 				return store.Reject("job_state_conflict", 409, "Budget hold is already resolved")
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO usage_ledger VALUES(?,?,'write_off',1,?,?,?,?,?,?)", store.ID("usage"), hold.Id, hold.AccountId, hold.PrincipalId, hold.Unit, hold.Amount, "unknown", store.Stamp(engine.Store.Now())); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO usage_ledger VALUES(?,?,'write_off',1,?,?,?,?,?,?,?)", store.ID("usage"), hold.Id, hold.AssociationRef, hold.PrincipalId, hold.Unit, hold.Amount, "unknown", store.Stamp(engine.Store.Now()), hold.KeyId); err != nil {
 				return err
 			}
 			if _, err = tx.ExecContext(ctx, "UPDATE budget_reservations SET state='written_off' WHERE id=?", hold.Id); err != nil {

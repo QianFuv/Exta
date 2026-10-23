@@ -119,11 +119,8 @@ func TestPackagedRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	account, err := state.CreateAccount(t.Context(), owner, domain.AccountCreate{Provider: "exa", Label: "Offline recovery fixture", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}})
+	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}, Label: "Synthetic offline key", Enabled: true, Secret: "synthetic-invalid-offline-smoke-key"})
 	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = state.AddKey(t.Context(), owner, domain.KeyCreate{AccountId: account.Id, Label: "Synthetic offline key", Enabled: true, Secret: "synthetic-invalid-offline-smoke-key"}); err != nil {
 		t.Fatal(err)
 	}
 	core, err := service.New(state, nil, security.UrlPolicy{})

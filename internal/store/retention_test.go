@@ -25,7 +25,7 @@ func TestRetentionBoundsBatchesAndPreservesSpending(t *testing.T) {
 		if err = state.StartRequest(t.Context(), owner, item); err != nil {
 			t.Fatal(err)
 		}
-		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: 1, AccountId: account.Id, CredentialVersionId: hold.CredentialVersionId, Provider: "exa", TransmissionState: "response_received", CreatedAt: item.CreatedAt}
+		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: 1, KeyId: &account.Id, CredentialVersionId: hold.CredentialVersionId, Provider: "exa", TransmissionState: "response_received", CreatedAt: item.CreatedAt}
 		if err = state.StartAttempt(t.Context(), id, attempt); err != nil {
 			t.Fatal(err)
 		}

@@ -232,13 +232,13 @@ func (engine *Engine) Accept(ctx context.Context, owner, key string, raw []byte)
 		if err = domain.ValidateJSON("Job", []byte(store.JSON(job))); err != nil {
 			return err
 		}
-		snapshot := domain.ResearchExecutionSnapshot{AccountId: hold.AccountId, CredentialVersionId: hold.CredentialVersionId, PricingRevision: "2026-10-22", ReservedAmount: domain.Integer(hold.Amount), ReservedUnit: domain.UsageUnit(hold.Unit), RoutePolicy: route, SourceProvider: selected}
+		snapshot := domain.ResearchExecutionSnapshot{AssociationRef: hold.AssociationRef, CredentialVersionId: hold.CredentialVersionId, PricingRevision: "2026-10-22", ReservedAmount: domain.Integer(hold.Amount), ReservedUnit: domain.UsageUnit(hold.Unit), RoutePolicy: route, SourceProvider: selected}
 		cipher, err := engine.Store.Vault.Seal(id+"/input", []byte(store.JSON(input)))
 		if err != nil {
 			return err
 		}
 		accepted = record{Job: job, ReservationID: hold.Id, IntentDigest: digest, MaxPolls: int(settings.Limits.MaxPolls), Credential: hold.CredentialVersionId, InputCipher: cipher, Snapshot: snapshot}
-		_, err = tx.ExecContext(ctx, "INSERT INTO research_jobs(id,principal_id,provider,account_id,key_id,credential_version_id,state,data,input_cipher,execution_snapshot,version,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, owner, selected, hold.AccountId, hold.KeyId, hold.CredentialVersionId, job.State, store.JSON(accepted), cipher, store.JSON(snapshot), job.Version, stamp, stamp)
+		_, err = tx.ExecContext(ctx, "INSERT INTO research_jobs(id,principal_id,provider,association_ref,key_id,credential_version_id,state,data,input_cipher,execution_snapshot,version,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, owner, selected, hold.AssociationRef, hold.KeyId, hold.CredentialVersionId, job.State, store.JSON(accepted), cipher, store.JSON(snapshot), job.Version, stamp, stamp)
 		if err != nil {
 			return err
 		}

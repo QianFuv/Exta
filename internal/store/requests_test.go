@@ -60,7 +60,7 @@ func TestInterruptedRequestRetainsReservationAcrossRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: 1, AccountId: account.Id, CredentialVersionId: hold.CredentialVersionId, Provider: "exa", TransmissionState: "possibly_sent", BillingUncertain: true, CreatedAt: item.CreatedAt}
+	attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: 1, KeyId: &account.Id, CredentialVersionId: hold.CredentialVersionId, Provider: "exa", TransmissionState: "possibly_sent", BillingUncertain: true, CreatedAt: item.CreatedAt}
 	if err = state.StartAttempt(t.Context(), item.Id, attempt); err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +104,7 @@ func TestAttemptEvidenceAndAccountingCommitAtomically(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: 1, Provider: "exa", AccountId: account.Id, CredentialVersionId: hold.CredentialVersionId, TransmissionState: "possibly_sent", BillingUncertain: true, CreatedAt: store.Stamp(state.Now())}
+		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: 1, Provider: "exa", KeyId: &account.Id, CredentialVersionId: hold.CredentialVersionId, TransmissionState: "possibly_sent", BillingUncertain: true, CreatedAt: store.Stamp(state.Now())}
 		if err = state.StartAttempt(t.Context(), hold.ParentId, attempt); err != nil {
 			t.Fatal(err)
 		}

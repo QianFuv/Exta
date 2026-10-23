@@ -1,387 +1,5 @@
 {
   "$defs": {
-    "Account": {
-      "additionalProperties": false,
-      "properties": {
-        "billing_state": {
-          "enum": [
-            "eligible",
-            "blocked",
-            "unknown"
-          ],
-          "type": "string"
-        },
-        "created_at": {
-          "format": "date-time",
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "external_ref": {
-          "anyOf": [
-            {
-              "maxLength": 256,
-              "minLength": 0,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
-        "label": {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        },
-        "provider": {
-          "$ref": "#/$defs/Provider"
-        },
-        "quota_policy": {
-          "$ref": "#/$defs/QuotaPolicy"
-        },
-        "verification_state": {
-          "enum": [
-            "unverified",
-            "verified"
-          ],
-          "type": "string"
-        },
-        "version": {
-          "maximum": 9007199254740991,
-          "minimum": 1,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "id",
-        "provider",
-        "label",
-        "external_ref",
-        "verification_state",
-        "billing_state",
-        "enabled",
-        "quota_policy",
-        "version",
-        "created_at"
-      ],
-      "type": "object"
-    },
-    "AccountCreate": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "external_ref": {
-          "anyOf": [
-            {
-              "maxLength": 256,
-              "minLength": 0,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "label": {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        },
-        "provider": {
-          "$ref": "#/$defs/Provider"
-        },
-        "quota_policy": {
-          "$ref": "#/$defs/QuotaPolicy"
-        },
-        "verification_state": {
-          "enum": [
-            "unverified",
-            "verified"
-          ],
-          "type": "string"
-        }
-      },
-      "required": [
-        "provider",
-        "label",
-        "quota_policy",
-        "enabled"
-      ],
-      "type": "object"
-    },
-    "AccountList": {
-      "additionalProperties": false,
-      "properties": {
-        "items": {
-          "items": {
-            "$ref": "#/$defs/Account"
-          },
-          "maxItems": 100,
-          "minItems": 0,
-          "type": "array"
-        },
-        "next_cursor": {
-          "anyOf": [
-            {
-              "maxLength": 1024,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "items",
-        "next_cursor"
-      ],
-      "type": "object"
-    },
-    "AccountPatch": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "expected_version": {
-          "maximum": 9007199254740991,
-          "minimum": 1,
-          "type": "integer"
-        },
-        "external_ref": {
-          "anyOf": [
-            {
-              "maxLength": 256,
-              "minLength": 0,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "label": {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        },
-        "quota_policy": {
-          "$ref": "#/$defs/QuotaPolicy"
-        },
-        "verification_state": {
-          "enum": [
-            "unverified",
-            "verified"
-          ],
-          "type": "string"
-        }
-      },
-      "required": [
-        "expected_version"
-      ],
-      "type": "object"
-    },
-    "AccountUsage": {
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "else": {
-            "properties": {
-              "limit": {
-                "type": "null"
-              },
-              "remaining": {
-                "type": "null"
-              }
-            }
-          },
-          "if": {
-            "properties": {
-              "limit_kind": {
-                "const": "finite"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "limit": {
-                "maximum": 9007199254740991,
-                "minimum": 0,
-                "type": "integer"
-              }
-            }
-          }
-        }
-      ],
-      "description": "finite requires a numeric limit; unlimited/unknown have null limit and remaining. Missing Exa service-key permission uses unavailable_reason=service_permission_missing, never a fabricated balance.",
-      "properties": {
-        "account_id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
-        "freshness": {
-          "enum": [
-            "fresh",
-            "stale",
-            "unknown"
-          ],
-          "type": "string"
-        },
-        "key_id": {
-          "anyOf": [
-            {
-              "maxLength": 128,
-              "minLength": 1,
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "limit": {
-          "anyOf": [
-            {
-              "maximum": 9007199254740991,
-              "minimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "limit_kind": {
-          "enum": [
-            "finite",
-            "unlimited",
-            "unknown"
-          ],
-          "type": "string"
-        },
-        "observed_at": {
-          "anyOf": [
-            {
-              "format": "date-time",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "period_end": {
-          "anyOf": [
-            {
-              "format": "date-time",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "period_start": {
-          "anyOf": [
-            {
-              "format": "date-time",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "provider": {
-          "$ref": "#/$defs/Provider"
-        },
-        "remaining": {
-          "anyOf": [
-            {
-              "maximum": 9007199254740991,
-              "minimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "reserved": {
-          "maximum": 9007199254740991,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "source": {
-          "enum": [
-            "upstream",
-            "local",
-            "estimate"
-          ],
-          "type": "string"
-        },
-        "unavailable_reason": {
-          "anyOf": [
-            {
-              "maxLength": 128,
-              "minLength": 0,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "unit": {
-          "$ref": "#/$defs/UsageUnit"
-        },
-        "used": {
-          "anyOf": [
-            {
-              "maximum": 9007199254740991,
-              "minimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "provider",
-        "account_id",
-        "key_id",
-        "source",
-        "observed_at",
-        "freshness",
-        "unit",
-        "period_start",
-        "period_end",
-        "used",
-        "reserved",
-        "limit_kind",
-        "limit",
-        "remaining",
-        "unavailable_reason"
-      ],
-      "type": "object"
-    },
     "Acknowledgement": {
       "additionalProperties": false,
       "properties": {
@@ -398,7 +16,6 @@
     "AdminPermission": {
       "enum": [
         "admin:read",
-        "admin:accounts:write",
         "admin:keys:write",
         "admin:routes:write",
         "admin:usage:refresh",
@@ -555,7 +172,7 @@
     },
     "AttachUpstreamId": {
       "additionalProperties": false,
-      "description": "Server independently verifies provider/account/correlation before attaching. Neither hold is released.",
+      "description": "Server independently verifies provider identity and intent correlation before attaching. Neither hold is released.",
       "properties": {
         "action": {
           "const": "attach_upstream_id",
@@ -596,12 +213,6 @@
       "additionalProperties": false,
       "description": "Sanitized metadata only; no query, content, credentials or headers.",
       "properties": {
-        "account_id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
         "attempt_number": {
           "maximum": 3,
           "minimum": 1,
@@ -638,6 +249,12 @@
           ]
         },
         "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "key_id": {
           "maxLength": 128,
           "minLength": 1,
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
@@ -684,7 +301,6 @@
         "id",
         "attempt_number",
         "provider",
-        "account_id",
         "credential_version_id",
         "transmission_state",
         "upstream_request_id",
@@ -2044,60 +1660,6 @@
       ],
       "type": "string"
     },
-    "KeyCreate": {
-      "additionalProperties": false,
-      "properties": {
-        "account_id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "label": {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        },
-        "secret": {
-          "maxLength": 4096,
-          "minLength": 8,
-          "type": "string",
-          "writeOnly": true
-        }
-      },
-      "required": [
-        "account_id",
-        "label",
-        "secret",
-        "enabled"
-      ],
-      "type": "object"
-    },
-    "KeyPatch": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "expected_version": {
-          "maximum": 9007199254740991,
-          "minimum": 1,
-          "type": "integer"
-        },
-        "label": {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        }
-      },
-      "required": [
-        "expected_version"
-      ],
-      "type": "object"
-    },
     "KeyRotate": {
       "additionalProperties": false,
       "properties": {
@@ -2116,6 +1678,259 @@
       "required": [
         "expected_version",
         "secret"
+      ],
+      "type": "object"
+    },
+    "KeyUsage": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "else": {
+            "properties": {
+              "limit": {
+                "type": "null"
+              },
+              "remaining": {
+                "type": "null"
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "limit_kind": {
+                "const": "finite"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "limit": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              }
+            }
+          }
+        }
+      ],
+      "description": "finite requires a numeric limit; unlimited/unknown have null limit and remaining. Missing Exa service-key permission uses unavailable_reason=service_permission_missing, never a fabricated balance.",
+      "properties": {
+        "association_evidence": {
+          "enum": [
+            "unknown",
+            "operator_declared",
+            "provider_verified"
+          ],
+          "type": "string"
+        },
+        "association_ref": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "freshness": {
+          "enum": [
+            "fresh",
+            "stale",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "key_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit_kind": {
+          "enum": [
+            "finite",
+            "unlimited",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "period_end": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "period_start": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "remaining": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reserved": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "scope": {
+          "enum": [
+            "key",
+            "shared"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "upstream",
+            "local",
+            "estimate"
+          ],
+          "type": "string"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 0,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "$ref": "#/$defs/UsageUnit"
+        },
+        "used": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "provider",
+        "association_ref",
+        "key_id",
+        "source",
+        "observed_at",
+        "freshness",
+        "unit",
+        "period_start",
+        "period_end",
+        "used",
+        "reserved",
+        "limit_kind",
+        "limit",
+        "remaining",
+        "unavailable_reason",
+        "scope",
+        "association_evidence"
+      ],
+      "type": "object"
+    },
+    "KeyUsageRefresh": {
+      "additionalProperties": false,
+      "properties": {
+        "key_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "KeyUsageView": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/KeyUsage"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overview": {
+          "$ref": "#/$defs/OverviewMetrics"
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor",
+        "overview"
       ],
       "type": "object"
     },
@@ -2368,149 +2183,6 @@
         "tavily"
       ],
       "type": "string"
-    },
-    "ProviderKey": {
-      "additionalProperties": false,
-      "properties": {
-        "account_id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
-        "billing_state": {
-          "enum": [
-            "eligible",
-            "blocked",
-            "unknown"
-          ],
-          "type": "string"
-        },
-        "breaker": {
-          "enum": [
-            "closed",
-            "open",
-            "half_open"
-          ],
-          "type": "string"
-        },
-        "cooldown_until": {
-          "anyOf": [
-            {
-              "format": "date-time",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "created_at": {
-          "format": "date-time",
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "fingerprint": {
-          "maxLength": 64,
-          "minLength": 16,
-          "type": "string"
-        },
-        "id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
-        "label": {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        },
-        "last_four": {
-          "maxLength": 4,
-          "minLength": 4,
-          "type": "string"
-        },
-        "provider": {
-          "$ref": "#/$defs/Provider"
-        },
-        "retained_credential_count": {
-          "maximum": 9007199254740991,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "retirement_state": {
-          "enum": [
-            "active",
-            "retiring",
-            "retired"
-          ],
-          "type": "string"
-        },
-        "validity": {
-          "enum": [
-            "valid",
-            "unknown",
-            "invalid"
-          ],
-          "type": "string"
-        },
-        "version": {
-          "maximum": 9007199254740991,
-          "minimum": 1,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "id",
-        "account_id",
-        "provider",
-        "label",
-        "fingerprint",
-        "last_four",
-        "enabled",
-        "validity",
-        "billing_state",
-        "cooldown_until",
-        "breaker",
-        "retirement_state",
-        "retained_credential_count",
-        "version",
-        "created_at"
-      ],
-      "type": "object"
-    },
-    "ProviderKeyList": {
-      "additionalProperties": false,
-      "properties": {
-        "items": {
-          "items": {
-            "$ref": "#/$defs/ProviderKey"
-          },
-          "maxItems": 100,
-          "minItems": 0,
-          "type": "array"
-        },
-        "next_cursor": {
-          "anyOf": [
-            {
-              "maxLength": 1024,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "items",
-        "next_cursor"
-      ],
-      "type": "object"
     },
     "QuotaPolicy": {
       "additionalProperties": false,
@@ -3068,9 +2740,9 @@
     },
     "ResearchExecutionSnapshot": {
       "additionalProperties": false,
-      "description": "Internal execution provenance frozen on first admission, separate from replay identity. Includes the immutable route policy and original provider/account/credential reference; contains no credential or raw input. Replay never replaces it with current routing.",
+      "description": "Internal execution provenance frozen on first admission, separate from replay identity. Includes the immutable route policy and original provider/key-association/credential reference; contains no credential or raw input. Replay never replaces it with current routing.",
       "properties": {
-        "account_id": {
+        "association_ref": {
           "maxLength": 128,
           "minLength": 1,
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
@@ -3104,7 +2776,7 @@
       },
       "required": [
         "source_provider",
-        "account_id",
+        "association_ref",
         "credential_version_id",
         "route_policy",
         "pricing_revision",
@@ -4050,6 +3722,223 @@
       ],
       "type": "object"
     },
+    "UpstreamKey": {
+      "additionalProperties": false,
+      "description": "An independently managed upstream key. association_ref is immutable accounting metadata, never an account resource. Unknown common identity does not block configured local safety limits. shared_limit is an additional constraint for reliably linked keys; it is not an independent allocation.",
+      "properties": {
+        "association_evidence": {
+          "enum": [
+            "unknown",
+            "operator_declared",
+            "provider_verified"
+          ],
+          "type": "string"
+        },
+        "association_ref": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "billing_state": {
+          "enum": [
+            "eligible",
+            "blocked",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "breaker": {
+          "enum": [
+            "closed",
+            "open",
+            "half_open"
+          ],
+          "type": "string"
+        },
+        "cooldown_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "fingerprint": {
+          "maxLength": 64,
+          "minLength": 16,
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "last_four": {
+          "maxLength": 4,
+          "minLength": 4,
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "quota_policy": {
+          "$ref": "#/$defs/QuotaPolicy"
+        },
+        "retained_credential_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retirement_state": {
+          "enum": [
+            "active",
+            "retiring",
+            "retired"
+          ],
+          "type": "string"
+        },
+        "shared_limit": {
+          "$ref": "#/$defs/QuotaPolicy"
+        },
+        "validity": {
+          "enum": [
+            "valid",
+            "unknown",
+            "invalid"
+          ],
+          "type": "string"
+        },
+        "version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "label",
+        "fingerprint",
+        "last_four",
+        "enabled",
+        "validity",
+        "billing_state",
+        "cooldown_until",
+        "breaker",
+        "retirement_state",
+        "retained_credential_count",
+        "version",
+        "created_at",
+        "association_ref",
+        "association_evidence",
+        "quota_policy"
+      ],
+      "type": "object"
+    },
+    "UpstreamKeyCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "quota_policy": {
+          "$ref": "#/$defs/QuotaPolicy"
+        },
+        "secret": {
+          "maxLength": 4096,
+          "minLength": 8,
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "label",
+        "secret",
+        "enabled",
+        "provider"
+      ],
+      "type": "object"
+    },
+    "UpstreamKeyList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/UpstreamKey"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "type": "object"
+    },
+    "UpstreamKeyPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "quota_policy": {
+          "$ref": "#/$defs/QuotaPolicy"
+        }
+      },
+      "required": [
+        "expected_version"
+      ],
+      "type": "object"
+    },
     "UsageAmount": {
       "additionalProperties": false,
       "properties": {
@@ -4111,25 +4000,6 @@
       ],
       "type": "string"
     },
-    "UsageRefresh": {
-      "additionalProperties": false,
-      "properties": {
-        "account_id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        },
-        "key_id": {
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
-          "type": "string"
-        }
-      },
-      "required": [],
-      "type": "object"
-    },
     "UsageRefreshResult": {
       "additionalProperties": false,
       "properties": {
@@ -4163,40 +4033,6 @@
       ],
       "type": "string"
     },
-    "UsageView": {
-      "additionalProperties": false,
-      "properties": {
-        "items": {
-          "items": {
-            "$ref": "#/$defs/AccountUsage"
-          },
-          "maxItems": 100,
-          "minItems": 0,
-          "type": "array"
-        },
-        "next_cursor": {
-          "anyOf": [
-            {
-              "maxLength": 1024,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "overview": {
-          "$ref": "#/$defs/OverviewMetrics"
-        }
-      },
-      "required": [
-        "items",
-        "next_cursor",
-        "overview"
-      ],
-      "type": "object"
-    },
     "VersionedAction": {
       "additionalProperties": false,
       "properties": {
@@ -4214,5 +4050,5 @@
   },
   "$id": "https://exta.invalid/contract",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-contract-sha256": "7af1ecfa1053a374d44f6d8235f8ec0a3dac69953e8d55c3edb2853f6e3da512"
+  "x-contract-sha256": "e108c18ec715f618c40d2a41eedc662d224b56e6e523e74ae78d43ba34e2aaa3"
 }

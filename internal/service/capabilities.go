@@ -55,7 +55,7 @@ func (service *Service) Capabilities(ctx context.Context) (domain.Capabilities, 
 					}
 				}
 				if !entry.Enabled {
-					entry.UnavailableReason = pointer("Profile is not currently configured with an eligible account, credential and implementation")
+					entry.UnavailableReason = pointer("Profile is not currently configured with an eligible configured key and implementation")
 				}
 				item.Enabled = item.Enabled || entry.Enabled
 				item.Profiles = append(item.Profiles, entry)

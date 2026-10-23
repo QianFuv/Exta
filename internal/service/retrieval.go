@@ -197,7 +197,7 @@ func (service *Service) Retrieve(ctx context.Context, principal, id, operation s
 			}
 			return response, err
 		}
-		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: domain.Integer(attemptNumber), Provider: selected.Provider, AccountId: reservation.AccountId, CredentialVersionId: reservation.CredentialVersionId, TransmissionState: "possibly_sent", BillingUncertain: true, CreatedAt: store.Stamp(service.Store.Now())}
+		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: domain.Integer(attemptNumber), Provider: selected.Provider, KeyId: pointer(reservation.KeyId), CredentialVersionId: reservation.CredentialVersionId, TransmissionState: "possibly_sent", BillingUncertain: true, CreatedAt: store.Stamp(service.Store.Now())}
 		if err = service.Store.StartAttempt(ctx, id, attempt); err != nil {
 			persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			_ = service.Store.ReleaseUnsent(persist, reservation.Id)
@@ -220,7 +220,7 @@ func (service *Service) Retrieve(ctx context.Context, principal, id, operation s
 		persist, persistCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		err = service.Store.FinishAttempt(persist, attempt, reservation.Id, outcome.IsUnspent, outcome.Cost, outcome.Certainty)
 		if err == nil && outcome.GateKind != "" {
-			entity := reservation.AccountId
+			entity := reservation.AssociationRef
 			if outcome.GateScope == "key" {
 				entity = reservation.KeyId
 			}

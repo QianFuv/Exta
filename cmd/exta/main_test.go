@@ -105,7 +105,7 @@ func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
 	if settings.Readiness.Ready || settings.Readiness.SecretStore != "unlocked" {
 		t.Fatalf("false readiness: %+v", settings.Readiness)
 	}
-	request = httptest.NewRequest("POST", configuration.Origin+"/v1/admin/accounts", strings.NewReader(`{"provider":"exa","label":"Synthetic","enabled":true,"quota_policy":{"unit":"micro_usd","allocation":0,"per_operation_reservation":1,"active_jobs":1}}`))
+	request = httptest.NewRequest("POST", configuration.Origin+"/v1/admin/keys", strings.NewReader(`{"provider":"exa","label":"Synthetic","secret":"synthetic-test-key-only-001","enabled":true,"quota_policy":{"unit":"micro_usd","allocation":0,"per_operation_reservation":1,"active_jobs":1}}`))
 	request.AddCookie(cookie)
 	request.Header.Set("Origin", configuration.Origin)
 	request.Header.Set("Content-Type", "application/json")
@@ -113,9 +113,9 @@ func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
 	response = httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	if response.Code != 201 {
-		t.Fatalf("account create %d %s", response.Code, response.Body.String())
+		t.Fatalf("key create %d %s", response.Code, response.Body.String())
 	}
-	if err = domain.ValidateJSON("Account", response.Body.Bytes()); err != nil {
+	if err = domain.ValidateJSON("UpstreamKey", response.Body.Bytes()); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, _, second, err := openRuntime(t.Context(), directory); err == nil {
@@ -149,7 +149,7 @@ func TestWrongMasterKeyLeavesReadOnlyMetadataAvailable(t *testing.T) {
 	if state.Vault != nil || readiness(state, configuration).SecretStore != "locked" {
 		t.Fatal("wrong master key reported unlocked")
 	}
-	if _, err = state.Accounts(t.Context()); err != nil {
+	if _, err = state.Keys(t.Context()); err != nil {
 		t.Fatal("locked store lost readable metadata")
 	}
 }
@@ -220,15 +220,11 @@ func TestEightCharacterCredentialCreationAndRotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	account, err := state.CreateAccount(t.Context(), session.PrincipalId, domain.AccountCreate{Provider: "exa", Label: "Synthetic boundary", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 1}})
-	if err != nil {
-		t.Fatal(err)
-	}
 	handler, err := managementHandler(state, auth, configuration)
 	if err != nil {
 		t.Fatal(err)
 	}
-	call := func(path, body string, status int) domain.ProviderKey {
+	call := func(path, body string, status int) domain.UpstreamKey {
 		t.Helper()
 		request := httptest.NewRequest("POST", configuration.Origin+path, strings.NewReader(body))
 		request.AddCookie(&http.Cookie{Name: "exta_session", Value: token})
@@ -240,17 +236,17 @@ func TestEightCharacterCredentialCreationAndRotation(t *testing.T) {
 		if writer.Code != status {
 			t.Fatalf("status=%d body=%s", writer.Code, writer.Body.String())
 		}
-		if err := domain.ValidateJSON("ProviderKey", writer.Body.Bytes()); err != nil {
+		if err := domain.ValidateJSON("UpstreamKey", writer.Body.Bytes()); err != nil {
 			t.Fatal(err)
 		}
-		var key domain.ProviderKey
+		var key domain.UpstreamKey
 		json.Unmarshal(writer.Body.Bytes(), &key)
 		if strings.Contains(writer.Body.String(), "abcdefgh") || strings.Contains(writer.Body.String(), "ijklmnop") {
 			t.Fatal("full secret in response")
 		}
 		return key
 	}
-	key := call("/v1/admin/keys", store.JSON(domain.KeyCreate{AccountId: account.Id, Label: "Eight", Enabled: true, Secret: "abcdefgh"}), 201)
+	key := call("/v1/admin/keys", store.JSON(domain.UpstreamKeyCreate{Provider: "exa", Label: "Eight", Enabled: true, Secret: "abcdefgh"}), 201)
 	rotated := call("/v1/admin/keys/"+key.Id+"/rotate", `{"expected_version":1,"secret":"ijklmnop"}`, 200)
 	if rotated.LastFour != "mnop" {
 		t.Fatal("masked response changed")

@@ -46,12 +46,12 @@ func TestResearchInputCannotOverrideIdentityOrDowngradeBudget(t *testing.T) {
 	}
 }
 
-func TestOptionalNullablePatchPreservesClearVersusNoChange(t *testing.T) {
-	for _, input := range []string{`{"expected_version":1}`, `{"expected_version":1,"external_ref":null}`, `{"expected_version":1,"external_ref":"account-reference"}`} {
-		if err := ValidateJSON("AccountPatch", []byte(input)); err != nil {
+func TestOptionalKeyPatchPreservesExplicitFalseVersusNoChange(t *testing.T) {
+	for _, input := range []string{`{"expected_version":1}`, `{"enabled":false,"expected_version":1}`, `{"expected_version":1,"label":"Key label"}`} {
+		if err := ValidateJSON("UpstreamKeyPatch", []byte(input)); err != nil {
 			t.Fatal(err)
 		}
-		var patch AccountPatch
+		var patch UpstreamKeyPatch
 		if err := json.Unmarshal([]byte(input), &patch); err != nil {
 			t.Fatal(err)
 		}
@@ -103,10 +103,10 @@ func TestGeneratedIntegersAcceptExactJsonNumberForms(t *testing.T) {
 		})
 	}
 	input := []byte(`{"expected_version":9007199254740991.0}`)
-	if err := ValidateJSON("AccountPatch", input); err != nil {
+	if err := ValidateJSON("UpstreamKeyPatch", input); err != nil {
 		t.Fatal(err)
 	}
-	var patch AccountPatch
+	var patch UpstreamKeyPatch
 	if err := json.Unmarshal(input, &patch); err != nil || patch.ExpectedVersion != 9007199254740991 {
 		t.Fatalf("maximum safe integer lost precision: %v", err)
 	}

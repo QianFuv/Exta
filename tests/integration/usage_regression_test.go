@@ -24,12 +24,8 @@ func TestUsageSharedCooldownSurvivesAccountsAndCallerCancellation(t *testing.T) 
 		t.Run(store.JSON(disconnect), func(t *testing.T) {
 			state, principal, _, _ := foundation(t)
 			first := addTavily(t, state, principal)
-			verified := "verified"
-			second, err := state.CreateAccount(t.Context(), principal, domain.AccountCreate{Provider: "tavily", Enabled: true, Label: "Second account", VerificationState: &verified, QuotaPolicy: domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 1, ActiveJobs: 1}})
+			second, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 1, ActiveJobs: 1}, Enabled: true, Label: "Second", Secret: "synthetic-independent-usage-key"})
 			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err = state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: second.Id, Enabled: true, Label: "Second", Secret: "synthetic-independent-usage-key"}); err != nil {
 				t.Fatal(err)
 			}
 			now := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
@@ -49,16 +45,16 @@ func TestUsageSharedCooldownSurvivesAccountsAndCallerCancellation(t *testing.T) 
 				t.Fatal(err)
 			}
 			usage := service.UsageService{Store: state, Clients: map[domain.Provider]*providers.Client{"tavily": client}}
-			input := domain.UsageRefresh{}
+			input := domain.KeyUsageRefresh{}
 			if disconnect {
-				input.AccountId = &first.Id
+				input.KeyId = &first.Id
 			}
 			_, _ = usage.Refresh(ctx, input)
 			if calls != 1 {
 				t.Fatalf("shared limit bypassed: %d", calls)
 			}
 			now = now.Add(121 * time.Second)
-			_, err = usage.Refresh(t.Context(), domain.UsageRefresh{AccountId: &second.Id})
+			_, err = usage.Refresh(t.Context(), domain.KeyUsageRefresh{KeyId: &second.Id})
 			var fault *store.Fault
 			if !errors.As(err, &fault) || fault.Code != "local_rate_limited" || fault.RetryAfterMs != 179000 || calls != 1 {
 				t.Fatalf("shared hint lost: %v calls=%d", err, calls)
@@ -70,7 +66,7 @@ func TestUsageSharedCooldownSurvivesAccountsAndCallerCancellation(t *testing.T) 
 func TestUsageProviderCooldownStopsSiblingsAndSurvivesRestart(t *testing.T) {
 	state, principal, _, _ := foundation(t)
 	account := addTavily(t, state, principal)
-	if _, err := state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Label: "Sibling", Enabled: true, Secret: "synthetic-usage-sibling"}); err != nil {
+	if _, err := addLinkedKey(t, state, principal, account, domain.UpstreamKeyCreate{Label: "Sibling", Enabled: true, Secret: "synthetic-usage-sibling"}); err != nil {
 		t.Fatal(err)
 	}
 	mock := newMockProvider(t, mockReply{Status: 429, Body: `{"error":"rate limit"}`, Headers: map[string]string{"Retry-After": "300"}})
@@ -78,7 +74,7 @@ func TestUsageProviderCooldownStopsSiblingsAndSurvivesRestart(t *testing.T) {
 	now := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 	state.Now = func() time.Time { return now }
 	usage := service.UsageService{Store: state, Clients: core.Clients}
-	result, err := usage.Refresh(t.Context(), domain.UsageRefresh{AccountId: &account.Id})
+	result, err := usage.Refresh(t.Context(), domain.KeyUsageRefresh{KeyId: &account.Id})
 	if err != nil || len(mock.Calls()) != 1 || result.NextRefreshAt != store.Stamp(now.Add(300*time.Second)) {
 		t.Fatalf("shared cooldown: %+v %v calls=%d", result, err, len(mock.Calls()))
 	}
@@ -91,7 +87,7 @@ func TestUsageProviderCooldownStopsSiblingsAndSurvivesRestart(t *testing.T) {
 	defer reopened.Close()
 	reopened.Now = func() time.Time { return now.Add(121 * time.Second) }
 	usage.Store = reopened
-	_, err = usage.Refresh(t.Context(), domain.UsageRefresh{AccountId: &account.Id})
+	_, err = usage.Refresh(t.Context(), domain.KeyUsageRefresh{KeyId: &account.Id})
 	var fault *store.Fault
 	if !errors.As(err, &fault) || fault.Code != "local_rate_limited" || fault.RetryAfterMs != 179000 || len(mock.Calls()) != 1 {
 		t.Fatalf("durable cooldown: %v", err)
@@ -101,7 +97,7 @@ func TestUsageProviderCooldownStopsSiblingsAndSurvivesRestart(t *testing.T) {
 func TestUsageCooldownStartsAtEachActualDispatch(t *testing.T) {
 	state, principal, _, _ := foundation(t)
 	account := addTavily(t, state, principal)
-	if _, err := state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Label: "Sibling", Enabled: true, Secret: "synthetic-delayed-sibling"}); err != nil {
+	if _, err := addLinkedKey(t, state, principal, account, domain.UpstreamKeyCreate{Label: "Sibling", Enabled: true, Secret: "synthetic-delayed-sibling"}); err != nil {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
@@ -119,22 +115,22 @@ func TestUsageCooldownStartsAtEachActualDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	usage := service.UsageService{Store: state, Clients: map[domain.Provider]*providers.Client{"tavily": client}}
-	result, err := usage.Refresh(t.Context(), domain.UsageRefresh{AccountId: &account.Id})
+	result, err := usage.Refresh(t.Context(), domain.KeyUsageRefresh{})
 	if err != nil || result.NextRefreshAt != store.Stamp(start.Add(130*time.Second)) {
 		t.Fatalf("dispatch deadline: %+v %v", result, err)
 	}
 	now = start.Add(120 * time.Second)
-	if _, err = usage.Refresh(t.Context(), domain.UsageRefresh{AccountId: &account.Id}); err == nil || calls != 2 {
+	if _, err = usage.Refresh(t.Context(), domain.KeyUsageRefresh{}); err == nil || calls != 2 {
 		t.Fatalf("early refresh: %v calls=%d", err, calls)
 	}
 }
 
-func TestUsageFailedSiblingDoesNotEraseAccountEvidence(t *testing.T) {
+func TestUsageFailedSiblingDoesNotEraseSharedEvidence(t *testing.T) {
 	for _, failureFirst := range []bool{false, true} {
 		t.Run(store.JSON(failureFirst), func(t *testing.T) {
 			state, principal, _, _ := foundation(t)
 			account := addTavily(t, state, principal)
-			if _, err := state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Label: "Sibling", Enabled: true, Secret: "synthetic-failing-sibling"}); err != nil {
+			if _, err := addLinkedKey(t, state, principal, account, domain.UpstreamKeyCreate{Label: "Sibling", Enabled: true, Secret: "synthetic-failing-sibling"}); err != nil {
 				t.Fatal(err)
 			}
 			success := mockReply{Status: 200, Body: `{"key":{"usage":1,"limit":10},"account":{"plan_usage":10,"paygo_usage":2,"plan_limit":100,"paygo_limit":100}}`}
@@ -146,7 +142,7 @@ func TestUsageFailedSiblingDoesNotEraseAccountEvidence(t *testing.T) {
 			mock := newMockProvider(t, replies...)
 			core, _ := retrievalService(t, state, nil, mock)
 			usage := service.UsageService{Store: state, Clients: core.Clients}
-			if _, err := usage.Refresh(t.Context(), domain.UsageRefresh{AccountId: &account.Id}); err != nil {
+			if _, err := usage.Refresh(t.Context(), domain.KeyUsageRefresh{}); err != nil {
 				t.Fatal(err)
 			}
 			items, err := state.Usage(t.Context())
@@ -155,7 +151,7 @@ func TestUsageFailedSiblingDoesNotEraseAccountEvidence(t *testing.T) {
 			}
 			accounts, unknownKeys := 0, 0
 			for _, item := range items {
-				if item.AccountId != account.Id || item.Source != "upstream" {
+				if item.AssociationRef != account.Id || item.Source != "upstream" {
 					continue
 				}
 				if item.KeyId == nil {
@@ -198,7 +194,7 @@ func TestUsageLocalAggregateRetainsEstimateProvenance(t *testing.T) {
 			}
 			found := 0
 			for _, item := range items {
-				if item.AccountId == account.Id && item.Source != "upstream" {
+				if item.AssociationRef == account.Id && item.Source != "upstream" {
 					found++
 					if item.Source != expected || item.Used == nil || int(*item.Used) != len(certainties) {
 						t.Fatalf("aggregate provenance: %+v", item)

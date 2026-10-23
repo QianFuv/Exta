@@ -19,19 +19,19 @@ type Admission struct {
 
 // Reservation pins identity and accounting across configuration edits and restarts.
 type Reservation struct {
-	Id, ParentId, PrincipalId, AccountId, KeyId, CredentialVersionId, Provider, Unit, State, CapacityBasis string
-	Amount                                                                                                 int64
-	ActiveSlot                                                                                             bool
-	AccountGateGeneration, KeyGateGeneration                                                               int64
+	Id, ParentId, PrincipalId, AssociationRef, KeyId, CredentialVersionId, Provider, Unit, State, CapacityBasis string
+	Amount                                                                                                      int64
+	ActiveSlot                                                                                                  bool
+	AssociationGateGeneration, KeyGateGeneration                                                                int64
 }
 
 // BalanceTx counts both paid/estimated charges and unsettled reservations.
-func BalanceTx(ctx context.Context, tx *sql.Tx, account string) (int64, int64, error) {
+func BalanceTx(ctx context.Context, tx *sql.Tx, association string) (int64, int64, error) {
 	var used, held int64
-	if err := tx.QueryRowContext(ctx, "SELECT coalesce(sum(amount),0) FROM usage_ledger WHERE account_id=?", account).Scan(&used); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT coalesce(sum(amount),0) FROM usage_ledger WHERE association_ref=?", association).Scan(&used); err != nil {
 		return 0, 0, err
 	}
-	err := tx.QueryRowContext(ctx, "SELECT coalesce(sum(amount),0) FROM budget_reservations WHERE account_id=? AND state='held'", account).Scan(&held)
+	err := tx.QueryRowContext(ctx, "SELECT coalesce(sum(amount),0) FROM budget_reservations WHERE association_ref=? AND state='held'", association).Scan(&held)
 	return used, held, err
 }
 
@@ -58,7 +58,7 @@ func (state *Store) Reserve(ctx context.Context, input Admission) (Reservation, 
 	return result, err
 }
 
-// ReserveTx atomically selects account/key, spends rate tokens and reserves budget/slots.
+// ReserveTx atomically selects a key, spends rate tokens and reserves budget/slots.
 func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, limits domain.Limits) (Reservation, error) {
 	result := Reservation{}
 	now := state.Now().UnixMilli()
@@ -83,68 +83,32 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 			return result, Reject("capacity_unavailable", 503, "Research capacity remains occupied by active or unsettled work")
 		}
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT a.data FROM provider_accounts a JOIN runtime_gates g ON g.scope='account' AND g.entity_id=a.id WHERE a.provider=? AND json_extract(a.data,'$.enabled')=1 AND g.blocked=0 AND g.cooldown_ms<=? AND g.breaker_ms<=? AND g.half_open<=? ORDER BY g.next_order,a.id`, input.Provider, now, now, now)
+	candidates, err := eligibleKeysTx(ctx, tx, input.Provider, now)
 	if err != nil {
 		return result, err
 	}
-	accounts := []domain.Account{}
-	for rows.Next() {
-		var data string
-		if err = rows.Scan(&data); err != nil {
-			rows.Close()
-			return result, err
-		}
-		account, err := Decode[domain.Account](data)
-		if err != nil {
-			rows.Close()
-			return result, err
-		}
-		accounts = append(accounts, account)
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return result, err
-	}
-	var selectionErr error = Reject("provider_unavailable", 503, "No eligible provider account and credential")
+	var selectionErr error = Reject("provider_unavailable", 503, "No eligible upstream key")
 	if err = consumeRate(ctx, tx, "principal", input.PrincipalId, now, 1, int64(limits.PrincipalRequestsPerMinute), 10); err != nil {
 		return result, err
 	}
-	for _, account := range accounts {
+	for _, candidate := range candidates {
+		key, keyId, credential := candidate.Key, candidate.Key.Id, candidate.Credential
 		amount := input.Amount
 		if amount == 0 {
-			amount = int64(account.QuotaPolicy.PerOperationReservation)
+			amount = int64(key.QuotaPolicy.PerOperationReservation)
 		}
 		if amount <= 0 {
-			selectionErr = Reject("quota_unavailable", 503, "Per-operation reservation must be configured before dispatch")
+			selectionErr = Reject("quota_unavailable", 503, "Per-operation safety reservation is not configured")
 			continue
 		}
 		amount = max(amount, input.MinimumAmount)
-		used, held, err := BalanceTx(ctx, tx, account.Id)
-		if err != nil {
-			return result, err
-		}
-		if amount <= 0 || int64(account.QuotaPolicy.Allocation)-used-held < amount {
-			selectionErr = Reject("quota_unavailable", 503, "No configured spendable provider allocation")
-			continue
-		}
-		if input.Research {
-			var active int
-			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM budget_reservations WHERE account_id=? AND active_slot=1", account.Id).Scan(&active); err != nil {
+		if err = keyBudgetTx(ctx, tx, key, amount, input.Research); err != nil {
+			var fault *Fault
+			if !errors.As(err, &fault) {
 				return result, err
 			}
-			if active >= int(account.QuotaPolicy.ActiveJobs) {
-				selectionErr = Reject("capacity_unavailable", 503, "Account active slots remain held")
-				continue
-			}
-		}
-		var keyId, credential string
-		err = tx.QueryRowContext(ctx, `SELECT k.id,k.active_version FROM provider_keys k JOIN runtime_gates g ON g.scope='key' AND g.entity_id=k.id JOIN credential_versions c ON c.id=k.active_version WHERE k.account_id=? AND json_extract(k.data,'$.enabled')=1 AND json_extract(k.data,'$.retirement_state')='active' AND c.validity<>'invalid' AND g.validity<>'invalid' AND g.blocked=0 AND g.cooldown_ms<=? AND g.breaker_ms<=? AND g.half_open<=? ORDER BY g.next_order,k.id LIMIT 1`, account.Id, now, now, now).Scan(&keyId, &credential)
-		if errors.Is(err, sql.ErrNoRows) {
+			selectionErr = err
 			continue
-		}
-		if err != nil {
-			return result, err
 		}
 		units := int64(1)
 		if input.Research && input.Provider == "exa" {
@@ -156,11 +120,11 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 			rate = 600
 			burst = 10
 		}
-		if _, err = tx.ExecContext(ctx, "SAVEPOINT account_admission"); err != nil {
+		if _, err = tx.ExecContext(ctx, "SAVEPOINT key_admission"); err != nil {
 			return result, err
 		}
 		if !input.Research {
-			if err = consumeRate(ctx, tx, "account", account.Id, now, units, rate, burst); err == nil {
+			if err = consumeRate(ctx, tx, "association", key.AssociationRef, now, units, rate, burst); err == nil {
 				err = consumeRate(ctx, tx, "key", keyId, now, units, rate, burst)
 			}
 		}
@@ -170,28 +134,28 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 				return result, err
 			}
 			selectionErr = err
-			if _, err = tx.ExecContext(ctx, "ROLLBACK TO account_admission"); err != nil {
+			if _, err = tx.ExecContext(ctx, "ROLLBACK TO key_admission"); err != nil {
 				return result, err
 			}
-			if _, err = tx.ExecContext(ctx, "RELEASE account_admission"); err != nil {
+			if _, err = tx.ExecContext(ctx, "RELEASE key_admission"); err != nil {
 				return result, err
 			}
 			continue
 		}
-		if _, err = tx.ExecContext(ctx, "RELEASE account_admission"); err != nil {
+		if _, err = tx.ExecContext(ctx, "RELEASE key_admission"); err != nil {
 			return result, err
 		}
-		result = Reservation{Id: ID("hold"), ParentId: input.ParentId, PrincipalId: input.PrincipalId, AccountId: account.Id, KeyId: keyId, CredentialVersionId: credential, Provider: input.Provider, Unit: string(account.QuotaPolicy.Unit), Amount: amount, State: "held", ActiveSlot: input.Research, CapacityBasis: "none"}
-		if err = tx.QueryRowContext(ctx, "SELECT generation FROM runtime_gates WHERE scope='account' AND entity_id=?", account.Id).Scan(&result.AccountGateGeneration); err != nil {
+		result = Reservation{Id: ID("hold"), ParentId: input.ParentId, PrincipalId: input.PrincipalId, AssociationRef: key.AssociationRef, KeyId: keyId, CredentialVersionId: credential, Provider: input.Provider, Unit: string(key.QuotaPolicy.Unit), Amount: amount, State: "held", ActiveSlot: input.Research, CapacityBasis: "none"}
+		if err = tx.QueryRowContext(ctx, "SELECT generation FROM runtime_gates WHERE scope='association' AND entity_id=?", key.AssociationRef).Scan(&result.AssociationGateGeneration); err != nil {
 			return result, err
 		}
 		if err = tx.QueryRowContext(ctx, "SELECT generation FROM runtime_gates WHERE scope='key' AND entity_id=?", keyId).Scan(&result.KeyGateGeneration); err != nil {
 			return result, err
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO budget_reservations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, result.Id, result.ParentId, result.PrincipalId, result.AccountId, result.KeyId, result.CredentialVersionId, result.Unit, result.Amount, result.State, result.ActiveSlot, result.CapacityBasis, Stamp(state.Now()), result.AccountGateGeneration, result.KeyGateGeneration); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO budget_reservations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, result.Id, result.ParentId, result.PrincipalId, result.AssociationRef, result.KeyId, result.CredentialVersionId, result.Unit, result.Amount, result.State, result.ActiveSlot, result.CapacityBasis, Stamp(state.Now()), result.AssociationGateGeneration, result.KeyGateGeneration); err != nil {
 			return Reservation{}, err
 		}
-		for _, gate := range [][2]string{{"account", account.Id}, {"key", keyId}} {
+		for _, gate := range [][2]string{{"association", key.AssociationRef}, {"key", keyId}} {
 			if input.Research {
 				if _, err = tx.ExecContext(ctx, "UPDATE runtime_gates SET next_order=(SELECT coalesce(max(next_order),0)+1 FROM runtime_gates WHERE scope=?) WHERE scope=? AND entity_id=?", gate[0], gate[0], gate[1]); err != nil {
 					return Reservation{}, err
@@ -207,7 +171,7 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 	return result, selectionErr
 }
 
-// ProviderCooldown prevents unknown/network rate limits being bypassed across accounts.
+// ProviderCooldown prevents unknown/network rate limits being bypassed across keys.
 func (state *Store) ProviderCooldown(ctx context.Context, provider string, duration time.Duration) error {
 	return state.Write(ctx, func(tx *sql.Tx) error {
 		_, err := tx.ExecContext(ctx, "INSERT INTO runtime_gates(scope,entity_id,cooldown_ms) VALUES('provider',?,?) ON CONFLICT(scope,entity_id) DO UPDATE SET cooldown_ms=max(cooldown_ms,excluded.cooldown_ms)", provider, state.Now().Add(duration).UnixMilli())
@@ -236,7 +200,7 @@ func consumeRate(ctx context.Context, tx *sql.Tx, scope, id string, now, units, 
 // ReservationTx loads an unsettled or historical reservation without changing its state.
 func ReservationTx(ctx context.Context, tx *sql.Tx, id string) (Reservation, error) {
 	var item Reservation
-	err := tx.QueryRowContext(ctx, `SELECT r.id,r.parent_id,r.principal_id,r.account_id,r.key_id,r.credential_version_id,a.provider,r.unit,r.amount,r.state,r.active_slot,r.capacity_basis,r.account_gate_generation,r.key_gate_generation FROM budget_reservations r JOIN provider_accounts a ON a.id=r.account_id WHERE r.id=?`, id).Scan(&item.Id, &item.ParentId, &item.PrincipalId, &item.AccountId, &item.KeyId, &item.CredentialVersionId, &item.Provider, &item.Unit, &item.Amount, &item.State, &item.ActiveSlot, &item.CapacityBasis, &item.AccountGateGeneration, &item.KeyGateGeneration)
+	err := tx.QueryRowContext(ctx, `SELECT r.id,r.parent_id,r.principal_id,r.association_ref,r.key_id,r.credential_version_id,k.provider,r.unit,r.amount,r.state,r.active_slot,r.capacity_basis,r.association_gate_generation,r.key_gate_generation FROM budget_reservations r JOIN provider_keys k ON k.id=r.key_id WHERE r.id=?`, id).Scan(&item.Id, &item.ParentId, &item.PrincipalId, &item.AssociationRef, &item.KeyId, &item.CredentialVersionId, &item.Provider, &item.Unit, &item.Amount, &item.State, &item.ActiveSlot, &item.CapacityBasis, &item.AssociationGateGeneration, &item.KeyGateGeneration)
 	return item, Missing(err)
 }
 
@@ -266,7 +230,7 @@ func SettleTx(ctx context.Context, tx *sql.Tx, id string, cost *int64, certainty
 	if *cost < 0 {
 		return Reject("invalid_request", 400, "Reported cost cannot be negative")
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO usage_ledger VALUES(?,?,'charge',1,?,?,?,?,?,?) ON CONFLICT(source,event_kind,revision) DO NOTHING", ID("usage"), id, item.AccountId, item.PrincipalId, item.Unit, *cost, certainty, Stamp(now)); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO usage_ledger VALUES(?,?,'charge',1,?,?,?,?,?,?,?) ON CONFLICT(source,event_kind,revision) DO NOTHING", ID("usage"), id, item.AssociationRef, item.PrincipalId, item.Unit, *cost, certainty, Stamp(now), item.KeyId); err != nil {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE budget_reservations SET state='settled' WHERE id=? AND state='held'", id)
@@ -278,7 +242,7 @@ func (state *Store) Settle(ctx context.Context, id string, cost *int64, certaint
 	return state.Write(ctx, func(tx *sql.Tx) error { return SettleTx(ctx, tx, id, cost, certainty, state.Now()) })
 }
 
-// GateFailure applies account/key scope without revoking a rotated credential by mistake.
+// GateFailure applies provider-reported shared or key scope without revoking a rotated credential by mistake.
 func (state *Store) GateFailure(ctx context.Context, scope, id, credential, kind string, cooldown time.Duration) error {
 	return state.Write(ctx, func(tx *sql.Tx) error {
 		return state.GateFailureTx(ctx, tx, scope, id, credential, kind, cooldown)
@@ -287,7 +251,10 @@ func (state *Store) GateFailure(ctx context.Context, scope, id, credential, kind
 
 // GateFailureTx persists an upstream gate together with durable research evidence.
 func (state *Store) GateFailureTx(ctx context.Context, tx *sql.Tx, scope, id, credential, kind string, cooldown time.Duration) error {
-	if scope != "account" && scope != "key" {
+	if scope == "account" {
+		scope = "association"
+	}
+	if scope != "association" && scope != "key" {
 		return Reject("invalid_request", 400, "Unknown gate scope")
 	}
 	now := state.Now().UnixMilli()
@@ -299,7 +266,7 @@ func (state *Store) GateFailureTx(ctx context.Context, tx *sql.Tx, scope, id, cr
 		return err
 	}
 	if kind == "quota" {
-		_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET blocked=1,half_open=0 WHERE scope=? AND entity_id=? AND (scope='account' OR EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?))", scope, id, id, credential)
+		_, err := tx.ExecContext(ctx, "UPDATE runtime_gates SET blocked=1,half_open=0 WHERE scope=? AND entity_id=? AND (scope='association' OR EXISTS(SELECT 1 FROM provider_keys WHERE id=? AND active_version=?))", scope, id, id, credential)
 		return err
 	}
 	if kind == "rate" {
@@ -322,8 +289,8 @@ func (state *Store) GateSuccess(ctx context.Context, reservation Reservation) er
 
 // GateSuccessTx closes a matching probe with the same transaction as job evidence.
 func (state *Store) GateSuccessTx(ctx context.Context, tx *sql.Tx, reservation Reservation) error {
-	for _, gate := range [][2]string{{"account", reservation.AccountId}, {"key", reservation.KeyId}} {
-		generation := reservation.AccountGateGeneration
+	for _, gate := range [][2]string{{"association", reservation.AssociationRef}, {"key", reservation.KeyId}} {
+		generation := reservation.AssociationGateGeneration
 		if gate[0] == "key" {
 			generation = reservation.KeyGateGeneration
 		}
@@ -352,11 +319,11 @@ func (state *Store) ResearchDispatch(ctx context.Context, reservationID string, 
 	return hold, err
 }
 
-// ResearchDispatchTx enforces pinned identity and provider/account/key wire gates.
+// ResearchDispatchTx enforces pinned identity and provider/association/key wire gates.
 func (state *Store) ResearchDispatchTx(ctx context.Context, tx *sql.Tx, hold *Reservation, isCreate bool, probeOwner string) error {
 	now := state.Now().UnixMilli()
 	var until int64
-	err := tx.QueryRowContext(ctx, `SELECT coalesce(max(max(cooldown_ms,breaker_ms,CASE WHEN probe_owner<>? THEN half_open ELSE 0 END)),0) FROM runtime_gates WHERE (scope='provider' AND entity_id=?) OR (scope='account' AND entity_id=?) OR (scope='key' AND entity_id=?)`, probeOwner, hold.Provider, hold.AccountId, hold.KeyId).Scan(&until)
+	err := tx.QueryRowContext(ctx, `SELECT coalesce(max(max(cooldown_ms,breaker_ms,CASE WHEN probe_owner<>? THEN half_open ELSE 0 END)),0) FROM runtime_gates WHERE (scope='provider' AND entity_id=?) OR (scope='association' AND entity_id=?) OR (scope='key' AND entity_id=?)`, probeOwner, hold.Provider, hold.AssociationRef, hold.KeyId).Scan(&until)
 	if err != nil {
 		return err
 	}
@@ -374,7 +341,7 @@ func (state *Store) ResearchDispatchTx(ctx context.Context, tx *sql.Tx, hold *Re
 	}
 	if isCreate {
 		var blocked int
-		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM runtime_gates WHERE blocked=1 AND ((scope='account' AND entity_id=?) OR (scope='key' AND entity_id=?))", hold.AccountId, hold.KeyId).Scan(&blocked); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM runtime_gates WHERE blocked=1 AND ((scope='association' AND entity_id=?) OR (scope='key' AND entity_id=?))", hold.AssociationRef, hold.KeyId).Scan(&blocked); err != nil {
 			return err
 		}
 		if blocked > 0 {
@@ -391,7 +358,7 @@ func (state *Store) ResearchDispatchTx(ctx context.Context, tx *sql.Tx, hold *Re
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT research_wire_rate"); err != nil {
 		return err
 	}
-	rateErr := consumeRate(ctx, tx, "account", hold.AccountId, now, units, rate, burst)
+	rateErr := consumeRate(ctx, tx, "association", hold.AssociationRef, now, units, rate, burst)
 	if rateErr == nil {
 		rateErr = consumeRate(ctx, tx, "key", hold.KeyId, now, units, rate, burst)
 	}
@@ -406,13 +373,13 @@ func (state *Store) ResearchDispatchTx(ctx context.Context, tx *sql.Tx, hold *Re
 	if rateErr != nil {
 		return rateErr
 	}
-	for _, gate := range [][2]string{{"account", hold.AccountId}, {"key", hold.KeyId}} {
+	for _, gate := range [][2]string{{"association", hold.AssociationRef}, {"key", hold.KeyId}} {
 		var generation int64
 		if err = tx.QueryRowContext(ctx, "SELECT generation FROM runtime_gates WHERE scope=? AND entity_id=?", gate[0], gate[1]).Scan(&generation); err != nil {
 			return err
 		}
-		if gate[0] == "account" {
-			hold.AccountGateGeneration = generation
+		if gate[0] == "association" {
+			hold.AssociationGateGeneration = generation
 		} else {
 			hold.KeyGateGeneration = generation
 		}

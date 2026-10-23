@@ -99,57 +99,31 @@ func managementHandlerWithCore(state *store.Store, auth *security.Auth, configur
 		auth.ClearSession(writer)
 		return domain.Acknowledgement{Ok: true}, nil
 	})
-	register("GET /v1/admin/accounts", "admin:read", 200, func(_ http.ResponseWriter, request *http.Request, _ store.Identity, _ domain.Session) (any, error) {
-		items, err := state.Accounts(request.Context())
-		if err != nil {
-			return nil, err
-		}
-		items, err = filterProvider(request, items, func(item domain.Account) domain.Provider { return item.Provider })
-		if err != nil {
-			return nil, err
-		}
-		items, cursor, err := page(request, items, func(item domain.Account) string { return item.CreatedAt + "/" + item.Id })
-		return domain.AccountList{Items: items, NextCursor: cursor}, err
-	})
-	register("POST /v1/admin/accounts", "admin:accounts:write", 201, func(writer http.ResponseWriter, request *http.Request, identity store.Identity, _ domain.Session) (any, error) {
-		input, err := body[domain.AccountCreate](state, writer, request, "AccountCreate")
-		if err != nil {
-			return nil, err
-		}
-		return state.CreateAccount(request.Context(), identity.PrincipalId, input)
-	})
-	register("PATCH /v1/admin/accounts/{id}", "admin:accounts:write", 200, func(writer http.ResponseWriter, request *http.Request, identity store.Identity, _ domain.Session) (any, error) {
-		input, err := body[domain.AccountPatch](state, writer, request, "AccountPatch")
-		if err != nil {
-			return nil, err
-		}
-		return state.PatchAccount(request.Context(), identity.PrincipalId, request.PathValue("id"), input)
-	})
 	register("GET /v1/admin/keys", "admin:read", 200, func(_ http.ResponseWriter, request *http.Request, _ store.Identity, _ domain.Session) (any, error) {
 		items, err := state.Keys(request.Context())
 		if err != nil {
 			return nil, err
 		}
-		items, err = filterProvider(request, items, func(item domain.ProviderKey) domain.Provider { return item.Provider })
+		items, err = filterProvider(request, items, func(item domain.UpstreamKey) domain.Provider { return item.Provider })
 		if err != nil {
 			return nil, err
 		}
-		items, cursor, err := page(request, items, func(item domain.ProviderKey) string { return item.CreatedAt + "/" + item.Id })
-		return domain.ProviderKeyList{Items: items, NextCursor: cursor}, err
+		items, cursor, err := page(request, items, func(item domain.UpstreamKey) string { return item.CreatedAt + "/" + item.Id })
+		return domain.UpstreamKeyList{Items: items, NextCursor: cursor}, err
 	})
 	register("POST /v1/admin/keys", "admin:keys:write", 201, func(writer http.ResponseWriter, request *http.Request, identity store.Identity, _ domain.Session) (any, error) {
-		input, err := body[domain.KeyCreate](state, writer, request, "KeyCreate")
+		input, err := body[domain.UpstreamKeyCreate](state, writer, request, "UpstreamKeyCreate")
 		if err != nil {
 			return nil, err
 		}
 		return state.AddKey(request.Context(), identity.PrincipalId, input)
 	})
 	register("PATCH /v1/admin/keys/{id}", "admin:keys:write", 200, func(writer http.ResponseWriter, request *http.Request, identity store.Identity, _ domain.Session) (any, error) {
-		input, err := body[domain.KeyPatch](state, writer, request, "KeyPatch")
+		input, err := body[domain.UpstreamKeyPatch](state, writer, request, "UpstreamKeyPatch")
 		if err != nil {
 			return nil, err
 		}
-		return state.ChangeKey(request.Context(), identity.PrincipalId, request.PathValue("id"), input.ExpectedVersion, input.Label, input.Enabled, nil, false)
+		return state.PatchKey(request.Context(), identity.PrincipalId, request.PathValue("id"), input)
 	})
 	register("POST /v1/admin/keys/{id}/rotate", "admin:keys:write", 200, func(writer http.ResponseWriter, request *http.Request, identity store.Identity, _ domain.Session) (any, error) {
 		input, err := body[domain.KeyRotate](state, writer, request, "KeyRotate")
@@ -299,31 +273,15 @@ func readiness(state *store.Store, configuration config) domain.Readiness {
 	if state.Vault != nil {
 		result.SecretStore = "unlocked"
 	}
-	accounts, err := state.Accounts(ctx)
-	if err != nil {
-		result.Database = "unavailable"
-		return result
-	}
-	keys, err := state.Keys(ctx)
-	if err != nil {
-		result.Database = "unavailable"
-		return result
-	}
 	for _, provider := range []domain.Provider{"exa", "tavily"} {
-		enabled := false
-		for _, account := range accounts {
-			if account.Provider != provider || !account.Enabled || account.QuotaPolicy.Allocation == 0 {
-				continue
-			}
-			for _, key := range keys {
-				if key.AccountId == account.Id && key.Enabled && key.Validity != "invalid" && key.RetirementState == "active" {
-					enabled = true
-				}
-			}
+		enabled, err := state.Available(ctx, string(provider), 0)
+		if err != nil {
+			result.Database = "unavailable"
+			return result
 		}
 		var reason *string
 		if !enabled {
-			message := "No eligible configured account and key"
+			message := "No eligible configured upstream key"
 			reason = &message
 		}
 		result.Providers = append(result.Providers, json.RawMessage(store.JSON(map[string]any{"provider": provider, "enabled": enabled, "reason": reason})))

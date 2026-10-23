@@ -98,17 +98,22 @@ func TestRetirementPreservesPinnedCredentialAndPreventsNewAdmission(t *testing.T
 
 func TestAccountKeyFairnessAndProviderIsolation(t *testing.T) {
 	state, principal := openStore(t)
-	verified := "verified"
 	accountCounts := map[string]int{}
 	keyCounts := map[string]int{}
 	for index := 0; index < 2; index++ {
-		account, err := state.CreateAccount(t.Context(), principal, domain.AccountCreate{Provider: "exa", Enabled: true, Label: fmt.Sprintf("Account %d", index), VerificationState: &verified, QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 2}})
-		if err != nil {
-			t.Fatal(err)
-		}
+		var first domain.UpstreamKey
 		for keyIndex := 0; keyIndex < 2; keyIndex++ {
-			_, err = state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Label: fmt.Sprintf("Key %d", keyIndex), Enabled: true, Secret: fmt.Sprintf("synthetic-fairness-%d-%d", index, keyIndex)})
+			key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", Label: fmt.Sprintf("Key %d", keyIndex), Enabled: true, Secret: fmt.Sprintf("synthetic-fairness-%d-%d", index, keyIndex), QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 2}})
 			if err != nil {
+				t.Fatal(err)
+			}
+			if keyIndex == 0 {
+				first = key
+			}
+			key.AssociationRef = first.AssociationRef
+			key.AssociationEvidence = "operator_declared"
+			key.SharedLimit = &first.QuotaPolicy
+			if _, err = state.DB.Exec("UPDATE provider_keys SET association_ref=?,data=? WHERE id=?", key.AssociationRef, store.JSON(key), key.Id); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -118,7 +123,7 @@ func TestAccountKeyFairnessAndProviderIsolation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		accountCounts[hold.AccountId]++
+		accountCounts[hold.AssociationRef]++
 		keyCounts[hold.KeyId]++
 	}
 	if len(accountCounts) != 2 || len(keyCounts) != 4 {
@@ -139,11 +144,8 @@ func TestAccountKeyFairnessAndProviderIsolation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	tavily, err := state.CreateAccount(t.Context(), principal, domain.AccountCreate{Provider: "tavily", Label: "Independent", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 1}})
+	_, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", Label: "Independent", Enabled: true, Secret: "synthetic-independent-tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 1}})
 	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: tavily.Id, Label: "Independent", Enabled: true, Secret: "synthetic-independent-tavily"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = state.Reserve(t.Context(), store.Admission{ParentId: store.ID("request"), PrincipalId: principal, Provider: "tavily", Operation: "search"}); err != nil {

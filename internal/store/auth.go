@@ -20,7 +20,7 @@ type Identity struct {
 }
 
 // AdminPermissions is the closed permission set from the frozen contract.
-var AdminPermissions = []domain.AdminPermission{"admin:read", "admin:accounts:write", "admin:keys:write", "admin:routes:write", "admin:usage:refresh", "admin:research:create", "admin:research:cancel", "admin:research:observe", "admin:research:reconcile", "admin:tokens:write", "admin:settings:write", "admin:audit:read"}
+var AdminPermissions = []domain.AdminPermission{"admin:read", "admin:keys:write", "admin:routes:write", "admin:usage:refresh", "admin:research:create", "admin:research:cancel", "admin:research:observe", "admin:research:reconcile", "admin:tokens:write", "admin:settings:write", "admin:audit:read"}
 
 // RandomToken creates an opaque local authentication value for explicit flows.
 func RandomToken() string {

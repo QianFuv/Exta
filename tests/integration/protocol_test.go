@@ -203,7 +203,7 @@ func TestAdminMetadataAndMutationsFollowFrozenContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	headers := map[string]string{"Cookie": "exta_session=" + cookie, "Origin": fixtureOrigin, "X-Exta-CSRF": session.CsrfToken}
-	for path, schema := range map[string]string{"/v1/admin/connection-info": "ConnectionInfo", "/v1/admin/requests": "RequestRecordList", "/v1/admin/usage": "UsageView", "/v1/admin/audit": "AuditEventList"} {
+	for path, schema := range map[string]string{"/v1/admin/connection-info": "ConnectionInfo", "/v1/admin/requests": "RequestRecordList", "/v1/admin/usage": "KeyUsageView", "/v1/admin/audit": "AuditEventList"} {
 		response := dispatch(handler, "GET", path, "", "", headers)
 		if response.Code != 200 {
 			t.Fatalf("metadata %s: %d %s", path, response.Code, response.Body.String())

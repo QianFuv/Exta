@@ -130,7 +130,7 @@ func (engine *Engine) claim(ctx context.Context) (record, bool, error) {
 		}
 		if item.Job.State == "queued" {
 			var enabled int
-			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM provider_keys k JOIN provider_accounts a ON a.id=k.account_id WHERE k.id=? AND json_extract(k.data,'$.enabled')=1 AND json_extract(k.data,'$.retirement_state')='active' AND json_extract(a.data,'$.enabled')=1", hold.KeyId).Scan(&enabled); err != nil {
+			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM provider_keys k WHERE k.id=? AND json_extract(k.data,'$.enabled')=1 AND json_extract(k.data,'$.retirement_state')='active'", hold.KeyId).Scan(&enabled); err != nil {
 				return err
 			}
 			if enabled == 0 {
@@ -406,7 +406,7 @@ func (engine *Engine) applyGatesTx(ctx context.Context, tx *sql.Tx, item record,
 		return err
 	}
 	if outcome.GateKind != "" {
-		entity := hold.AccountId
+		entity := hold.AssociationRef
 		if outcome.GateScope == "key" {
 			entity = hold.KeyId
 		}

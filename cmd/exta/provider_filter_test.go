@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"exta/internal/domain"
+	"exta/internal/store"
 )
 
 func TestManagementProviderFiltersBeforePagination(t *testing.T) {
@@ -36,12 +37,7 @@ func TestManagementProviderFiltersBeforePagination(t *testing.T) {
 			unit = "tavily_credit"
 		}
 		for range 2 {
-			verified := "verified"
-			account, err := state.CreateAccount(t.Context(), session.PrincipalId, domain.AccountCreate{Provider: provider, Label: "Filter fixture", VerificationState: &verified, QuotaPolicy: domain.QuotaPolicy{Unit: unit, ActiveJobs: 1}})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := state.AddKey(t.Context(), session.PrincipalId, domain.KeyCreate{AccountId: account.Id, Label: "Filter key", Secret: "synthetic-filter-key-" + account.Id}); err != nil {
+			if _, err := state.AddKey(t.Context(), session.PrincipalId, domain.UpstreamKeyCreate{Provider: provider, Label: "Filter key", Secret: "synthetic-filter-" + store.ID("key"), QuotaPolicy: &domain.QuotaPolicy{Unit: unit, ActiveJobs: 1}}); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -50,7 +46,7 @@ func TestManagementProviderFiltersBeforePagination(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, endpoint := range []string{"accounts", "keys"} {
+	for _, endpoint := range []string{"keys"} {
 		for _, provider := range []string{"exa", "tavily"} {
 			cursor := ""
 			seen := map[string]bool{}

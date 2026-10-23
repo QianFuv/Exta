@@ -66,7 +66,7 @@ func run(arguments []string) error {
 	if err != nil {
 		return err
 	}
-	manifest := artifactManifest{ContractVersion: "1.0.0", ContractSHA256: digest(source), Generator: "exta-contract-v1/openapi-typescript-7.13.0/defaultNonNullable=false", Files: map[string]string{}}
+	manifest := artifactManifest{ContractVersion: contract["info"].(map[string]any)["version"].(string), ContractSHA256: digest(source), Generator: "exta-contract-v1/openapi-typescript-7.13.0/defaultNonNullable=false", Files: map[string]string{}}
 	if backendOnly {
 		previousBytes, err := os.ReadFile("api/contract-manifest.json")
 		if err != nil {

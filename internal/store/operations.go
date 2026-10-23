@@ -66,12 +66,9 @@ func openInspection(path, mode string) (*sql.DB, error) {
 	return database, nil
 }
 
-var expectedSchemas sync.Map
-
-type schemaExpectation struct {
-	Objects map[string]string
-	Error   error
-}
+var expectedSchemaOnce sync.Once
+var expectedSchema map[string]string
+var expectedSchemaError error
 
 func schemaObjects(ctx context.Context, database *sql.DB) (map[string]string, error) {
 	rows, err := database.QueryContext(ctx, "SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT GLOB 'sqlite_*'")
@@ -90,42 +87,29 @@ func schemaObjects(ctx context.Context, database *sql.DB) (map[string]string, er
 	return result, rows.Err()
 }
 
-func validateSchemaObjects(ctx context.Context, database *sql.DB, version int) error {
-	cached, exists := expectedSchemas.Load(version)
-	if !exists {
-		expected := schemaExpectation{}
-		build := func() {
-			reference, err := sql.Open("sqlite", ":memory:")
-			if err != nil {
-				expected.Error = err
-				return
-			}
-			defer reference.Close()
-			reference.SetMaxOpenConns(1)
-			if _, err = reference.Exec(initialSchema); err != nil {
-				expected.Error = err
-				return
-			}
-			if version == 2 {
-				if _, err = reference.Exec(keySchema); err != nil {
-					expected.Error = err
-					return
-				}
-			}
-			expected.Objects, expected.Error = schemaObjects(context.Background(), reference)
+func validateSchemaObjects(ctx context.Context, database *sql.DB) error {
+	expectedSchemaOnce.Do(func() {
+		reference, err := sql.Open("sqlite", ":memory:")
+		if err != nil {
+			expectedSchemaError = err
+			return
 		}
-		build()
-		cached, _ = expectedSchemas.LoadOrStore(version, expected)
-	}
-	expected := cached.(schemaExpectation)
-	if expected.Error != nil {
-		return expected.Error
+		defer reference.Close()
+		reference.SetMaxOpenConns(1)
+		if _, err = reference.Exec(initialSchema); err != nil {
+			expectedSchemaError = err
+			return
+		}
+		expectedSchema, expectedSchemaError = schemaObjects(context.Background(), reference)
+	})
+	if expectedSchemaError != nil {
+		return expectedSchemaError
 	}
 	actual, err := schemaObjects(ctx, database)
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(expected.Objects, actual) {
+	if !reflect.DeepEqual(expectedSchema, actual) {
 		return errors.New("database schema objects differ from the published migration")
 	}
 	return nil
@@ -180,13 +164,13 @@ func InspectExisting(ctx context.Context, path string, vault Vault) (Inspection,
 	if err = database.QueryRowContext(ctx, "PRAGMA user_version").Scan(&result.SchemaVersion); err != nil {
 		return result, err
 	}
-	if result.SchemaVersion != 1 && result.SchemaVersion != 2 {
+	if result.SchemaVersion != 1 {
 		return result, errors.New("database schema is incompatible; initialization and downgrades are refused")
 	}
-	if err = validateSchemaObjects(ctx, database, result.SchemaVersion); err != nil {
+	if err = validateSchemaObjects(ctx, database); err != nil {
 		return result, err
 	}
-	if err = database.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != result.SchemaVersion {
+	if err = database.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 1 {
 		return result, errors.New("migration history is incomplete or incompatible")
 	}
 	if err = database.QueryRowContext(ctx, "SELECT checksum FROM schema_migrations WHERE version=1").Scan(&result.MigrationChecksum); err != nil {
@@ -194,13 +178,6 @@ func InspectExisting(ctx context.Context, path string, vault Vault) (Inspection,
 	}
 	if result.MigrationChecksum != Digest([]byte(strings.ReplaceAll(strings.ReplaceAll(initialSchema, "\r\n", "\n"), "\r", "\n"))) {
 		return result, errors.New("migration checksum mismatch")
-	}
-	if result.SchemaVersion == 2 {
-		var second string
-		if err = database.QueryRowContext(ctx, "SELECT checksum FROM schema_migrations WHERE version=2").Scan(&second); err != nil || second != schemaDigest(keySchema) {
-			return result, errors.New("key migration checksum mismatch")
-		}
-		result.MigrationChecksum = Digest([]byte(result.MigrationChecksum + "\n" + second + "\n"))
 	}
 	if err = database.QueryRowContext(ctx, "SELECT count(*) FROM principals WHERE credential_hash IS NOT NULL").Scan(&count); err != nil || count == 0 {
 		return result, errors.New("administrator initialization is incomplete")

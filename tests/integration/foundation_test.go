@@ -14,7 +14,7 @@ import (
 	"exta/internal/store"
 )
 
-func foundation(t *testing.T) (*store.Store, string, domain.Account, domain.ProviderKey) {
+func foundation(t *testing.T) (*store.Store, string, domain.UpstreamKey, domain.UpstreamKey) {
 	t.Helper()
 	vault, err := security.NewVault(bytes.Repeat([]byte{9}, 32))
 	if err != nil {
@@ -29,14 +29,11 @@ func foundation(t *testing.T) (*store.Store, string, domain.Account, domain.Prov
 	if err != nil {
 		t.Fatal(err)
 	}
-	account, err := state.CreateAccount(t.Context(), principal, domain.AccountCreate{Provider: "exa", Enabled: true, Label: "Synthetic", QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: 1000000, PerOperationReservation: 1, ActiveJobs: 2}})
+	key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 1000000, PerOperationReservation: 1, ActiveJobs: 2}, Label: "Synthetic", Enabled: true, Secret: "synthetic-provider-for-foundation"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	key, err := state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Label: "Synthetic", Enabled: true, Secret: "synthetic-provider-for-foundation"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	account := key
 	return state, principal, account, key
 }
 
@@ -129,7 +126,7 @@ func TestFoundationRatesAndRejectedReservationAreAtomic(t *testing.T) {
 	}
 	quota := account.QuotaPolicy
 	quota.Allocation = 9
-	if _, err = state.PatchAccount(t.Context(), principal, account.Id, domain.AccountPatch{ExpectedVersion: 1, QuotaPolicy: &quota}); err == nil {
+	if _, err = state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: 1, QuotaPolicy: &quota}); err == nil {
 		t.Fatal("quota edit erased held budget")
 	}
 }

@@ -18,7 +18,7 @@ func TestCapabilitiesRequireConfiguredAndSufficientReservation(t *testing.T) {
 			quota := account.QuotaPolicy
 			quota.Allocation = fixture.allocation
 			quota.PerOperationReservation = fixture.reservation
-			if _, err := state.PatchAccount(t.Context(), principal, account.Id, domain.AccountPatch{ExpectedVersion: account.Version, QuotaPolicy: &quota}); err != nil {
+			if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: &quota}); err != nil {
 				t.Fatal(err)
 			}
 			mock := newMockProvider(t)

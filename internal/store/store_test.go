@@ -38,16 +38,13 @@ func openStore(t *testing.T) (*store.Store, string) {
 	return state, principal
 }
 
-func addAccount(t *testing.T, state *store.Store, principal string, allocation int64) (domain.Account, domain.ProviderKey) {
+func addAccount(t *testing.T, state *store.Store, principal string, allocation int64) (domain.UpstreamKey, domain.UpstreamKey) {
 	t.Helper()
-	account, err := state.CreateAccount(t.Context(), principal, domain.AccountCreate{Provider: "exa", Label: "Test account", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: domain.Integer(allocation), PerOperationReservation: 10, ActiveJobs: 2}})
+	key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: domain.Integer(allocation), PerOperationReservation: 10, ActiveJobs: 2}, Label: "Test key", Enabled: true, Secret: fakeProviderKey})
 	if err != nil {
 		t.Fatal(err)
 	}
-	key, err := state.AddKey(t.Context(), principal, domain.KeyCreate{AccountId: account.Id, Label: "Test key", Enabled: true, Secret: fakeProviderKey})
-	if err != nil {
-		t.Fatal(err)
-	}
+	account := key
 	return account, key
 }
 
@@ -195,7 +192,7 @@ func TestRestartPreservesHoldsCooldownAndPinnedCredential(t *testing.T) {
 	if keys[0].Validity == "invalid" || keys[0].RetainedCredentialCount != 1 {
 		t.Fatalf("rotation lost version isolation: %+v", keys[0])
 	}
-	if err = state.GateFailure(t.Context(), "account", hold.AccountId, "", "rate", time.Minute); err != nil {
+	if err = state.GateFailure(t.Context(), "account", hold.AssociationRef, "", "rate", time.Minute); err != nil {
 		t.Fatal(err)
 	}
 	path, vault := state.Path, state.Vault

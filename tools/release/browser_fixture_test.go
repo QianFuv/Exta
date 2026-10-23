@@ -69,11 +69,8 @@ func TestBrowserFixture(t *testing.T) {
 	if err := state.DB.QueryRow("SELECT id FROM principals LIMIT 1").Scan(&owner); err != nil {
 		t.Fatal(err)
 	}
-	account, err := state.CreateAccount(t.Context(), owner, domain.AccountCreate{Provider: "exa", Label: "Offline browser fixtures", Enabled: true, QuotaPolicy: domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}})
+	upstreamKey, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}, Label: "Invalid offline fixture key", Enabled: true, Secret: "synthetic-invalid-browser-fixture-key"})
 	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := state.AddKey(t.Context(), owner, domain.KeyCreate{AccountId: account.Id, Label: "Invalid offline fixture key", Enabled: true, Secret: "synthetic-invalid-browser-fixture-key"}); err != nil {
 		t.Fatal(err)
 	}
 	core, err := service.New(state, nil, security.UrlPolicy{})
@@ -137,21 +134,29 @@ func TestBrowserFixture(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	for _, input := range []domain.UpstreamKeyCreate{
+		{Provider: "exa", Label: "Exa secondary · offline fixture", Enabled: false, Secret: "synthetic-invalid-secondary-key", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 5000000, PerOperationReservation: 500000, ActiveJobs: 1}},
+		{Provider: "tavily", Label: "Tavily search · offline fixture", Enabled: false, Secret: "synthetic-invalid-tavily-key", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 10000, PerOperationReservation: 100, ActiveJobs: 1}},
+	} {
+		if _, err := state.AddKey(t.Context(), owner, input); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err = state.DB.Exec("UPDATE credential_versions SET validity='invalid'"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = state.DB.Exec("UPDATE runtime_gates SET blocked=1"); err != nil {
 		t.Fatal(err)
 	}
-	requestId := seedBrowserRequests(t, state, owner, account.Id)
-	metadata := map[string]any{"owner": owner, "jobs": ids, "body": body, "key": "browser-fixture-queued", "account": account.Id, "request": requestId}
+	requestId := seedBrowserRequests(t, state, owner, upstreamKey.Id)
+	metadata := map[string]any{"owner": owner, "jobs": ids, "body": body, "key": "browser-fixture-queued", "upstreamKey": upstreamKey.Id, "request": requestId}
 	if err := os.WriteFile(filepath.Join(filepath.Dir(directory), "fixture.json"), []byte(store.JSON(metadata)), 0600); err != nil {
 		t.Fatal(err)
 	}
 }
 
 // seedBrowserRequests supplies sanitized local history without contacting a provider.
-func seedBrowserRequests(t *testing.T, state *store.Store, owner, accountId string) string {
+func seedBrowserRequests(t *testing.T, state *store.Store, owner, keyId string) string {
 	t.Helper()
 	var credentialId string
 	if err := state.DB.QueryRow("SELECT id FROM credential_versions LIMIT 1").Scan(&credentialId); err != nil {
@@ -169,7 +174,7 @@ func seedBrowserRequests(t *testing.T, state *store.Store, owner, accountId stri
 			count, failures, status = 0, 1, 429
 			record.Error = &domain.ErrorDetail{Code: "upstream_rate_limited", Message: "Synthetic provider rate limit", RequestId: id, Retryable: true, Details: json.RawMessage(`{}`)}
 		}
-		attempt := domain.Attempt{Id: fmt.Sprintf("attempt_browser_%02d", index), AccountId: accountId, CredentialVersionId: credentialId, Provider: provider, AttemptNumber: 1, CreatedAt: created, DurationMs: duration, HttpStatus: &status, TransmissionState: "response_received"}
+		attempt := domain.Attempt{Id: fmt.Sprintf("attempt_browser_%02d", index), KeyId: &keyId, CredentialVersionId: credentialId, Provider: provider, AttemptNumber: 1, CreatedAt: created, DurationMs: duration, HttpStatus: &status, TransmissionState: "response_received"}
 		for schema, item := range map[string]any{"RequestRecord": record, "Attempt": attempt} {
 			if err := domain.ValidateJSON(schema, []byte(store.JSON(item))); err != nil {
 				t.Fatal(err)
