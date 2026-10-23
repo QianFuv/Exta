@@ -302,19 +302,12 @@ function LimitsForm({ settings }: { settings: Settings }) {
             onChange={onChange}
             disabled={!canWrite || save.isPending}
             invalid={!isFieldValid}
-            describedBy={`${formId}-${name}-unit ${formId}-${name}-range`}
+            describedBy={`${formId}-${name}-range`}
           />
-          <span id={`${formId}-${name}-unit`} className="input-unit">
-            {t(
-              fieldUnit(name) === "settings.unit.jobs" && Number(value) === 1
-                ? "settings.unit.job"
-                : fieldUnit(name),
-            )}
-          </span>
         </div>
         <p id={`${formId}-${name}-range`} className={isFieldValid ? "field-hint" : "field-error"}>
           {isFieldValid
-            ? `${formatNumber(minimum)}–${formatNumber(maximum)}`
+            ? `${formatNumber(minimum)}–${formatNumber(maximum)} ${t(fieldUnit(name))}`
             : t("settings.rangeError", { minimum, maximum })}
         </p>
         {name.endsWith("_bytes") && isFieldValid ? (
@@ -399,5 +392,5 @@ function numericPresets(name: string, maximum: number): number[] {
   if (name.endsWith("_seconds")) return [60, 900, 1800, maximum];
   if (maximum <= 3) return [0, 1, 2, maximum];
   if (maximum <= 16) return [1, 4, 8, maximum];
-  return [1, Math.round(maximum / 4), Math.round(maximum / 2), maximum];
+  return [Math.round(maximum / 4), Math.round(maximum / 2), maximum];
 }
