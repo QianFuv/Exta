@@ -624,3 +624,18 @@ html body[theme-mode="dark"] {
   display: inline-flex;
   flex: 0 0 auto;
 }
+
+.key-usage {
+  min-width: 0;
+  max-width: 380px;
+}
+.key-usage-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+.key-usage .semi-progress {
+  margin: 6px 0;
+}

@@ -115,7 +115,9 @@ describe("key pools", () => {
     );
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByText(/billing account/i)).toBeNull();
-    expect(screen.getAllByText("Not independently verified")).toHaveLength(4);
+    expect(screen.queryByRole("columnheader", { name: "Shared allowance" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Local safety limit" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Usage" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add account" })).toBeNull();
     expect(callsTo("GET", "/v1/admin/accounts")).toHaveLength(0);
     expect(screen.getByText(/Credential retained for 1 unresolved job/)).toBeInTheDocument();

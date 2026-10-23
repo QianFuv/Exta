@@ -1,12 +1,13 @@
 import { KeyStatus } from "./KeyStatus";
 /** Direct upstream-key administration with no parent-account workflow. */
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { KeyUsage } from "./KeyUsage";
 import { Button, Input, Select, ActionMenu } from "../../components/Controls";
 import { DataTable } from "../../components/DataTable";
 import { EmptyState, InlineError, QueryView } from "../../components/Feedback";
 import { PageHeader, PermissionHint, RequirePermission, Section } from "../../components/Page";
 import { LoadMore } from "../../components/LoadMore";
-import { useUnitFormatter } from "../../components/Values";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
@@ -45,7 +46,6 @@ function KeyInventory() {
   const { t } = useI18n();
   const api = useApi();
   const { can } = useSession();
-  const format = useUnitFormatter();
   const [provider, setProvider] = useState<Provider | "all">("all");
   const [filter, setFilter] = useState("");
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -62,6 +62,29 @@ function KeyInventory() {
       }),
     ),
   );
+  const usage = useQuery({
+    queryKey: ["usage", "key-inventory", provider],
+    queryFn: async () => {
+      const observations: Schemas["KeyUsage"][] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await call(
+          api.GET("/v1/admin/usage", {
+            params: {
+              query: {
+                limit: 100,
+                ...(provider === "all" ? {} : { provider }),
+                ...(cursor ? { cursor } : {}),
+              },
+            },
+          }),
+        );
+        observations.push(...page.items);
+        cursor = page.next_cursor ?? undefined;
+      } while (cursor);
+      return observations;
+    },
+  });
   const visible = items.filter((key) =>
     `${key.label} ${key.id} ${key.last_four}`.toLowerCase().includes(filter.trim().toLowerCase()),
   );
@@ -99,10 +122,17 @@ function KeyInventory() {
           <option value="exa">Exa</option>
           <option value="tavily">Tavily</option>
         </Select>
-        <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
+        <Button
+          onClick={() => {
+            void query.refetch();
+            void usage.refetch();
+          }}
+          disabled={query.isFetching || usage.isFetching}
+        >
           {t("common.refresh")}
         </Button>
       </div>
+      <InlineError error={usage.error} />
       <QueryView query={query}>
         {() =>
           visible.length === 0 ? (
@@ -126,12 +156,7 @@ function KeyInventory() {
                       <p className="cell-secondary">
                         {t(`provider.${key.provider}`)} · ••••{key.last_four}
                       </p>
-                      <p className="numeric">
-                        {t("keys.allocation")}:{" "}
-                        {key.quota_policy.allocation === 0
-                          ? t("keys.unlimited")
-                          : format(key.quota_policy.allocation, key.quota_policy.unit)}
-                      </p>
+                      <KeyUsage providerKey={key} items={usage.data ?? []} />
                       <KeyActions providerKey={key} canWrite={canWrite} onDialog={setDialog} />
                     </>
                   )}
@@ -165,30 +190,11 @@ function KeyInventory() {
                       render: (_value, key) => <KeyStatus providerKey={key} />,
                     },
                     {
-                      key: "limit",
-                      title: t("keys.allocation"),
-                      width: 180,
+                      key: "usage",
+                      title: t("keys.usage"),
+                      width: 300,
                       render: (_value, key) => (
-                        <>
-                          <span className="numeric">
-                            {key.quota_policy.allocation === 0
-                              ? t("keys.unlimited")
-                              : format(key.quota_policy.allocation, key.quota_policy.unit)}
-                          </span>
-                          <small className="cell-secondary">{t("keys.localLimit")}</small>
-                        </>
-                      ),
-                    },
-                    {
-                      key: "association",
-                      title: t("keys.sharedAllowance"),
-                      width: 180,
-                      render: (_value, key) => (
-                        <span className="muted">
-                          {key.association_evidence === "unknown"
-                            ? t("keys.identityUnknown")
-                            : t("keys.sharedKnown")}
-                        </span>
+                        <KeyUsage providerKey={key} items={usage.data ?? []} />
                       ),
                     },
                     {
