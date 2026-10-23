@@ -1755,3 +1755,15 @@ h3 {
   gap: 12px;
   margin-bottom: 20px;
 }
+
+.interface-preferences {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbar {
+  justify-content: flex-end;
+}
+.session-sign-out {
+  margin-left: 8px;
+}

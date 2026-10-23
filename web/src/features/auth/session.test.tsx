@@ -55,8 +55,7 @@ describe("admin session", () => {
 
   it("signs out with the CSRF header", async () => {
     renderApp("/overview");
-    await userEvent.click(await screen.findByRole("button", { name: "Preferences" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(await screen.findByText("You signed out.")).toBeInTheDocument();
     const calls = callsTo("DELETE", "/v1/admin/session");
     expect(calls).toHaveLength(1);

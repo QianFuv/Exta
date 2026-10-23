@@ -8,8 +8,7 @@ import { call, useApi } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
 import { useSession } from "../../lib/session";
 import { InlineError, Notice } from "../../components/Feedback";
-import { LanguageSwitch } from "../../components/LanguageSwitch";
-import { ThemeSwitch } from "../../components/ThemeSwitch";
+import { PreferencesMenu } from "../../components/PreferencesMenu";
 import { BrandMark } from "../../components/BrandMark";
 import { MockModeBanner } from "../../components/Layout";
 
@@ -63,8 +62,7 @@ export function LoginPage() {
     <div className="login">
       <MockModeBanner />
       <header className="login-language">
-        <ThemeSwitch />
-        <LanguageSwitch />
+        <PreferencesMenu />
       </header>
       <main className="login-card" id="main">
         <div className="login-brand">

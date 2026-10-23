@@ -40,7 +40,7 @@ describe("application shell", () => {
   it("defaults to Chinese and switches to English", async () => {
     renderApp("/overview", { locale: "zh" });
     expect(await screen.findByRole("heading", { name: "统计", level: 1 })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "偏好设置" }));
+    await userEvent.click(screen.getByRole("button", { name: "语言" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "English" }));
     expect(
       await screen.findByRole("heading", { name: "Statistics", level: 1 }),

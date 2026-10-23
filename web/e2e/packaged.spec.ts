@@ -18,14 +18,13 @@ function audit(page: Page) {
 /** Choose an official Semi option by its visible accessible label. */
 async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
   const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
-  const preferences = page.getByRole("button", { name: "Preferences", exact: true });
-  if (await preferences.isVisible()) {
-    await preferences.click();
-    await page.getByRole("menuitem", { name: label, exact: true }).click();
-  } else {
-    await page.getByRole("combobox", { name: "Appearance", exact: true }).click();
-    await page.getByRole("option", { name: label, exact: true }).click();
-  }
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page
+    .getByRole("menuitem", {
+      name: label,
+      exact: true,
+    })
+    .click();
 }
 
 /** Await layout and integer scroll rounding while rejecting clipped navigation labels. */
@@ -129,7 +128,8 @@ test("standalone key-only administration and persistent appearance", async ({
       )
       .toBe(200);
     await page.goto(`${origin}/app/`);
-    await page.getByRole("button", { name: /English/ }).click();
+    await page.getByRole("button", { name: "语言", exact: true }).click();
+    await page.getByRole("menuitem", { name: "English", exact: true }).click();
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
     await page.getByLabel("Administrator password").fill(credential);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -367,7 +367,7 @@ test("standalone key-only administration and persistent appearance", async ({
       }
       await page.screenshot({ path: info.outputPath(`logs-${theme}.png`), fullPage: true });
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("button", { name: "Preferences", exact: true }).click();
+      await page.getByRole("button", { name: "Appearance", exact: true }).click();
       await expect(page.getByRole("menuitem", { name: "System", exact: true })).toBeVisible();
       await page.keyboard.press("Escape");
       await expectActiveNavigationVisible(page, `${theme}: navigation after mobile resize`);
@@ -444,8 +444,7 @@ test("standalone key-only administration and persistent appearance", async ({
     ).toBe(0);
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
-    await page.getByRole("button", { name: "Preferences", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(401);
     await info.attach("binary-identity", {

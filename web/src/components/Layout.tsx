@@ -1,3 +1,4 @@
+import { Button } from "./Controls";
 import { PreferencesMenu } from "./PreferencesMenu";
 /** Authenticated application shell: brand, navigation, language and sign-out. */
 import { Suspense, useEffect, useRef } from "react";
@@ -87,7 +88,6 @@ export function Layout() {
     onSuccess: () => expire("logged_out"),
   });
 
-  const current = NAVIGATION.find((item) => location.pathname.startsWith(item.to));
   return (
     <div className="shell">
       <a className="skip-link" href="#main">
@@ -98,7 +98,6 @@ export function Layout() {
         <div className="brand">
           <BrandMark />
           <span className="brand-name">Exta</span>
-          <span className="brand-console">Console</span>
         </div>
         <p className="nav-caption">{t("nav.workspace")}</p>
         <nav ref={navigationRef} id="primary-navigation" aria-label={t("nav.primary")} tabIndex={0}>
@@ -119,13 +118,15 @@ export function Layout() {
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <div className="breadcrumb">
-            <span>Exta</span>
-            <span aria-hidden="true">/</span>
-            <strong>{current ? t(current.label) : t("nav.workspace")}</strong>
-          </div>
           <div className="topbar-actions">
-            <PreferencesMenu onLogout={() => logout.mutate()} isLoggingOut={logout.isPending} />
+            <PreferencesMenu />
+            <Button
+              className="button-ghost session-sign-out"
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
+            >
+              {logout.isPending ? t("session.signingOut") : t("session.signOut")}
+            </Button>
           </div>
         </header>
         {logout.isError ? (
