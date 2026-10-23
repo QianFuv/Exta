@@ -28,6 +28,24 @@ async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
   }
 }
 
+/** Await layout and integer scroll rounding while rejecting clipped navigation labels. */
+async function expectActiveNavigationVisible(page: Page, description: string) {
+  await expect
+    .poll(
+      () =>
+        page.locator('#primary-navigation [aria-current="page"]').evaluate((element) => {
+          const item = element.getBoundingClientRect();
+          const viewport = document.getElementById("primary-navigation")!.getBoundingClientRect();
+          return {
+            leftOverflow: Math.max(0, Math.ceil(viewport.left - item.left - 1)),
+            rightOverflow: Math.max(0, Math.ceil(item.right - viewport.right - 1)),
+          };
+        }),
+      { message: description },
+    )
+    .toEqual({ leftOverflow: 0, rightOverflow: 0 });
+}
+
 test("standalone key-only administration and persistent appearance", async ({
   page,
   context,
@@ -281,16 +299,7 @@ test("standalone key-only administration and persistent appearance", async ({
       await page.getByRole("button", { name: "Preferences", exact: true }).click();
       await expect(page.getByRole("menuitem", { name: "System", exact: true })).toBeVisible();
       await page.keyboard.press("Escape");
-      const resizedActive = page.locator('#primary-navigation [aria-current="page"]');
-      await expect
-        .poll(async () =>
-          resizedActive.evaluate((element) => {
-            const rect = element.getBoundingClientRect();
-            const bounds = document.getElementById("primary-navigation")!.getBoundingClientRect();
-            return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
-          }),
-        )
-        .toBe(true);
+      await expectActiveNavigationVisible(page, `${theme}: navigation after mobile resize`);
       for (const route of ["overview", "keys", "access-keys", "requests", "settings"]) {
         await page.goto(`${origin}/app/${route}`);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -315,17 +324,7 @@ test("standalone key-only administration and persistent appearance", async ({
             await expect(action).toBeFocused();
           }
         }
-        const activeNavigation = page.locator('#primary-navigation [aria-current="page"]');
-        const navigation = page.locator("#primary-navigation");
-        expect(
-          await activeNavigation.evaluate(
-            (element, bounds) => {
-              const rect = element.getBoundingClientRect();
-              return rect.left >= bounds!.x && rect.right <= bounds!.x + bounds!.width;
-            },
-            await navigation.boundingBox(),
-          ),
-        ).toBe(true);
+        await expectActiveNavigationVisible(page, `${theme}: mobile navigation on ${route}`);
       }
       await page.screenshot({
         path: info.outputPath(`settings-mobile-${theme}.png`),
