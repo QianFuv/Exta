@@ -9,6 +9,8 @@
 - Consolidate recent calls and errors on the left of Statistics with key-pool/readiness panels on the right. Add UTC call-count trends over 24 hours, 7 days or 30 days, counting each retained synchronous request or Research job once, never retries, fallback attempts or polling. Outcomes reflect current state in the original creation bucket; pre-admission rejections and deleted history are outside coverage.
 - Remove the independent Audit interface while preserving internal transactional evidence and existing history. Add exact request-ID filtering and provider filtering across failed fallback attempts without duplicate call rows.
 - Unify login and application language/appearance icon menus, remove redundant breadcrumbs and subtitles, and move selected explanations into accessible heading help. Apply restrained graphite/indigo light, dark and system themes. Keep units, errors, critical states and destructive confirmations visible.
+- Show per-key usage progress with matching units, scope and period; unknown totals have no fabricated percentage. Remove shared-pool identification and ownership-verification product hints, retaining atomic identical-credential rejection and historical accounting data.
+- Give exact numeric inputs a unified surface in both themes, including hover, focus, disabled and invalid states. Keep heading help dismissible by Escape even when opened by hovering from another focused field.
 - Keep the initial database schema unchanged from 0.1.2. New password-verifier state requires this or a newer binary for login; old credentials are not rewritten. No automatic production deployment or password reset is performed.
 
 ## 0.1.2 — 2026-10-24
