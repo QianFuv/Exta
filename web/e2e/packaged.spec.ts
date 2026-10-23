@@ -52,6 +52,31 @@ async function expectNumericMarksReadable(page: Page) {
     .toBe(true);
 }
 
+/** A precise number and its steppers share a visible, enclosing control surface. */
+async function expectNumericSurface(page: Page) {
+  const surfaces = await page
+    .locator(".numeric-control > .semi-input-number")
+    .evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const style = getComputedStyle(node);
+        const bounds = node.getBoundingClientRect();
+        const input = node.querySelector("input")!.getBoundingClientRect();
+        const buttons = node
+          .querySelector(".semi-input-number-suffix-btns")!
+          .getBoundingClientRect();
+        return {
+          visible:
+            style.backgroundColor !== "rgba(0, 0, 0, 0)" &&
+            parseFloat(style.borderTopWidth) >= 1 &&
+            parseFloat(style.borderRadius) > 0,
+          enclosed: input.left >= bounds.left && buttons.right <= bounds.right + 1,
+        };
+      }),
+    );
+  expect(surfaces.length).toBeGreaterThan(0);
+  expect(surfaces.every((item) => item.visible && item.enclosed)).toBe(true);
+}
+
 /** Choose an official Semi option by its visible accessible label. */
 async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
   const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
@@ -436,11 +461,9 @@ test("standalone key-only administration and persistent appearance", async ({
           fullPage: true,
         });
         if (route === "keys") {
-          const help = page.getByRole("button", { name: "About Upstream provider keys" });
-          await help.focus();
-          await expect(page.getByRole("tooltip")).toBeVisible();
-          await page.keyboard.press("Escape");
-          await expect(page.getByRole("tooltip")).not.toBeVisible();
+          await expect(
+            page.getByRole("button", { name: "About Upstream provider keys" }),
+          ).toHaveCount(0);
         }
       }
       await page.goto(`${origin}/app/requests`);
@@ -604,8 +627,53 @@ test("standalone key-only administration and persistent appearance", async ({
         await page.getByRole("menuitem", { name: "添加密钥 · Exa", exact: true }).click();
         await expect(page.getByRole("dialog")).toBeVisible();
         await expectNumericMarksReadable(page);
+        await page.mouse.move(0, 0);
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await expectNumericSurface(page);
         await capture(`zh-key-dialog-${theme}`);
+        const exact = page.getByRole("dialog").getByRole("spinbutton").first();
+        const surface = exact.locator("xpath=ancestor::div[contains(@class,'semi-input-number')]");
+        const restingBackground = await surface.evaluate(
+          (element) => getComputedStyle(element).backgroundColor,
+        );
+        await exact.hover();
+        await expect
+          .poll(() => surface.evaluate((element) => getComputedStyle(element).backgroundColor))
+          .not.toBe(restingBackground);
+        await capture(`zh-number-hover-${theme}`);
+        await exact.focus();
+        await expect
+          .poll(() => surface.evaluate((element) => getComputedStyle(element).boxShadow))
+          .not.toBe("none");
+        await capture(`zh-number-focus-${theme}`);
+        await exact.fill("-1");
+        await expect(exact).toHaveAttribute("aria-invalid", "true");
+        await exact.hover();
+        const invalidBorder = await surface.evaluate(
+          (element) => getComputedStyle(element).borderTopColor,
+        );
+        await page.mouse.move(0, 0);
+        await expect
+          .poll(() => surface.evaluate((element) => getComputedStyle(element).borderTopColor))
+          .toBe(invalidBorder);
+        await capture(`zh-number-error-${theme}`);
+        await exact.fill("0");
+        const dialogHelp = page.getByRole("dialog").getByRole("button", { name: /关于/ });
+        await exact.focus();
+        await dialogHelp.hover();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await expect(exact).toBeFocused();
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await expect(page.getByRole("dialog")).toBeVisible();
+        await dialogHelp.click();
+        await expect(page.getByRole("tooltip")).toContainText("上游余额未知");
+        await capture(`zh-key-help-${theme}`);
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await expect(page.getByRole("dialog")).toBeVisible();
         await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
+        await page.goto(`${origin}/app/overview`);
         const help = page.getByRole("button", { name: /关于/ }).first();
         await page.mouse.move(0, 0);
         await help.focus();
@@ -632,6 +700,7 @@ test("standalone key-only administration and persistent appearance", async ({
         await capture(`zh-route-dialog-${theme}`);
         await page.setViewportSize({ width: 390, height: 844 });
         await expectDialogWithinViewport(page);
+        await expectNumericSurface(page);
         await capture(`zh-route-mobile-${theme}`);
         await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
         for (const route of [
@@ -652,6 +721,17 @@ test("standalone key-only administration and persistent appearance", async ({
         await capture(`zh-mobile-theme-menu-${theme}`, false);
         await page.keyboard.press("Escape");
         await page.setViewportSize({ width: 1440, height: 1000 });
+        await page.route("**/v1/admin/session", async (route) => {
+          const response = await route.fetch();
+          const current = await response.json();
+          await route.fulfill({ response, json: { ...current, permissions: ["admin:read"] } });
+        });
+        await page.goto(`${origin}/app/settings`);
+        await expect(page.getByRole("spinbutton").first()).toBeDisabled();
+        await expectNumericSurface(page);
+        await capture(`zh-number-disabled-${theme}`, false);
+        await page.unroute("**/v1/admin/session");
+        await page.goto(`${origin}/app/keys`);
         await page.route("**/v1/admin/keys?*", async (route) =>
           route.fulfill({ json: { items: [], next_cursor: null } }),
         );
