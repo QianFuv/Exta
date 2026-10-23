@@ -129,3 +129,30 @@ func TestLinkedKeysShareOneReservationCeiling(t *testing.T) {
 		t.Fatalf("duplicated shared balance: %d", sharedRows)
 	}
 }
+
+// Concurrent import submissions must converge to one durable fingerprint binding.
+func TestConcurrentDuplicateKeyCreationHasOneWinner(t *testing.T) {
+	state, owner := openStore(t)
+	var accepted atomic.Int32
+	var workers sync.WaitGroup
+	for range 16 {
+		workers.Go(func() {
+			_, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Synthetic duplicate", Secret: "synthetic-concurrent-duplicate", Enabled: true})
+			if err == nil {
+				accepted.Add(1)
+			} else {
+				faultCode(t, err, "invalid_request")
+			}
+		})
+	}
+	workers.Wait()
+	if accepted.Load() != 1 {
+		t.Fatalf("accepted %d duplicate credentials", accepted.Load())
+	}
+	for _, table := range []string{"provider_keys", "credential_versions"} {
+		var count int
+		if err := state.DB.QueryRow("SELECT count(*) FROM " + table).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("%s contains %d rows: %v", table, count, err)
+		}
+	}
+}
