@@ -1,3 +1,4 @@
+import { PreferencesMenu } from "./PreferencesMenu";
 /** Authenticated application shell: brand, navigation, language and sign-out. */
 import { Suspense, useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
@@ -7,14 +8,13 @@ import { useI18n } from "../lib/i18n";
 import type { MessageKey } from "../lib/messages";
 import { useSession } from "../lib/session";
 import { InlineError, LoadingState } from "./Feedback";
-import { LanguageSwitch } from "./LanguageSwitch";
 import { BrandMark } from "./BrandMark";
-import { ThemeSwitch } from "./ThemeSwitch";
 import { NavigationIcon } from "./NavigationIcon";
 
 const NAVIGATION = [
   { to: "/overview", label: "nav.overview", icon: "overview" },
-  { to: "/keys", label: "nav.keys", icon: "keys" },
+  { to: "/keys", label: "keys.upstream", icon: "keys" },
+  { to: "/access-keys", label: "keys.access", icon: "keys" },
   { to: "/requests", label: "nav.requests", icon: "requests" },
   { to: "/settings", label: "nav.settings", icon: "settings" },
 ] as const satisfies ReadonlyArray<{
@@ -47,11 +47,30 @@ export function MockModeBanner() {
  * @returns Shell with navigation and routed content.
  */
 export function Layout() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const api = useApi();
-  const { session, csrfToken, expire } = useSession();
+  const { csrfToken, expire } = useSession();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
+  const navigationRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    /** Keep the selected destination visible after navigation, translation or viewport changes. */
+    const revealActive = () => {
+      const nav = navigationRef.current;
+      const active = nav?.querySelector<HTMLElement>("[aria-current=page]");
+      if (!nav || !active || !window.matchMedia?.("(max-width: 640px)").matches) return;
+      const bounds = nav.getBoundingClientRect();
+      const item = active.getBoundingClientRect();
+      if (item.left < bounds.left) nav.scrollLeft -= bounds.left - item.left;
+      else if (item.right > bounds.right) nav.scrollLeft += item.right - bounds.right;
+    };
+    const frame = requestAnimationFrame(revealActive);
+    window.addEventListener("resize", revealActive);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", revealActive);
+    };
+  }, [location.pathname, locale]);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -82,7 +101,7 @@ export function Layout() {
           <span className="brand-console">Console</span>
         </div>
         <p className="nav-caption">{t("nav.workspace")}</p>
-        <nav id="primary-navigation" aria-label={t("nav.primary")}>
+        <nav ref={navigationRef} id="primary-navigation" aria-label={t("nav.primary")} tabIndex={0}>
           <ul>
             {NAVIGATION.map((item) => (
               <li key={item.to}>
@@ -97,10 +116,6 @@ export function Layout() {
             ))}
           </ul>
         </nav>
-        <div className="sidebar-note">
-          <span className="sidebar-dot" />
-          MCP / REST API<p>{t("overview.readOnly")}</p>
-        </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
@@ -110,27 +125,7 @@ export function Layout() {
             <strong>{current ? t(current.label) : t("nav.workspace")}</strong>
           </div>
           <div className="topbar-actions">
-            <ThemeSwitch />
-            <LanguageSwitch />
-            <details className="session-menu">
-              <summary>{t("nav.workspace")}</summary>
-              <div>
-                {session === null ? null : (
-                  <p className="principal">
-                    {t("session.principal")}
-                    <code>{session.principal_id}</code>
-                  </p>
-                )}
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  onClick={() => logout.mutate()}
-                  disabled={logout.isPending}
-                >
-                  {logout.isPending ? t("session.signingOut") : t("session.signOut")}
-                </button>
-              </div>
-            </details>
+            <PreferencesMenu onLogout={() => logout.mutate()} isLoggingOut={logout.isPending} />
           </div>
         </header>
         {logout.isError ? (

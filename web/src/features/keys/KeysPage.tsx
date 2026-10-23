@@ -1,467 +1,280 @@
-/** Provider account and key pools, separated by provider, with versioned management actions. */
+import { KeyStatus } from "./KeyStatus";
+/** Direct upstream-key administration with no parent-account workflow. */
 import { useState } from "react";
-import { useSearchParams } from "react-router";
-import { SectionNav } from "../../components/SectionNav";
-import { TokensSection } from "../connections/TokensSection";
+import { Button, Input, Select, ActionMenu } from "../../components/Controls";
+import { DataTable } from "../../components/DataTable";
+import { EmptyState, InlineError, QueryView, Notice } from "../../components/Feedback";
+import { PageHeader, PermissionHint, RequirePermission, Section } from "../../components/Page";
+import { LoadMore } from "../../components/LoadMore";
+import { useUnitFormatter } from "../../components/Values";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
 import { useSession } from "../../lib/session";
 import { useCursorList } from "../../lib/useCursorList";
 import {
-  Badge,
-  EmptyState,
-  ErrorState,
-  InlineError,
-  LoadingState,
-  Notice,
-} from "../../components/Feedback";
-import type { Tone } from "../../components/Feedback";
-import { LoadMore } from "../../components/LoadMore";
-import { PageHeader, PermissionHint, RequirePermission, Section } from "../../components/Page";
-import { DateTime, useUnitFormatter } from "../../components/Values";
-import {
-  AccountDialog,
   KeyCreateDialog,
+  KeySettingsDialog,
   KeyRetireDialog,
   KeyRotateDialog,
   useKeyPatch,
 } from "./KeyDialogs";
 
+type UpstreamKey = Schemas["UpstreamKey"];
 type Provider = Schemas["Provider"];
-type Account = Schemas["Account"];
-type ProviderKey = Schemas["ProviderKey"];
-
 type OpenDialog =
-  | { kind: "account-create" }
-  | { kind: "account-edit"; account: Account }
-  | { kind: "key-create"; accountId: string }
-  | { kind: "key-rotate"; key: ProviderKey }
-  | { kind: "key-retire"; key: ProviderKey }
+  | { kind: "create"; provider: Provider }
+  | { kind: "edit" | "rotate" | "retire"; key: UpstreamKey }
   | null;
 
-const VALIDITY_TONE: Record<ProviderKey["validity"], Tone> = {
-  valid: "success",
-  unknown: "warning",
-  invalid: "danger",
-};
-const BREAKER_TONE: Record<ProviderKey["breaker"], Tone> = {
-  closed: "neutral",
-  half_open: "warning",
-  open: "danger",
-};
-const BILLING_TONE: Record<Account["billing_state"], Tone> = {
-  eligible: "neutral",
-  unknown: "warning",
-  blocked: "danger",
-};
-
-/**
- * Key pools page.
- *
- * @returns Page element.
- */
+/** Keep read permission ahead of metadata retrieval and all mutation controls. */
 export function KeysPage() {
   const { t } = useI18n();
-  const [params] = useSearchParams();
   return (
     <>
-      <PageHeader title={t("keys.title")} description={t("keys.description")} />
-      <SectionNav
-        label={t("keys.title")}
-        items={[
-          { value: "upstream", label: t("keys.upstream") },
-          { value: "access", label: t("keys.access") },
-        ]}
-      />
+      <PageHeader title={t("keys.upstream")} description={t("keys.description")} />
       <RequirePermission permission="admin:read">
-        {params.get("view") === "access" ? (
-          <TokensSection />
-        ) : (
-          <>
-            <ProviderPool provider="exa" />
-            <ProviderPool provider="tavily" />
-          </>
-        )}
+        <KeyInventory />
       </RequirePermission>
     </>
   );
 }
 
-/**
- * One provider's accounts and keys, grouped by account.
- *
- * @param props - Provider.
- * @returns Section element.
- */
-function ProviderPool({ provider }: { provider: Provider }) {
+/** Present a single flat inventory with nearby filtering and key-owned safety limits. */
+function KeyInventory() {
   const { t } = useI18n();
   const api = useApi();
   const { can } = useSession();
-  const [dialog, setDialog] = useState<OpenDialog>(null);
+  const format = useUnitFormatter();
+  const [provider, setProvider] = useState<Provider | "all">("all");
   const [filter, setFilter] = useState("");
-  const accounts = useCursorList(["accounts", provider], (cursor) =>
-    call(
-      api.GET("/v1/admin/accounts", {
-        params: { query: { provider, limit: 100, ...(cursor === undefined ? {} : { cursor }) } },
-      }),
-    ),
-  );
-  const keys = useCursorList(["keys", provider], (cursor) =>
+  const [dialog, setDialog] = useState<OpenDialog>(null);
+  const { query, items } = useCursorList(["keys", provider], (cursor) =>
     call(
       api.GET("/v1/admin/keys", {
-        params: { query: { provider, limit: 100, ...(cursor === undefined ? {} : { cursor }) } },
+        params: {
+          query: {
+            limit: 100,
+            ...(provider === "all" ? {} : { provider }),
+            ...(cursor ? { cursor } : {}),
+          },
+        },
       }),
     ),
   );
-
-  const canWriteAccounts = can("admin:accounts:write");
-  const canWriteKeys = can("admin:keys:write");
-  const accountIds = new Set(accounts.items.map((account) => account.id));
-  const filteredAccounts = accounts.items.filter((account) =>
-    `${account.label} ${account.id}`.toLowerCase().includes(filter.trim().toLowerCase()),
+  const visible = items.filter((key) =>
+    `${key.label} ${key.id} ${key.last_four}`.toLowerCase().includes(filter.trim().toLowerCase()),
   );
-  const orphanKeys = keys.items.filter((key) => !accountIds.has(key.account_id));
-  const isLoading = accounts.query.isPending || keys.query.isPending;
-  const failed = accounts.query.isError ? accounts.query : keys.query.isError ? keys.query : null;
-
+  const canWrite = can("admin:keys:write");
   return (
     <Section
-      title={t(`provider.${provider}`)}
-      description={t(`keys.providerDescription.${provider}`)}
+      title={t("keys.inventory")}
       actions={
-        <button
-          type="button"
-          className="button button-primary"
-          disabled={!canWriteAccounts}
-          onClick={() => setDialog({ kind: "account-create" })}
-        >
-          {t("keys.addAccount")}
-        </button>
+        <ActionMenu
+          label={t("keys.addKey")}
+          primary
+          disabled={!canWrite}
+          items={(["exa", "tavily"] as const).map((value) => ({
+            label: `${t("keys.addKey")} · ${t(`provider.${value}`)}`,
+            disabled: !canWrite,
+            onSelect: () => setDialog({ kind: "create", provider: value }),
+          }))}
+        />
       }
     >
       <PermissionHint permission="admin:keys:write" />
-      <div className="table-toolbar">
-        <label className="search-field">
-          <span className="visually-hidden">
-            {t("keys.find")} · {t(`provider.${provider}`)}
-          </span>
-          <input
-            type="search"
-            value={filter}
-            placeholder={t("keys.findHint")}
-            onChange={(event) => setFilter(event.target.value)}
-          />
-        </label>
-        <span className="muted">{t("keys.accountCount", { count: accounts.items.length })}</span>
+      <div className="inventory-toolbar">
+        <Input
+          aria-label={t("keys.find")}
+          placeholder={t("keys.findHint")}
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+        />
+        <Select
+          aria-label={t("common.provider")}
+          value={provider}
+          onChange={(event) => setProvider(event.target.value as Provider | "all")}
+        >
+          <option value="all">{t("common.all")}</option>
+          <option value="exa">Exa</option>
+          <option value="tavily">Tavily</option>
+        </Select>
+        <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
+          {t("common.refresh")}
+        </Button>
       </div>
-      {isLoading ? (
-        <LoadingState />
-      ) : failed !== null ? (
-        <ErrorState error={failed.error} onRetry={() => void failed.refetch()} />
-      ) : accounts.items.length === 0 && keys.items.length === 0 ? (
-        <EmptyState
-          title={t("keys.emptyTitle", { provider: t(`provider.${provider}`) })}
-          description={t("keys.emptyDescription")}
-        />
-      ) : (
-        <div className="account-list">
-          {filteredAccounts.length === 0 ? <EmptyState title={t("keys.noMatches")} /> : null}
-          {filteredAccounts.map((account) => (
-            <AccountCard
-              key={account.id}
-              account={account}
-              keys={keys.items.filter((key) => key.account_id === account.id)}
-              canWriteAccounts={canWriteAccounts}
-              canWriteKeys={canWriteKeys}
-              onDialog={setDialog}
-            />
-          ))}
-          {orphanKeys.length > 0 ? (
-            <article className="card">
-              <header className="card-header">
-                <h3>{t("keys.unknownGrouping")}</h3>
-              </header>
-              <Notice tone="warning">{t("keys.unknownGroupingDetail")}</Notice>
-              <KeyTable keys={orphanKeys} canWriteKeys={canWriteKeys} onDialog={setDialog} />
-            </article>
-          ) : null}
-        </div>
-      )}
-      <LoadMore query={accounts.query} />
-      <LoadMore query={keys.query} />
-      {dialog?.kind === "account-create" ? (
-        <AccountDialog provider={provider} onClose={() => setDialog(null)} />
+      <Notice tone="info">{t("keys.identityNotice")}</Notice>
+      <QueryView query={query}>
+        {() =>
+          visible.length === 0 ? (
+            <EmptyState title={t("keys.noMatches")} description={t("keys.emptyDescription")} />
+          ) : (
+            <>
+              <p className="table-caption">{t("keys.keyCount", { count: visible.length })}</p>
+              <div
+                className="table-wrap"
+                role="region"
+                aria-label={t("keys.upstream")}
+                tabIndex={0}
+              >
+                <DataTable
+                  mobileRow={(key) => (
+                    <>
+                      <div className="mobile-record-heading">
+                        <strong>{key.label}</strong>
+                        <KeyStatus providerKey={key} />
+                      </div>
+                      <p className="cell-secondary">
+                        {t(`provider.${key.provider}`)} · ••••{key.last_four}
+                      </p>
+                      <p className="numeric">
+                        {t("keys.allocation")}:{" "}
+                        {format(key.quota_policy.allocation, key.quota_policy.unit)}
+                      </p>
+                      <KeyActions providerKey={key} canWrite={canWrite} onDialog={setDialog} />
+                    </>
+                  )}
+                  dataSource={visible}
+                  rowKey={(key) => key.id}
+                  columns={[
+                    {
+                      key: "key",
+                      title: t("keys.key"),
+                      width: 240,
+                      render: (_value, key) => (
+                        <div className="key-label">
+                          <strong>{key.label}</strong>
+                          <span className="cell-secondary">
+                            {key.provider === "exa" ? "Exa" : "Tavily"} · ••••{key.last_four}
+                          </span>
+                          {key.retained_credential_count > 0 ? (
+                            <small>
+                              {t("keys.retainedCredentials", {
+                                count: key.retained_credential_count,
+                              })}
+                            </small>
+                          ) : null}
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "status",
+                      title: t("common.status"),
+                      width: 190,
+                      render: (_value, key) => <KeyStatus providerKey={key} />,
+                    },
+                    {
+                      key: "limit",
+                      title: t("keys.allocation"),
+                      width: 180,
+                      render: (_value, key) => (
+                        <>
+                          <span className="numeric">
+                            {format(key.quota_policy.allocation, key.quota_policy.unit)}
+                          </span>
+                          <small className="cell-secondary">
+                            {key.quota_policy.allocation > 0 &&
+                            key.quota_policy.per_operation_reservation > 0
+                              ? t("keys.localLimit")
+                              : t("keys.needsLimits")}
+                          </small>
+                        </>
+                      ),
+                    },
+                    {
+                      key: "association",
+                      title: t("keys.sharedAllowance"),
+                      width: 180,
+                      render: (_value, key) => (
+                        <span className="muted">
+                          {key.association_evidence === "unknown"
+                            ? t("keys.identityUnknown")
+                            : t("keys.sharedKnown")}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "actions",
+                      title: t("common.actions"),
+                      width: 190,
+                      render: (_value, key) => (
+                        <KeyActions providerKey={key} canWrite={canWrite} onDialog={setDialog} />
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+            </>
+          )
+        }
+      </QueryView>
+      <LoadMore query={query} />
+      {dialog?.kind === "create" ? (
+        <KeyCreateDialog provider={dialog.provider} onClose={() => setDialog(null)} />
       ) : null}
-      {dialog?.kind === "account-edit" ? (
-        <AccountDialog
-          provider={provider}
-          account={dialog.account}
-          onClose={() => setDialog(null)}
-        />
+      {dialog?.kind === "edit" ? (
+        <KeySettingsDialog providerKey={dialog.key} onClose={() => setDialog(null)} />
       ) : null}
-      {dialog?.kind === "key-create" ? (
-        <KeyCreateDialog accountId={dialog.accountId} onClose={() => setDialog(null)} />
-      ) : null}
-      {dialog?.kind === "key-rotate" ? (
+      {dialog?.kind === "rotate" ? (
         <KeyRotateDialog providerKey={dialog.key} onClose={() => setDialog(null)} />
       ) : null}
-      {dialog?.kind === "key-retire" ? (
+      {dialog?.kind === "retire" ? (
         <KeyRetireDialog providerKey={dialog.key} onClose={() => setDialog(null)} />
       ) : null}
     </Section>
   );
 }
 
-/**
- * Account summary with its keys.
- *
- * @param props - Account, its keys, permissions and dialog opener.
- * @returns Card element.
- */
-function AccountCard({
-  account,
-  keys,
-  canWriteAccounts,
-  canWriteKeys,
-  onDialog,
-}: {
-  account: Account;
-  keys: ProviderKey[];
-  canWriteAccounts: boolean;
-  canWriteKeys: boolean;
-  onDialog: (dialog: OpenDialog) => void;
-}) {
-  const { t, formatNumber } = useI18n();
-  const format = useUnitFormatter();
-  return (
-    <article className="card account-card">
-      <header className="card-header">
-        <div>
-          <h3>{account.label}</h3>
-          <p className="muted">
-            <code>{account.id}</code>
-            {account.external_ref === null || account.external_ref === "" ? null : (
-              <> · {account.external_ref}</>
-            )}
-          </p>
-        </div>
-        <div className="badge-group">
-          <Badge tone={account.enabled ? "neutral" : "warning"}>
-            {account.enabled ? t("common.enabled") : t("common.disabled")}
-          </Badge>
-          <Badge tone={BILLING_TONE[account.billing_state]}>
-            {t(`billingState.${account.billing_state}`)}
-          </Badge>
-          <Badge tone={account.verification_state === "verified" ? "info" : "warning"}>
-            {t(`verificationState.${account.verification_state}`)}
-          </Badge>
-        </div>
-      </header>
-      {account.billing_state === "blocked" ? (
-        <Notice tone="danger" title={t("keys.accountExhausted")}>
-          {t("keys.accountExhaustedDetail")}
-        </Notice>
-      ) : null}
-      <dl className="account-metrics">
-        <dt>{t("keys.allocation")}</dt>
-        <dd>{format(account.quota_policy.allocation, account.quota_policy.unit)}</dd>
-        <dt>{t("keys.perOperation")}</dt>
-        <dd>{format(account.quota_policy.per_operation_reservation, account.quota_policy.unit)}</dd>
-        <dt>{t("keys.activeJobs")}</dt>
-        <dd>{formatNumber(account.quota_policy.active_jobs)}</dd>
-        <dt>{t("common.version")}</dt>
-        <dd>{account.version}</dd>
-      </dl>
-      <div className="account-toolbar">
-        <strong>{t("keys.keyCount", { count: keys.length })}</strong>
-        <div className="button-row account-actions">
-          <button
-            type="button"
-            className="button button-small"
-            disabled={!canWriteAccounts}
-            onClick={() => onDialog({ kind: "account-edit", account })}
-          >
-            {t("keys.editAccount")}
-          </button>
-          <button
-            type="button"
-            className="button button-primary"
-            disabled={!canWriteKeys}
-            onClick={() => onDialog({ kind: "key-create", accountId: account.id })}
-          >
-            {t("keys.addKey")}
-          </button>
-        </div>
-      </div>
-      {keys.length === 0 ? (
-        <p className="muted">{t("keys.noKeysInAccount")}</p>
-      ) : (
-        <KeyTable keys={keys} canWriteKeys={canWriteKeys} onDialog={onDialog} />
-      )}
-    </article>
-  );
-}
-
-/**
- * Masked key rows with status and actions.
- *
- * @param props - Keys, permission and dialog opener.
- * @returns Table element.
- */
-function KeyTable({
-  keys,
-  canWriteKeys,
-  onDialog,
-}: {
-  keys: ProviderKey[];
-  canWriteKeys: boolean;
-  onDialog: (dialog: OpenDialog) => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <div className="table-wrap" role="region" aria-label={t("keys.upstream")} tabIndex={0}>
-      <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">{t("keys.key")}</th>
-            <th scope="col">{t("keys.validity")}</th>
-            <th scope="col">{t("keys.billing")}</th>
-            <th scope="col">{t("keys.breaker")}</th>
-            <th scope="col">{t("keys.cooldown")}</th>
-            <th scope="col">{t("keys.retirement")}</th>
-            <th scope="col">{t("common.actions")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {keys.map((key) => (
-            <KeyRow
-              key={key.id}
-              providerKey={key}
-              canWriteKeys={canWriteKeys}
-              onDialog={onDialog}
-            />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/**
- * One masked key.
- *
- * @param props - Key, permission and dialog opener.
- * @returns Table row.
- */
-function KeyRow({
+/** Keep destructive actions behind their existing confirmation and version fences. */
+function KeyActions({
   providerKey,
-  canWriteKeys,
+  canWrite,
   onDialog,
 }: {
-  providerKey: ProviderKey;
-  canWriteKeys: boolean;
+  providerKey: UpstreamKey;
+  canWrite: boolean;
   onDialog: (dialog: OpenDialog) => void;
 }) {
   const { t } = useI18n();
   const patch = useKeyPatch(providerKey);
-  const isRetired = providerKey.retirement_state !== "active";
-  /** Close the disclosure before opening a dialog so focus returns to its visible trigger. */
-  const openSecondaryAction = (button: HTMLButtonElement, kind: "key-rotate" | "key-retire") => {
-    const disclosure = button.closest("details");
-    if (disclosure) {
-      disclosure.open = false;
-      disclosure.querySelector("summary")?.focus();
-    }
-    onDialog({ kind, key: providerKey });
-  };
-
+  const disabled = !canWrite || providerKey.retirement_state !== "active" || patch.isPending;
   return (
-    <tr>
-      <td>
-        <div className="key-label">
-          <strong>{providerKey.label}</strong>
-          <span
-            className="mono"
-            aria-label={t("keys.maskedKey", { lastFour: providerKey.last_four })}
-          >
-            ••••{providerKey.last_four}
-          </span>
-          <details className="key-fingerprint">
-            <summary>{t("keys.fingerprint")}</summary>
-            <code>{providerKey.fingerprint}</code>
-          </details>
-          {providerKey.enabled ? null : <Badge tone="warning">{t("common.disabled")}</Badge>}
-        </div>
-        {providerKey.retained_credential_count > 0 ? (
-          <p className="muted">
-            {t("keys.retainedCredentials", { count: providerKey.retained_credential_count })}
-          </p>
-        ) : null}
-      </td>
-      <td>
-        <Badge tone={VALIDITY_TONE[providerKey.validity]}>
-          {t(`validity.${providerKey.validity}`)}
-        </Badge>
-      </td>
-      <td>
-        <Badge tone={BILLING_TONE[providerKey.billing_state]}>
-          {t(`billingState.${providerKey.billing_state}`)}
-        </Badge>
-      </td>
-      <td>
-        <Badge tone={BREAKER_TONE[providerKey.breaker]}>
-          {t(`breaker.${providerKey.breaker}`)}
-        </Badge>
-      </td>
-      <td>
-        <DateTime value={providerKey.cooldown_until} />
-      </td>
-      <td>{t(`retirement.${providerKey.retirement_state}`)}</td>
-      <td>
-        <div className="key-actions">
-          <button
-            type="button"
-            className="button button-small"
-            disabled={!canWriteKeys || isRetired || patch.isPending}
-            onClick={() => patch.mutate({ enabled: !providerKey.enabled })}
-          >
-            {providerKey.enabled ? t("keys.disable") : t("keys.enable")}
-          </button>
-          <details
-            className="key-secondary-actions"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.currentTarget.open = false;
-                event.currentTarget.querySelector("summary")?.focus();
-              }
-            }}
-          >
-            <summary aria-label={t("keys.moreFor", { label: providerKey.label })}>
-              {t("keys.more")}
-            </summary>
-            <div className="key-secondary-list">
-              <button
-                type="button"
-                className="button button-small"
-                disabled={!canWriteKeys || isRetired}
-                onClick={(event) => openSecondaryAction(event.currentTarget, "key-rotate")}
-              >
-                {t("keys.rotate")}
-              </button>
-              <button
-                type="button"
-                className="button button-small button-danger"
-                disabled={!canWriteKeys || isRetired}
-                onClick={(event) => openSecondaryAction(event.currentTarget, "key-retire")}
-              >
-                {t("keys.retire")}
-              </button>
-            </div>
-          </details>
-        </div>
-        {patch.isError ? <InlineError error={patch.error} /> : null}
-      </td>
-    </tr>
+    <>
+      <div className="key-actions">
+        <Button
+          className="button button-small"
+          disabled={disabled}
+          loading={patch.isPending}
+          onClick={() => patch.mutate({ enabled: !providerKey.enabled })}
+          aria-label={`${providerKey.enabled ? t("keys.disable") : t("keys.enable")} ${providerKey.label}`}
+        >
+          {providerKey.enabled ? t("keys.disable") : t("keys.enable")}
+        </Button>
+        <ActionMenu
+          label={t("keys.more")}
+          accessibleLabel={t("keys.moreFor", { label: providerKey.label })}
+          disabled={disabled}
+          items={[
+            {
+              label: t("keys.editKey"),
+              disabled,
+              onSelect: () => onDialog({ kind: "edit", key: providerKey }),
+            },
+            {
+              label: t("keys.rotate"),
+              disabled,
+              onSelect: () => onDialog({ kind: "rotate", key: providerKey }),
+            },
+            {
+              label: t("keys.retire"),
+              disabled,
+              danger: true,
+              onSelect: () => onDialog({ kind: "retire", key: providerKey }),
+            },
+          ]}
+        />
+      </div>
+      <InlineError error={patch.error} />
+    </>
   );
 }

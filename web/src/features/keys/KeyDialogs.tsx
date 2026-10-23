@@ -1,5 +1,6 @@
+import { SwitchField, Button, Input, Select } from "../../components/Controls";
 /**
- * Account and key mutation dialogs. Secrets are write-only: they live in a password field
+ * Key mutation dialogs. Secrets are write-only: they live in a password field
  * of a dialog that unmounts on close, are cleared after every attempt and are never
  * cached, logged or stored.
  */
@@ -15,8 +16,7 @@ import { useNotify } from "../../components/Notifications";
 import { useUnitFormatter } from "../../components/Values";
 
 type Provider = Schemas["Provider"];
-type Account = Schemas["Account"];
-type ProviderKey = Schemas["ProviderKey"];
+type ProviderKey = Schemas["UpstreamKey"];
 
 const PROVIDER_UNIT: Record<Provider, Schemas["UsageUnit"]> = {
   exa: "micro_usd",
@@ -24,14 +24,13 @@ const PROVIDER_UNIT: Record<Provider, Schemas["UsageUnit"]> = {
 };
 
 /**
- * Invalidate account and key caches after a change or conflict.
+ * Invalidate key and usage caches after a change or conflict.
  *
  * @returns Refresh callback.
  */
 function useRefreshPools(): () => void {
   const queryClient = useQueryClient();
   return () => {
-    void queryClient.invalidateQueries({ queryKey: ["accounts"] });
     void queryClient.invalidateQueries({ queryKey: ["keys"] });
     void queryClient.invalidateQueries({ queryKey: ["usage"] });
   };
@@ -75,18 +74,16 @@ export function useKeyPatch(providerKey: ProviderKey) {
 }
 
 /**
- * Create or edit an account. Edits send the account's current version.
+ * Edit a key and its local safety limits using the current revision.
  *
- * @param props - Provider, optional existing account and close callback.
+ * @param props - Existing key and close callback.
  * @returns Dialog element.
  */
-export function AccountDialog({
-  provider,
-  account,
+export function KeySettingsDialog({
+  providerKey,
   onClose,
 }: {
-  provider: Provider;
-  account?: Account;
+  providerKey: ProviderKey;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -96,18 +93,14 @@ export function AccountDialog({
   const refresh = useRefreshPools();
   const format = useUnitFormatter();
   const formId = useId();
-  const unit = account?.quota_policy.unit ?? PROVIDER_UNIT[provider];
-  const [label, setLabel] = useState(account?.label ?? "");
-  const [externalRef, setExternalRef] = useState(account?.external_ref ?? "");
-  const [isEnabled, setEnabled] = useState(account?.enabled ?? true);
-  const [verification, setVerification] = useState<Account["verification_state"]>(
-    account?.verification_state ?? "unverified",
-  );
-  const [allocation, setAllocation] = useState(String(account?.quota_policy.allocation ?? 0));
+  const unit = providerKey.quota_policy.unit;
+  const [label, setLabel] = useState(providerKey.label ?? "");
+  const [isEnabled, setEnabled] = useState(providerKey.enabled);
+  const [allocation, setAllocation] = useState(String(providerKey.quota_policy.allocation ?? 0));
   const [perOperation, setPerOperation] = useState(
-    String(account?.quota_policy.per_operation_reservation ?? 0),
+    String(providerKey.quota_policy.per_operation_reservation ?? 0),
   );
-  const [activeJobs, setActiveJobs] = useState(String(account?.quota_policy.active_jobs ?? 1));
+  const [activeJobs, setActiveJobs] = useState(String(providerKey.quota_policy.active_jobs ?? 1));
 
   const allocationValue = parseInteger(allocation);
   const perOperationValue = parseInteger(perOperation);
@@ -115,7 +108,6 @@ export function AccountDialog({
   const isValid =
     label.trim().length >= 1 &&
     label.length <= 128 &&
-    externalRef.length <= 256 &&
     !Number.isNaN(allocationValue) &&
     !Number.isNaN(perOperationValue) &&
     (activeJobsValue === 1 || activeJobsValue === 2);
@@ -128,31 +120,13 @@ export function AccountDialog({
         per_operation_reservation: perOperationValue,
         active_jobs: activeJobsValue,
       };
-      const reference = externalRef.trim() === "" ? null : externalRef.trim();
-      if (account === undefined) {
-        return call(
-          api.POST("/v1/admin/accounts", {
-            params: { header: { "X-Exta-CSRF": csrfToken } },
-            body: {
-              provider,
-              label: label.trim(),
-              external_ref: reference,
-              enabled: isEnabled,
-              verification_state: verification,
-              quota_policy: quotaPolicy,
-            },
-          }),
-        );
-      }
       return call(
-        api.PATCH("/v1/admin/accounts/{id}", {
-          params: { path: { id: account.id }, header: { "X-Exta-CSRF": csrfToken } },
+        api.PATCH("/v1/admin/keys/{id}", {
+          params: { path: { id: providerKey.id }, header: { "X-Exta-CSRF": csrfToken } },
           body: {
-            expected_version: account.version,
+            expected_version: providerKey.version,
             label: label.trim(),
-            external_ref: reference,
             enabled: isEnabled,
-            verification_state: verification,
             quota_policy: quotaPolicy,
           },
         }),
@@ -160,7 +134,7 @@ export function AccountDialog({
     },
     onSuccess: () => {
       refresh();
-      notify("info", t("keys.accountSaved"));
+      notify("info", t("keys.keySaved"));
       onClose();
     },
     onError: (error) => {
@@ -171,12 +145,7 @@ export function AccountDialog({
   });
 
   return (
-    <Dialog
-      title={account === undefined ? t("keys.addAccount") : t("keys.editAccount")}
-      description={t(`provider.${provider}`)}
-      onClose={onClose}
-      isBusy={save.isPending}
-    >
+    <Dialog title={t("keys.editKey")} onClose={onClose} isBusy={save.isPending}>
       <form
         className="form"
         onSubmit={(event) => {
@@ -187,8 +156,10 @@ export function AccountDialog({
         }}
       >
         <div className="field">
-          <label htmlFor={`${formId}-label`}>{t("common.label")}</label>
-          <input
+          <label id={`${formId}-label` + "-label"} htmlFor={`${formId}-label`}>
+            {t("common.label")}
+          </label>
+          <Input
             id={`${formId}-label`}
             value={label}
             onChange={(event) => setLabel(event.target.value)}
@@ -196,37 +167,19 @@ export function AccountDialog({
             data-autofocus
           />
         </div>
-        <div className="field">
-          <label htmlFor={`${formId}-ref`}>{t("keys.externalRef")}</label>
-          <input
-            id={`${formId}-ref`}
-            value={externalRef}
-            onChange={(event) => setExternalRef(event.target.value)}
-            maxLength={256}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor={`${formId}-verification`}>{t("keys.verification")}</label>
-          <select
-            id={`${formId}-verification`}
-            value={verification}
-            onChange={(event) =>
-              setVerification(event.target.value as Account["verification_state"])
-            }
-          >
-            <option value="unverified">{t("verificationState.unverified")}</option>
-            <option value="verified">{t("verificationState.verified")}</option>
-          </select>
-        </div>
         <fieldset className="fieldset">
           <legend>{t("keys.quotaPolicy")}</legend>
           <p className="field-hint">
-            {t("keys.quotaUnit", { unit: unit === "micro_usd" ? "micro-USD" : "Tavily credits" })}
+            {t("keys.quotaUnit", {
+              unit: t(unit === "micro_usd" ? "keys.unitMicroUsd" : "keys.unitCredits"),
+            })}
           </p>
           <div className="field-row">
             <div className="field">
-              <label htmlFor={`${formId}-allocation`}>{t("keys.allocation")}</label>
-              <input
+              <label id={`${formId}-allocation` + "-label"} htmlFor={`${formId}-allocation`}>
+                {t("keys.allocation")}
+              </label>
+              <Input
                 id={`${formId}-allocation`}
                 inputMode="numeric"
                 value={allocation}
@@ -241,8 +194,10 @@ export function AccountDialog({
               </p>
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-per-op`}>{t("keys.perOperation")}</label>
-              <input
+              <label id={`${formId}-per-op` + "-label"} htmlFor={`${formId}-per-op`}>
+                {t("keys.perOperation")}
+              </label>
+              <Input
                 id={`${formId}-per-op`}
                 inputMode="numeric"
                 value={perOperation}
@@ -257,41 +212,43 @@ export function AccountDialog({
               </p>
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-active`}>{t("keys.activeJobs")}</label>
-              <select
+              <label id={`${formId}-active` + "-label"} htmlFor={`${formId}-active`}>
+                {t("keys.activeJobs")}
+              </label>
+              <Select
                 id={`${formId}-active`}
                 value={activeJobs}
                 onChange={(event) => setActiveJobs(event.target.value)}
               >
                 <option value="1">1</option>
                 <option value="2">2</option>
-              </select>
+              </Select>
             </div>
           </div>
           <p className="field-hint">{t("keys.noBudgetNoDispatch")}</p>
         </fieldset>
         <div className="field field-checkbox">
-          <input
+          <SwitchField
+            label={t("keys.enableKey")}
             id={`${formId}-enabled`}
-            type="checkbox"
             checked={isEnabled}
             onChange={(event) => setEnabled(event.target.checked)}
           />
-          <label htmlFor={`${formId}-enabled`}>{t("common.enabled")}</label>
         </div>
         <InlineError error={save.error} />
         <ConflictRecovery error={save.error} onClose={onClose} />
         <div className="button-row">
-          <button type="button" className="button" onClick={onClose} disabled={save.isPending}>
+          <Button type="button" className="button" onClick={onClose} disabled={save.isPending}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             className="button button-primary"
             disabled={!isValid || save.isPending || isConflict(save.error)}
+            loading={save.isPending}
           >
             {save.isPending ? t("common.working") : t("common.save")}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>
@@ -316,8 +273,10 @@ function SecretField({
   const { t } = useI18n();
   return (
     <div className="field">
-      <label htmlFor={id}>{t("keys.secret")}</label>
-      <input
+      <label id={id + "-label"} htmlFor={id}>
+        {t("keys.secret")}
+      </label>
+      <Input
         id={id}
         type="password"
         autoComplete="off"
@@ -336,16 +295,16 @@ function SecretField({
 }
 
 /**
- * Add a key to an account.
+ * Add an upstream key directly with optional local safety limits.
  *
- * @param props - Account ID and close callback.
+ * @param props - Provider and close callback.
  * @returns Dialog element.
  */
 export function KeyCreateDialog({
-  accountId,
+  provider,
   onClose,
 }: {
-  accountId: string;
+  provider: Provider;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -354,11 +313,19 @@ export function KeyCreateDialog({
   const notify = useNotify();
   const refresh = useRefreshPools();
   const formId = useId();
+  const format = useUnitFormatter();
   const [label, setLabel] = useState("");
   const [secret, setSecret] = useState("");
+  const [allocation, setAllocation] = useState("0");
+  const [perOperation, setPerOperation] = useState("0");
   const [isEnabled, setEnabled] = useState(true);
   const isValid =
-    label.trim().length >= 1 && label.length <= 128 && secret.length >= 8 && secret.length <= 4096;
+    label.trim().length >= 1 &&
+    label.length <= 128 &&
+    secret.length >= 8 &&
+    secret.length <= 4096 &&
+    Number.isSafeInteger(parseInteger(allocation)) &&
+    Number.isSafeInteger(parseInteger(perOperation));
   const create = useMutation({
     gcTime: 0,
     mutationFn: (value: { secret: string }) =>
@@ -366,7 +333,13 @@ export function KeyCreateDialog({
         api.POST("/v1/admin/keys", {
           params: { header: { "X-Exta-CSRF": csrfToken } },
           body: {
-            account_id: accountId,
+            provider,
+            quota_policy: {
+              unit: PROVIDER_UNIT[provider],
+              allocation: parseInteger(allocation),
+              per_operation_reservation: parseInteger(perOperation),
+              active_jobs: 1,
+            },
             label: label.trim(),
             secret: value.secret,
             enabled: isEnabled,
@@ -385,8 +358,7 @@ export function KeyCreateDialog({
   });
   return (
     <Dialog
-      title={t("keys.addKey")}
-      description={accountId}
+      title={`${t("keys.addKey")} · ${t(`provider.${provider}`)}`}
       onClose={onClose}
       isBusy={create.isPending}
     >
@@ -400,8 +372,10 @@ export function KeyCreateDialog({
         }}
       >
         <div className="field">
-          <label htmlFor={`${formId}-label`}>{t("common.label")}</label>
-          <input
+          <label id={`${formId}-label` + "-label"} htmlFor={`${formId}-label`}>
+            {t("common.label")}
+          </label>
+          <Input
             id={`${formId}-label`}
             value={label}
             onChange={(event) => setLabel(event.target.value)}
@@ -410,27 +384,71 @@ export function KeyCreateDialog({
           />
         </div>
         <SecretField id={`${formId}-secret`} value={secret} onChange={setSecret} />
+        <div className="field-row">
+          <div className="field">
+            <label id={`${formId}-allocation-label`} htmlFor={`${formId}-allocation`}>
+              {t("keys.allocation")}
+            </label>
+            <Input
+              id={`${formId}-allocation`}
+              type="number"
+              min={0}
+              value={allocation}
+              onChange={(event) => setAllocation(event.target.value)}
+              aria-describedby={`${formId}-allocation-preview`}
+            />
+            <p id={`${formId}-allocation-preview`} className="field-hint">
+              {Number.isSafeInteger(parseInteger(allocation))
+                ? format(parseInteger(allocation), PROVIDER_UNIT[provider])
+                : t("common.invalidNumber")}
+            </p>
+          </div>
+          <div className="field">
+            <label id={`${formId}-reservation-label`} htmlFor={`${formId}-reservation`}>
+              {t("keys.perOperation")}
+            </label>
+            <Input
+              id={`${formId}-reservation`}
+              type="number"
+              min={0}
+              value={perOperation}
+              onChange={(event) => setPerOperation(event.target.value)}
+              aria-describedby={`${formId}-reservation-preview`}
+            />
+            <p id={`${formId}-reservation-preview`} className="field-hint">
+              {Number.isSafeInteger(parseInteger(perOperation))
+                ? format(parseInteger(perOperation), PROVIDER_UNIT[provider])
+                : t("common.invalidNumber")}
+            </p>
+          </div>
+        </div>
+        <p className="field-hint">
+          {t("keys.quotaUnit", {
+            unit: t(provider === "exa" ? "keys.unitMicroUsd" : "keys.unitCredits"),
+          })}{" "}
+          {t("keys.noBudgetNoDispatch")}
+        </p>
         <div className="field field-checkbox">
-          <input
+          <SwitchField
+            label={t("keys.enableKey")}
             id={`${formId}-enabled`}
-            type="checkbox"
             checked={isEnabled}
             onChange={(event) => setEnabled(event.target.checked)}
           />
-          <label htmlFor={`${formId}-enabled`}>{t("common.enabled")}</label>
         </div>
         <InlineError error={create.error} />
         <div className="button-row">
-          <button type="button" className="button" onClick={onClose} disabled={create.isPending}>
+          <Button type="button" className="button" onClick={onClose} disabled={create.isPending}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             className="button button-primary"
             disabled={!isValid || create.isPending}
+            loading={create.isPending}
           >
             {create.isPending ? t("common.working") : t("keys.addKey")}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>
@@ -502,16 +520,17 @@ export function KeyRotateDialog({
         <InlineError error={rotate.error} />
         <ConflictRecovery error={rotate.error} onClose={onClose} />
         <div className="button-row">
-          <button type="button" className="button" onClick={onClose} disabled={rotate.isPending}>
+          <Button type="button" className="button" onClick={onClose} disabled={rotate.isPending}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             className="button button-primary"
             disabled={!isValid || rotate.isPending || isConflict(rotate.error)}
+            loading={rotate.isPending}
           >
             {rotate.isPending ? t("common.working") : t("keys.rotate")}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>
@@ -570,7 +589,7 @@ export function KeyRetireDialog({
       <InlineError error={retire.error} />
       <ConflictRecovery error={retire.error} onClose={onClose} />
       <div className="button-row">
-        <button
+        <Button
           type="button"
           className="button"
           onClick={onClose}
@@ -578,8 +597,8 @@ export function KeyRetireDialog({
           data-autofocus
         >
           {t("common.cancel")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           className="button button-danger"
           onClick={() => {
@@ -588,7 +607,7 @@ export function KeyRetireDialog({
           disabled={retire.isPending || isConflict(retire.error)}
         >
           {retire.isPending ? t("common.working") : t("keys.retire")}
-        </button>
+        </Button>
       </div>
     </Dialog>
   );

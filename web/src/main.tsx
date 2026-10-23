@@ -1,3 +1,5 @@
+import "@douyinfe/semi-ui/react19-adapter";
+import "@douyinfe/semi-ui/lib/es/_base/base.css";
 /** Browser entry: mounts Exta under the `/app/` base path. */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -7,6 +9,7 @@ import { APP_ROUTES, AppProviders } from "./app/App";
 import { createBrowserApiClient } from "./lib/api";
 import { createAppQueryClient } from "./lib/queryClient";
 import "./styles/app.css";
+import "./styles/semi.css";
 
 /**
  * Start the optional development-only mock worker. Production builds statically remove

@@ -1,7 +1,8 @@
+import { selectOption } from "../../test/selectOption";
 /** Routing: no-route states, versioned replacement and local preview. */
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { mockDb } from "../../mocks/handlers";
 import { callsTo, renderApp } from "../../test/renderApp";
 
@@ -12,14 +13,36 @@ import { callsTo, renderApp } from "../../test/renderApp";
  * @returns Row element.
  */
 async function policyRow(capability: string): Promise<HTMLElement> {
-  const row = (await screen.findByText(capability, { selector: "th code" })).closest("tr");
+  const row = (await screen.findByText(capability, { selector: "td .operation-name" })).closest(
+    "tr",
+  );
   if (row === null) {
     throw new Error(`${capability} row missing`);
   }
   return row;
 }
 
+beforeAll(async () => {
+  await import("./RoutingPage");
+});
+
 describe("routing", () => {
+  it("closes the nested selector before its parent dialog on Escape", async () => {
+    renderApp("/settings?view=routing");
+    const opener = within(await policyRow("advanced_search")).getByRole("button", { name: "Edit" });
+    await userEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Edit route: advanced_search" });
+    const selector = within(dialog).getByRole("combobox", { name: "Add target" });
+    await userEvent.click(selector);
+    expect(await screen.findByRole("option", { name: "Tavily · common" })).toBeInTheDocument();
+    fireEvent.keyDown(selector, { key: "Escape", code: "Escape", keyCode: 27 });
+    expect(dialog).toBeInTheDocument();
+    expect(selector).toHaveAttribute("aria-expanded", "false");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(opener).toHaveFocus();
+  });
+
   it.each([
     ["search", 30],
     ["research_create", 30],
@@ -44,9 +67,11 @@ describe("routing", () => {
   });
   it("flags an enabled policy without targets", async () => {
     renderApp("/settings?view=routing");
-    expect(within(await policyRow("crawl")).getByText("No compatible route")).toHaveClass(
-      "badge-danger",
-    );
+    expect(
+      within(await policyRow("crawl"))
+        .getByText("No compatible route")
+        .closest(".semi-tag"),
+    ).toHaveClass("status-danger");
   });
 
   it("saves with expected_version equal to the current revision", async () => {
@@ -55,7 +80,7 @@ describe("routing", () => {
       within(await policyRow("advanced_search")).getByRole("button", { name: "Edit" }),
     );
     const dialog = screen.getByRole("dialog", { name: "Edit route: advanced_search" });
-    await userEvent.selectOptions(within(dialog).getByLabelText("Add target"), "tavily/common");
+    await selectOption(within(dialog).getByLabelText("Add target"), "Tavily · common");
     await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Move tavily/common up" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));

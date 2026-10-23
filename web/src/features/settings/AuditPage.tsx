@@ -1,3 +1,4 @@
+import { Button, Disclosure, Input } from "../../components/Controls";
 /** Redacted audit history with action/entity filters. */
 import { useId, useState } from "react";
 import { call, useApi } from "../../lib/api";
@@ -7,6 +8,18 @@ import { EmptyState, ErrorState, LoadingState } from "../../components/Feedback"
 import { LoadMore } from "../../components/LoadMore";
 import { PageHeader, RequirePermission, Section } from "../../components/Page";
 import { DateTime, JsonBlock } from "../../components/Values";
+import type { MessageKey } from "../../lib/messages";
+
+const ACTION_LABELS: Record<string, MessageKey> = {
+  "token.create": "audit.tokenCreate",
+  "token.revoke": "audit.tokenRevoke",
+  "key.create": "audit.keyCreate",
+  "key.update": "audit.keyUpdate",
+  "key.rotate": "audit.keyRotate",
+  "key.retire": "audit.keyRetire",
+  "settings.update": "audit.settingsUpdate",
+  "route.replace": "audit.routeReplace",
+};
 
 /**
  * Audit page; requires `admin:audit:read` before any request is made.
@@ -63,26 +76,41 @@ function AuditContent() {
         >
           <div className="field-row">
             <div className="field">
-              <label htmlFor={`${formId}-action`}>{t("audit.action")}</label>
-              <input
+              <label id={`${formId}-action` + "-label"} htmlFor={`${formId}-action`}>
+                {t("audit.action")}
+              </label>
+              <Input
                 id={`${formId}-action`}
                 value={draft.action}
+                placeholder="key.rotate"
                 onChange={(event) => setDraft({ ...draft, action: event.target.value })}
               />
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-entity`}>{t("audit.entity")}</label>
-              <input
+              <label id={`${formId}-entity` + "-label"} htmlFor={`${formId}-entity`}>
+                {t("audit.entity")}
+              </label>
+              <Input
                 id={`${formId}-entity`}
                 value={draft.entityId}
+                placeholder="key_…"
                 onChange={(event) => setDraft({ ...draft, entityId: event.target.value })}
               />
             </div>
           </div>
           <div className="button-row">
-            <button type="submit" className="button button-primary">
+            <Button type="submit" className="button button-primary">
               {t("common.apply")}
-            </button>
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setDraft({ action: "", entityId: "" });
+                setFilters({ action: "", entityId: "" });
+              }}
+            >
+              {t("common.reset")}
+            </Button>
           </div>
         </form>
       </Section>
@@ -99,20 +127,25 @@ function AuditContent() {
               <li key={event.id}>
                 <div className="timeline-head">
                   <DateTime value={event.created_at} />
-                  <code>{event.action}</code>
-                  {event.entity_id === null ? null : (
-                    <code className="muted">{event.entity_id}</code>
-                  )}
+                  <strong>
+                    {ACTION_LABELS[event.action] ? t(ACTION_LABELS[event.action]!) : event.action}
+                  </strong>
                 </div>
-                <p className="muted">
-                  {t("audit.actor")}: <code>{event.actor_principal_id}</code>
-                </p>
-                {Object.keys(event.changes).length === 0 ? null : (
-                  <details>
-                    <summary>{t("audit.changes")}</summary>
-                    <JsonBlock value={event.changes} />
-                  </details>
-                )}
+                <Disclosure label={t("audit.changes")}>
+                  <p className="muted">
+                    <code>{event.action}</code>
+                    {event.entity_id ? (
+                      <>
+                        {" "}
+                        · <code>{event.entity_id}</code>
+                      </>
+                    ) : null}
+                  </p>
+                  <p className="muted">
+                    {t("audit.actor")}: <code>{event.actor_principal_id}</code>
+                  </p>
+                  <JsonBlock value={event.changes} />
+                </Disclosure>
               </li>
             ))}
           </ol>

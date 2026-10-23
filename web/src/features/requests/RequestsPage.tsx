@@ -1,3 +1,7 @@
+import { DiagnosticReason } from "../../components/DiagnosticReason";
+import { DataTable } from "../../components/DataTable";
+import type { ColumnProps } from "@douyinfe/semi-ui/lib/es/table";
+import { Button, Input, Select } from "../../components/Controls";
 /** Sanitized request history with time/operation/provider/status filters. */
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
@@ -11,7 +15,7 @@ import { useCursorList } from "../../lib/useCursorList";
 import { EmptyState, ErrorState, LoadingState } from "../../components/Feedback";
 import { LoadMore } from "../../components/LoadMore";
 import { PageHeader, RequirePermission, Section } from "../../components/Page";
-import { DateTime, RouteRevision } from "../../components/Values";
+import { DateTime } from "../../components/Values";
 import { RequestStatusBadges, ResultSummary } from "./requestStatus";
 
 type Filters = {
@@ -82,6 +86,7 @@ export function RequestsPage() {
  * @returns Sections.
  */
 function RequestsContent() {
+  const columns = useRequestColumns();
   const { t } = useI18n();
   const api = useApi();
   const formId = useId();
@@ -109,9 +114,11 @@ function RequestsContent() {
   );
 
   const isInvalidRange =
-    draft.createdAfter !== "" &&
-    draft.createdBefore !== "" &&
-    draft.createdAfter >= draft.createdBefore;
+    (draft.createdAfter !== "" && toInstant(draft.createdAfter) === undefined) ||
+    (draft.createdBefore !== "" && toInstant(draft.createdBefore) === undefined) ||
+    (draft.createdAfter !== "" &&
+      draft.createdBefore !== "" &&
+      draft.createdAfter >= draft.createdBefore);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,21 +133,23 @@ function RequestsContent() {
         title={t("requests.listTitle")}
         description={t("requests.noRawContent")}
         actions={
-          <button
+          <Button
             type="button"
             className="button button-small"
             disabled={query.isFetching}
             onClick={() => void query.refetch()}
           >
             {t("common.refresh")}
-          </button>
+          </Button>
         }
       >
         <form className="form filters log-filters" onSubmit={onSubmit}>
           <div className="filter-fields">
             <div className="field">
-              <label htmlFor={`${formId}-operation`}>{t("requests.operation")}</label>
-              <select
+              <label id={`${formId}-operation` + "-label"} htmlFor={`${formId}-operation`}>
+                {t("requests.operation")}
+              </label>
+              <Select
                 id={`${formId}-operation`}
                 value={draft.operation}
                 onChange={(event) =>
@@ -153,11 +162,13 @@ function RequestsContent() {
                     {entry}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-provider`}>{t("common.provider")}</label>
-              <select
+              <label id={`${formId}-provider` + "-label"} htmlFor={`${formId}-provider`}>
+                {t("common.provider")}
+              </label>
+              <Select
                 id={`${formId}-provider`}
                 value={draft.provider}
                 onChange={(event) =>
@@ -167,11 +178,13 @@ function RequestsContent() {
                 <option value="">{t("common.all")}</option>
                 <option value="exa">{t("provider.exa")}</option>
                 <option value="tavily">{t("provider.tavily")}</option>
-              </select>
+              </Select>
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-status`}>{t("common.state")}</label>
-              <select
+              <label id={`${formId}-status` + "-label"} htmlFor={`${formId}-status`}>
+                {t("common.state")}
+              </label>
+              <Select
                 id={`${formId}-status`}
                 value={draft.status}
                 onChange={(event) =>
@@ -184,11 +197,13 @@ function RequestsContent() {
                     {t(`requestStatus.${entry}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-after`}>{t("requests.createdAfter")}</label>
-              <input
+              <label id={`${formId}-after` + "-label"} htmlFor={`${formId}-after`}>
+                {t("requests.createdAfter")}
+              </label>
+              <Input
                 id={`${formId}-after`}
                 aria-invalid={isInvalidRange}
                 aria-describedby={isInvalidRange ? `${formId}-range-error` : undefined}
@@ -198,8 +213,10 @@ function RequestsContent() {
               />
             </div>
             <div className="field">
-              <label htmlFor={`${formId}-before`}>{t("requests.createdBefore")}</label>
-              <input
+              <label id={`${formId}-before` + "-label"} htmlFor={`${formId}-before`}>
+                {t("requests.createdBefore")}
+              </label>
+              <Input
                 id={`${formId}-before`}
                 aria-invalid={isInvalidRange}
                 aria-describedby={isInvalidRange ? `${formId}-range-error` : undefined}
@@ -210,10 +227,10 @@ function RequestsContent() {
             </div>
           </div>
           <div className="button-row">
-            <button type="submit" className="button button-primary" disabled={isInvalidRange}>
+            <Button type="submit" className="button button-primary" disabled={isInvalidRange}>
               {t("common.apply")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               className="button"
               onClick={() => {
@@ -222,7 +239,7 @@ function RequestsContent() {
               }}
             >
               {t("common.reset")}
-            </button>
+            </Button>
           </div>
           {isInvalidRange ? (
             <p id={`${formId}-range-error`} className="field-error" role="alert">
@@ -250,24 +267,28 @@ function RequestsContent() {
             aria-label={t("requests.listTitle")}
             tabIndex={0}
           >
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">{t("common.created")}</th>
-                  <th scope="col">{t("requests.operation")}</th>
-                  <th scope="col">{t("common.provider")}</th>
-                  <th scope="col">{t("common.state")}</th>
-                  <th scope="col">{t("requests.results")}</th>
-                  <th scope="col">{t("requests.duration")}</th>
-                  <th scope="col">{t("routing.revision")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((record) => (
-                  <RequestRow key={record.id} record={record} />
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              dataSource={items}
+              rowKey={(record) => record.id}
+              columns={columns}
+              mobileRow={(record) => (
+                <>
+                  <div className="mobile-record-heading">
+                    <Link to={`?request=${encodeURIComponent(record.id)}`}>{record.operation}</Link>
+                    <RequestStatusBadges record={record} />
+                  </div>
+                  <p className="cell-secondary">
+                    <DateTime value={record.created_at} /> ·{" "}
+                    {record.source_provider ? t(`provider.${record.source_provider}`) : "—"}
+                  </p>
+                  {record.error ? (
+                    <DiagnosticReason reason={record.error.code} />
+                  ) : (
+                    <ResultSummary record={record} />
+                  )}
+                </>
+              )}
+            />
           </div>
         )}
         <LoadMore query={query} />
@@ -285,9 +306,6 @@ function RequestsContent() {
           }}
         >
           <RequestDetail id={selectedId} />
-          <Link className="button" to={`/requests/${encodeURIComponent(selectedId)}`}>
-            {t("requests.openDetail")} ↗
-          </Link>
         </Dialog>
       ) : null}
     </>
@@ -300,45 +318,87 @@ function RequestsContent() {
  * @param props - Request record.
  * @returns Table row.
  */
-function RequestRow({ record }: { record: Schemas["RequestRecord"] }) {
+/** Build typed Semi columns with the existing permissions and evidence semantics. */
+function useRequestColumns(): ColumnProps<Schemas["RequestRecord"]>[] {
   const { t, formatDuration } = useI18n();
-  return (
-    <tr>
-      <td>
-        <Link to={`?request=${encodeURIComponent(record.id)}`}>
-          <DateTime value={record.created_at} />
-        </Link>
-        <br />
-        <code className="muted table-id" title={record.id}>
-          {record.id}
-        </code>
-      </td>
-      <td>
-        <code>{record.operation}</code>
-      </td>
-      <td>
-        {record.source_provider === null ? (
-          <span className="muted">{t("requests.noProvider")}</span>
-        ) : (
-          t(`provider.${record.source_provider}`)
-        )}
-      </td>
-      <td>
-        <RequestStatusBadges record={record} />
-        {record.error === null ? null : (
+  return [
+    {
+      key: "column-0",
+      title: <>{t("common.created")}</>,
+      render: (_value, record) => {
+        return (
           <>
+            <Link to={`?request=${encodeURIComponent(record.id)}`}>
+              <DateTime value={record.created_at} />
+            </Link>
             <br />
-            <code className="muted">{record.error.code}</code>
+            <code className="muted table-id" title={record.id}>
+              {record.id}
+            </code>
           </>
-        )}
-      </td>
-      <td>
-        <ResultSummary record={record} />
-      </td>
-      <td>{formatDuration(record.duration_ms)}</td>
-      <td>
-        <RouteRevision revision={record.route_revision} />
-      </td>
-    </tr>
-  );
+        );
+      },
+    },
+    {
+      key: "column-1",
+      title: <>{t("requests.operation")}</>,
+      render: (_value, record) => {
+        return (
+          <>
+            <span className="operation-name">{record.operation}</span>
+          </>
+        );
+      },
+    },
+    {
+      key: "column-2",
+      title: <>{t("common.provider")}</>,
+      render: (_value, record) => {
+        return (
+          <>
+            {record.source_provider === null ? (
+              <span className="muted">{t("requests.noProvider")}</span>
+            ) : (
+              t(`provider.${record.source_provider}`)
+            )}
+          </>
+        );
+      },
+    },
+    {
+      key: "column-3",
+      title: <>{t("common.state")}</>,
+      render: (_value, record) => {
+        return (
+          <>
+            <RequestStatusBadges record={record} />
+            {record.error === null ? null : (
+              <>
+                <br />
+                <DiagnosticReason reason={record.error.code} />
+              </>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      key: "column-4",
+      title: <>{t("requests.results")}</>,
+      render: (_value, record) => {
+        return (
+          <>
+            <ResultSummary record={record} />
+          </>
+        );
+      },
+    },
+    {
+      key: "column-5",
+      title: <>{t("requests.duration")}</>,
+      render: (_value, record) => {
+        return <>{formatDuration(record.duration_ms)}</>;
+      },
+    },
+  ];
 }

@@ -1,9 +1,14 @@
+import { selectOption } from "../../test/selectOption";
 /** Requests: empty success vs unknown counts, partial failures and pre-routing rejection. */
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { mockDb } from "../../mocks/handlers";
 import { callsTo, renderApp } from "../../test/renderApp";
+
+beforeAll(async () => {
+  await import("./RequestsPage");
+});
 
 /**
  * Find the table row containing a request ID.
@@ -21,6 +26,15 @@ async function rowFor(id: string) {
 }
 
 describe("requests", () => {
+  it("refuses malformed typed dates without issuing a filtered request", async () => {
+    renderApp("/requests");
+    await screen.findByText("req_ok");
+    const count = callsTo("GET", "/v1/admin/requests").length;
+    await userEvent.type(screen.getByLabelText("Created after"), "not-a-date");
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(callsTo("GET", "/v1/admin/requests")).toHaveLength(count);
+  });
+
   it("explains reversed date filters without fetching another list", async () => {
     renderApp("/requests");
     await screen.findByText("req_ok");
@@ -42,11 +56,11 @@ describe("requests", () => {
     if (!detail) throw new Error("Missing request fixture");
     detail.request.status = "running";
     renderApp("/requests/req_ok");
-    await screen.findByText("Running", { selector: ".badge" });
+    await screen.findByText("Running", { selector: ".semi-tag-content" });
     detail.request.status = "succeeded";
     await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() =>
-      expect(screen.getByText("Succeeded", { selector: ".badge" })).toBeInTheDocument(),
+      expect(screen.getByText("Succeeded", { selector: ".semi-tag-content" })).toBeInTheDocument(),
     );
     expect(callsTo("GET", "/v1/admin/requests/req_ok")).toHaveLength(2);
     expect(mockDb.state.calls.filter((entry) => entry.method !== "GET")).toHaveLength(0);
@@ -58,21 +72,22 @@ describe("requests", () => {
     ).toBeInTheDocument();
     const unknown = await rowFor("req_unknown");
     expect(unknown.getByText("Not yet known")).toBeInTheDocument();
-    expect(unknown.getByText("Uncertain")).toHaveClass("badge-warning");
+    expect(unknown.getByText("Uncertain").closest(".semi-tag")).toHaveClass("status-warning");
     expect(unknown.getByText("Billing uncertain")).toBeInTheDocument();
     const rejected = await rowFor("req_rejected");
-    expect(rejected.getByText("No route applied")).toBeInTheDocument();
     expect(rejected.getByText("None (pre-dispatch)")).toBeInTheDocument();
     const partial = await rowFor("req_partial");
     expect(partial.getByText("Partial")).toBeInTheDocument();
-    expect(partial.getByText("Succeeded")).toHaveClass("badge-warning");
+    expect(partial.getByText("Succeeded").closest(".semi-tag")).toHaveClass("status-warning");
     expect((await rowFor("req_too_large")).getByText("response_too_large")).toBeInTheDocument();
+    await userEvent.click(rejected.getByRole("link"));
+    expect(await screen.findByText("No route applied")).toBeInTheDocument();
   });
 
   it("applies filters as contract query parameters", async () => {
     renderApp("/requests");
     await screen.findByText("req_ok");
-    await userEvent.selectOptions(screen.getByLabelText("Status"), "failed");
+    await selectOption(screen.getByLabelText("Status"), "Failed");
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
     expect(await screen.findByText("req_rejected")).toBeInTheDocument();
     expect(screen.queryByText("req_ok")).toBeNull();
@@ -95,7 +110,7 @@ describe("requests", () => {
 
     renderApp("/requests/req_unknown");
     expect(
-      await screen.findByText("Billing uncertain", { selector: ".notice-title" }),
+      await screen.findByText("Billing uncertain", { selector: ".semi-banner-title" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Possibly sent")).toBeInTheDocument();
   });
@@ -108,7 +123,7 @@ describe("requests", () => {
   it("opens details without losing list filters and restores keyboard focus on repeated close", async () => {
     renderApp("/requests");
     await screen.findByText("req_partial");
-    await userEvent.selectOptions(screen.getByLabelText("Status"), "succeeded");
+    await selectOption(screen.getByLabelText("Status"), "Succeeded");
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
     for (let index = 0; index < 2; index++) {
       const row = await rowFor("req_partial");
@@ -119,7 +134,7 @@ describe("requests", () => {
       await userEvent.keyboard("{Escape}");
       expect(screen.queryByRole("dialog")).toBeNull();
       expect(opener).toHaveFocus();
-      expect(screen.getByLabelText("Status")).toHaveValue("succeeded");
+      expect(screen.getByLabelText("Status")).toHaveTextContent("Succeeded");
     }
     expect(mockDb.state.calls.filter((call) => call.method !== "GET")).toHaveLength(0);
   });

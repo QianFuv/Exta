@@ -1,3 +1,6 @@
+import { DataTable } from "../../components/DataTable";
+import { Link } from "react-router";
+import { CheckboxField, Button, Input, Select } from "../../components/Controls";
 /** Route configuration with versioned replacement and capability constraints. */
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -116,6 +119,16 @@ function RoutePolicies() {
   return (
     <Section title={t("routing.policies")}>
       <PermissionHint permission="admin:routes:write" />
+      {capabilities.data?.capabilities.capabilities.some((entry) => !entry.enabled) ? (
+        <Notice tone="warning">
+          {t(
+            capabilities.data.capabilities.capabilities.every((entry) => !entry.enabled)
+              ? "dispatch.allRoutesUnavailable"
+              : "dispatch.routeNotice",
+          )}{" "}
+          <Link to="/keys">{t("keys.upstream")}</Link>
+        </Notice>
+      ) : null}
       <QueryView query={policies}>
         {(data) =>
           data.items.length === 0 ? (
@@ -124,83 +137,130 @@ function RoutePolicies() {
               description={t("routing.emptyDescription")}
             />
           ) : (
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("routing.capability")}</th>
-                    <th scope="col">{t("common.state")}</th>
-                    <th scope="col">{t("routing.targets")}</th>
-                    <th scope="col">{t("routing.limits")}</th>
-                    <th scope="col">{t("routing.duplicateCost")}</th>
-                    <th scope="col">{t("routing.revision")}</th>
-                    <th scope="col">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.map((policy) => (
-                    <tr key={policy.capability}>
-                      <th scope="row">
-                        <code>{policy.capability}</code>
-                      </th>
-                      <td>
-                        <Badge tone={policy.enabled ? "neutral" : "warning"}>
-                          {policy.enabled ? t("common.enabled") : t("common.disabled")}
-                        </Badge>
-                        {policy.enabled && policy.targets.length === 0 ? (
-                          <Badge tone="danger">{t("routing.noCompatibleRoute")}</Badge>
-                        ) : null}
-                      </td>
-                      <td>
-                        {policy.targets.length === 0 ? (
-                          <span className="muted">—</span>
-                        ) : (
-                          <ol className="target-list">
-                            {policy.targets.map((target) => {
-                              const info = profileInfo(policy.capability, target);
-                              return (
-                                <li key={`${target.provider}-${target.profile}`}>
-                                  {t(`provider.${target.provider}`)} · <code>{target.profile}</code>
-                                  {info !== undefined && !info.enabled ? (
-                                    <>
-                                      {" "}
-                                      <Badge tone="warning">{t("routing.providerDisabled")}</Badge>
-                                    </>
-                                  ) : null}
-                                </li>
-                              );
-                            })}
-                          </ol>
-                        )}
-                      </td>
-                      <td>
-                        {t("routing.attemptsDeadline", {
-                          attempts: policy.max_attempts,
-                          seconds: policy.deadline_seconds,
-                        })}
-                      </td>
-                      <td>{policy.allow_duplicate_cost ? t("common.yes") : t("common.no")}</td>
-                      <td>
-                        <RouteRevision revision={policy.revision} />
-                        <br />
-                        <span className="muted">
-                          <DateTime value={policy.created_at} />
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="button button-small"
-                          disabled={!can("admin:routes:write")}
-                          onClick={() => setEditing(policy)}
-                        >
-                          {t("common.edit")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="table-wrap" role="region" aria-label={t("common.table")} tabIndex={0}>
+              <DataTable
+                dataSource={data.items}
+                rowKey={(policy) => policy.capability}
+                columns={[
+                  {
+                    key: "column-0",
+                    title: <>{t("routing.capability")}</>,
+                    render: (_value, policy) => {
+                      return (
+                        <>
+                          <span className="operation-name">{policy.capability}</span>
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-1",
+                    title: <>{t("dispatch.configuration")}</>,
+                    render: (_value, policy) => {
+                      return (
+                        <>
+                          <Badge tone={policy.enabled ? "neutral" : "warning"}>
+                            {policy.enabled ? t("common.enabled") : t("common.disabled")}
+                          </Badge>
+                          {policy.enabled && policy.targets.length === 0 ? (
+                            <Badge tone="danger">{t("routing.noCompatibleRoute")}</Badge>
+                          ) : null}
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-2",
+                    title: <>{t("routing.targets")}</>,
+                    render: (_value, policy) => {
+                      return (
+                        <>
+                          {policy.targets.length === 0 ? (
+                            <span className="muted">—</span>
+                          ) : (
+                            <ol className="target-list">
+                              {policy.targets.map((target) => {
+                                const info = profileInfo(policy.capability, target);
+                                return (
+                                  <li key={`${target.provider}-${target.profile}`}>
+                                    {t(`provider.${target.provider}`)} ·{" "}
+                                    <span>{target.profile}</span>
+                                    {info !== undefined && !info.enabled ? (
+                                      <>
+                                        {" "}
+                                        <span
+                                          className="availability-dot"
+                                          role="img"
+                                          title={t("dispatch.blocked")}
+                                          aria-label={t("dispatch.blocked")}
+                                        />
+                                      </>
+                                    ) : null}
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          )}
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-3",
+                    title: <>{t("routing.limits")}</>,
+                    render: (_value, policy) => {
+                      return (
+                        <>
+                          {t("routing.attemptsDeadline", {
+                            attempts: policy.max_attempts,
+                            seconds: policy.deadline_seconds,
+                          })}
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-4",
+                    title: <>{t("routing.duplicateCost")}</>,
+                    render: (_value, policy) => {
+                      return <>{policy.allow_duplicate_cost ? t("common.yes") : t("common.no")}</>;
+                    },
+                  },
+                  {
+                    key: "column-5",
+                    title: <>{t("routing.revision")}</>,
+                    render: (_value, policy) => {
+                      return (
+                        <>
+                          <RouteRevision revision={policy.revision} />
+                          <br />
+                          <span className="muted">
+                            <DateTime value={policy.created_at} />
+                          </span>
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-6",
+                    title: <>{t("common.actions")}</>,
+                    render: (_value, policy) => {
+                      return (
+                        <>
+                          <Button
+                            type="button"
+                            className="button button-small"
+                            disabled={!can("admin:routes:write")}
+                            onClick={() => setEditing(policy)}
+                          >
+                            {t("common.edit")}
+                          </Button>
+                        </>
+                      );
+                    },
+                  },
+                ]}
+              />
             </div>
           )
         }
@@ -334,14 +394,13 @@ function RouteEditDialog({
         }}
       >
         <div className="field field-checkbox">
-          <input
+          <CheckboxField
+            label={<>{t("common.enabled")}</>}
             id={`${formId}-enabled`}
-            type="checkbox"
             checked={isEnabled}
             onChange={(event) => setEnabled(event.target.checked)}
             data-autofocus
           />
-          <label htmlFor={`${formId}-enabled`}>{t("common.enabled")}</label>
         </div>
         <fieldset className="fieldset">
           <legend>{t("routing.targetsOrdered")}</legend>
@@ -352,10 +411,10 @@ function RouteEditDialog({
               {targets.map((target, index) => (
                 <li key={`${target.provider}-${target.profile}`}>
                   <span>
-                    {t(`provider.${target.provider}`)} · <code>{target.profile}</code>
+                    {t(`provider.${target.provider}`)} · <span>{target.profile}</span>
                   </span>
                   <span className="button-row tight">
-                    <button
+                    <Button
                       type="button"
                       className="button button-small"
                       onClick={() => move(index, -1)}
@@ -365,8 +424,8 @@ function RouteEditDialog({
                       })}
                     >
                       ↑
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       className="button button-small"
                       onClick={() => move(index, 1)}
@@ -376,8 +435,8 @@ function RouteEditDialog({
                       })}
                     >
                       ↓
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       className="button button-small"
                       onClick={() =>
@@ -388,7 +447,7 @@ function RouteEditDialog({
                       })}
                     >
                       {t("common.remove")}
-                    </button>
+                    </Button>
                   </span>
                 </li>
               ))}
@@ -397,8 +456,10 @@ function RouteEditDialog({
           {targets.length < 2 && remaining.length > 0 ? (
             <div className="field-row">
               <div className="field">
-                <label htmlFor={`${formId}-candidate`}>{t("routing.addTarget")}</label>
-                <select
+                <label id={`${formId}-candidate` + "-label"} htmlFor={`${formId}-candidate`}>
+                  {t("routing.addTarget")}
+                </label>
+                <Select
                   id={`${formId}-candidate`}
                   value={candidate}
                   onChange={(event) => setCandidate(event.target.value)}
@@ -412,9 +473,9 @@ function RouteEditDialog({
                       {t(`provider.${target.provider}`)} · {target.profile}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
-              <button
+              <Button
                 type="button"
                 className="button align-end"
                 disabled={candidate === ""}
@@ -429,15 +490,17 @@ function RouteEditDialog({
                 }}
               >
                 {t("common.add")}
-              </button>
+              </Button>
             </div>
           ) : null}
           <p className="field-hint">{t("routing.noDowngrade")}</p>
         </fieldset>
         <div className="field-row">
           <div className="field">
-            <label htmlFor={`${formId}-attempts`}>{t("routing.maxAttempts")}</label>
-            <input
+            <label id={`${formId}-attempts` + "-label"} htmlFor={`${formId}-attempts`}>
+              {t("routing.maxAttempts")}
+            </label>
+            <Input
               id={`${formId}-attempts`}
               inputMode="numeric"
               value={maxAttempts}
@@ -449,8 +512,10 @@ function RouteEditDialog({
             </p>
           </div>
           <div className="field">
-            <label htmlFor={`${formId}-deadline`}>{t("routing.deadline")}</label>
-            <input
+            <label id={`${formId}-deadline` + "-label"} htmlFor={`${formId}-deadline`}>
+              {t("routing.deadline")}
+            </label>
+            <Input
               id={`${formId}-deadline`}
               inputMode="numeric"
               value={deadline}
@@ -463,15 +528,14 @@ function RouteEditDialog({
           </div>
         </div>
         <div className="field field-checkbox">
-          <input
+          <CheckboxField
+            label={<>{t("routing.duplicateCost")}</>}
             id={`${formId}-duplicate`}
-            type="checkbox"
             checked={allowDuplicateCost}
             onChange={(event) => setAllowDuplicateCost(event.target.checked)}
             disabled={isResearch}
             aria-describedby={`${formId}-duplicate-hint`}
           />
-          <label htmlFor={`${formId}-duplicate`}>{t("routing.duplicateCost")}</label>
           <p id={`${formId}-duplicate-hint`} className="field-hint">
             {isResearch ? t("routing.duplicateCostResearch") : t("routing.duplicateCostHint")}
           </p>
@@ -479,16 +543,17 @@ function RouteEditDialog({
         <InlineError error={save.error} />
         <ConflictRecovery error={save.error} onClose={onClose} />
         <div className="button-row">
-          <button type="button" className="button" onClick={onClose} disabled={save.isPending}>
+          <Button type="button" className="button" onClick={onClose} disabled={save.isPending}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             className="button button-primary"
             disabled={!isValid || save.isPending || isConflict(save.error)}
+            loading={save.isPending}
           >
             {save.isPending ? t("common.working") : t("common.save")}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>

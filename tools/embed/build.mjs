@@ -10,7 +10,7 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const WEB = path.join(ROOT, "web");
 const requireWeb = createRequire(path.join(WEB, "package.json"));
 const { parse, serialize } = await import(pathToFileURL(requireWeb.resolve("parse5")).href);
-const ROUTES = ["/app/", "/app/login", "/app/overview", "/app/keys", "/app/requests", "/app/requests/:id", "/app/settings"];
+const ROUTES = ["/app/", "/app/login", "/app/overview", "/app/keys", "/app/access-keys", "/app/requests", "/app/requests/:id", "/app/settings"];
 
 /** Hash exact payload bytes. */
 export function digest(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
@@ -121,18 +121,26 @@ export function packageOutput(output) {
   return files;
 }
 
+/** Locate the installed package boundary, ignoring nested module-mode package.json files. */
+export function dependencyRoot(id) {
+  const filename = path.resolve(id.split("?")[0]);
+  const marker = `${path.sep}node_modules${path.sep}`;
+  const boundary = filename.lastIndexOf(marker);
+  if (boundary < 0) return null;
+  if (!filename.startsWith(WEB + path.sep)) throw new Error("Bundled dependency outside web workspace");
+  const tail = filename.slice(boundary + marker.length).split(path.sep);
+  const count = tail[0].startsWith("@") ? 2 : 1;
+  if (tail.length <= count || tail.slice(0, count).some((part) => !part)) throw new Error("Invalid bundled package path");
+  return path.join(filename.slice(0, boundary + marker.length), ...tail.slice(0, count));
+}
+
 /** Collect the exact installed package identities and license texts used in emitted chunks. */
 async function collectLicenses(moduleIds, lock, destination) {
   const roots = new Set();
   for (const id of moduleIds) { const owner = virtualOwner(id); if (owner) roots.add(path.dirname(requireWeb.resolve(owner))); }
   for (const id of moduleIds) {
-    if (!id.includes("node_modules")) continue;
-    let directory = path.dirname(path.resolve(id.split("?")[0]));
-    while (directory.startsWith(WEB + path.sep)) {
-      try { await lstat(path.join(directory, "package.json")); roots.add(directory); break; }
-      catch (error) { if (error.code !== "ENOENT") throw error; }
-      directory = path.dirname(directory);
-    }
+    const directory = dependencyRoot(id);
+    if (directory) roots.add(directory);
   }
   const inventory = [];
   for (const directory of [...roots].sort()) {

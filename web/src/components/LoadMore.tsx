@@ -1,3 +1,4 @@
+import { Button } from "./Controls";
 /** Button that fetches the next cursor page. */
 import { useI18n } from "../lib/i18n";
 import { InlineError } from "./Feedback";
@@ -26,14 +27,14 @@ export function LoadMore({
   return (
     <div className="load-more">
       {query.isFetchNextPageError ? <InlineError error={query.error} /> : null}
-      <button
+      <Button
         type="button"
         className="button"
         onClick={() => void query.fetchNextPage()}
         disabled={query.isFetchingNextPage}
       >
         {query.isFetchingNextPage ? t("common.loading") : t("common.loadMore")}
-      </button>
+      </Button>
     </div>
   );
 }

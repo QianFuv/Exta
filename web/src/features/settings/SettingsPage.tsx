@@ -1,3 +1,4 @@
+import { Button, Input } from "../../components/Controls";
 /** Non-secret limits/retention editing plus build, schema and readiness diagnostics. */
 import { useId, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -125,7 +126,7 @@ function SettingsContent({ health }: { health: boolean }) {
       {(data) => (
         <>
           {health ? (
-            <>
+            <div className="settings-health">
               <Section title={t("settings.diagnostics")}>
                 <BuildDiagnostics settings={data} />
                 <ReadinessList readiness={data.readiness} />
@@ -140,13 +141,25 @@ function SettingsContent({ health }: { health: boolean }) {
                   <ul className="plain-list">
                     {data.protected_fields.map((field) => (
                       <li key={field}>
-                        <code>{field}</code>
+                        <span>
+                          {t(
+                            (
+                              {
+                                bind: "protected.bind",
+                                data_dir: "protected.data_dir",
+                                master_key: "protected.master_key",
+                                upstream_origins: "protected.upstream_origins",
+                              } as Record<string, MessageKey>
+                            )[field] ?? "settings.protected",
+                          )}{" "}
+                          <code className="cell-secondary">{field}</code>
+                        </span>
                       </li>
                     ))}
                   </ul>
                 )}
               </Section>
-            </>
+            </div>
           ) : (
             <LimitsForm key={data.version} settings={data} />
           )}
@@ -285,9 +298,11 @@ function LimitsForm({ settings }: { settings: Settings }) {
     const isFieldValid = isInRange(value, minimum, maximum);
     return (
       <div className="field" key={name}>
-        <label htmlFor={`${formId}-${name}`}>{t(`settings.field.${name}` as MessageKey)}</label>
+        <label id={`${formId}-${name}` + "-label"} htmlFor={`${formId}-${name}`}>
+          {t(`settings.field.${name}` as MessageKey)}
+        </label>
         <div className="input-with-unit">
-          <input
+          <Input
             id={`${formId}-${name}`}
             inputMode="numeric"
             value={value}
@@ -297,7 +312,11 @@ function LimitsForm({ settings }: { settings: Settings }) {
             aria-describedby={`${formId}-${name}-unit ${formId}-${name}-range`}
           />
           <span id={`${formId}-${name}-unit`} className="input-unit">
-            {t(fieldUnit(name))}
+            {t(
+              fieldUnit(name) === "settings.unit.jobs" && Number(value) === 1
+                ? "settings.unit.job"
+                : fieldUnit(name),
+            )}
           </span>
         </div>
         <p id={`${formId}-${name}-range`} className={isFieldValid ? "field-hint" : "field-error"}>
@@ -305,6 +324,14 @@ function LimitsForm({ settings }: { settings: Settings }) {
             ? `${formatNumber(minimum)}–${formatNumber(maximum)}`
             : t("settings.rangeError", { minimum, maximum })}
         </p>
+        {name.endsWith("_bytes") && isFieldValid ? (
+          <p className="field-hint">≈ {formatNumber(Number(value) / 1048576)} MiB</p>
+        ) : null}
+        {name === "research_active" ? (
+          <p className="field-hint">
+            {t("settings.field.principal_research_active")}: 1 {t("settings.unit.job")}
+          </p>
+        ) : null}
       </div>
     );
   };
@@ -335,11 +362,6 @@ function LimitsForm({ settings }: { settings: Settings }) {
                 );
               })}
             </div>
-            {group.title === "settings.research" ? (
-              <p className="field-hint">
-                {t("settings.field.principal_research_active")}: 1 {t("settings.unit.jobs")}
-              </p>
-            ) : null}
           </fieldset>
         ))}
         <fieldset className="fieldset settings-group">
@@ -356,7 +378,9 @@ function LimitsForm({ settings }: { settings: Settings }) {
             )}
             <div className="field">
               <span className="field-label">{t("settings.field.idempotency_days")}</span>
-              <p className="readonly-value">90 {t("settings.unit.days")}</p>
+              <p className="readonly-value">
+                90 {t("settings.unit.days")} · {t("settings.fixed")}
+              </p>
             </div>
           </div>
           <p className="field-hint">{t("settings.retentionNote")}</p>
@@ -364,13 +388,14 @@ function LimitsForm({ settings }: { settings: Settings }) {
         <InlineError error={save.error} />
         <div className="settings-save-bar">
           <span className="muted">{t("settings.saveAll")}</span>
-          <button
+          <Button
             type="submit"
             className="button button-primary"
             disabled={!canWrite || !isValid || save.isPending}
+            loading={save.isPending}
           >
             {save.isPending ? t("common.working") : t("common.save")}
-          </button>
+          </Button>
         </div>
       </form>
     </Section>

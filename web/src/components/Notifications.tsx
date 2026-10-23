@@ -1,3 +1,5 @@
+import SemiNotice from "@douyinfe/semi-ui/lib/es/notification/notice";
+import "@douyinfe/semi-foundation/lib/es/notification/notification.css";
 /** Polite live-region announcements for completed actions. */
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -53,17 +55,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         aria-label={t("common.notifications")}
       >
         {items.map((item) => (
-          <div key={item.id} className={`toast toast-${item.tone}`}>
-            <span>{item.message}</span>
-            <button
-              type="button"
-              className="button button-ghost button-icon"
-              aria-label={t("common.dismiss")}
-              onClick={() => dismiss(item.id)}
-            >
-              ×
-            </button>
-          </div>
+          <SemiNotice
+            key={item.id}
+            id={String(item.id)}
+            type={
+              item.tone === "danger" ? "error" : item.tone === "neutral" ? "default" : item.tone
+            }
+            content={item.message}
+            duration={0}
+            showClose
+            close={() => dismiss(item.id)}
+            onClose={() => dismiss(item.id)}
+          />
         ))}
       </div>
     </NotificationsContext.Provider>

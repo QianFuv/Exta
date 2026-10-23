@@ -8,7 +8,6 @@ import type { HttpResponseResolver } from "msw";
 import type { Schemas } from "../lib/api";
 import { canonicalJson } from "../lib/researchDraft";
 import {
-  mockAccounts,
   mockAudit,
   mockConnectionInfo,
   mockJob,
@@ -34,12 +33,11 @@ export interface RecordedCall {
 export interface MockState {
   session: Schemas["Session"] | null;
   validCredential: string;
-  accounts: Schemas["Account"][];
-  keys: Schemas["ProviderKey"][];
+  keys: Schemas["UpstreamKey"][];
   routes: Schemas["RoutePolicy"][];
   jobs: Map<string, Schemas["JobDetail"]>;
   requests: Schemas["RequestDetail"][];
-  usage: Schemas["UsageView"];
+  usage: Schemas["KeyUsageView"];
   connectionInfo: Schemas["ConnectionInfo"];
   settings: Schemas["Settings"];
   tokens: Schemas["ClientToken"][];
@@ -59,7 +57,6 @@ export function createMockState(options: { signedIn?: boolean } = {}): MockState
   return {
     session: options.signedIn === false ? null : mockSession(),
     validCredential: "fixture-operator-credential",
-    accounts: mockAccounts(),
     keys: mockKeys(),
     routes: mockRoutes(),
     jobs: mockJobDetails(),
@@ -270,59 +267,6 @@ export const handlers = [
     }),
   ),
   http.get(
-    "*/v1/admin/accounts",
-    guarded("admin:read", false, ({ request }) => {
-      const provider = new URL(request.url).searchParams.get("provider");
-      return HttpResponse.json(
-        page(
-          mockDb.state.accounts.filter((account) => !provider || account.provider === provider),
-          request,
-        ),
-      );
-    }),
-  ),
-  http.post(
-    "*/v1/admin/accounts",
-    guarded("admin:accounts:write", true, ({ body }) => {
-      const input = body as Schemas["AccountCreate"];
-      const account: Schemas["Account"] = {
-        id: `acc_new_${mockDb.state.nextId++}`,
-        provider: input.provider,
-        label: input.label,
-        external_ref: input.external_ref ?? null,
-        enabled: input.enabled,
-        billing_state: "unknown",
-        verification_state: input.verification_state ?? "unverified",
-        quota_policy: input.quota_policy,
-        created_at: NOW,
-        version: 1,
-      };
-      mockDb.state.accounts.push(account);
-      return HttpResponse.json(account, { status: 201 });
-    }),
-  ),
-  http.patch(
-    "*/v1/admin/accounts/:id",
-    guarded("admin:accounts:write", true, ({ params, body }) => {
-      const input = body as Schemas["AccountPatch"];
-      const account = mockDb.state.accounts.find((entry) => entry.id === param(params, "id"));
-      if (account === undefined) {
-        return apiError(404, "not_found", "Account not found.");
-      }
-      if (account.version !== input.expected_version) {
-        return apiError(409, "revision_conflict", "Stale version.");
-      }
-      account.label = input.label ?? account.label;
-      account.enabled = input.enabled ?? account.enabled;
-      account.verification_state = input.verification_state ?? account.verification_state;
-      account.quota_policy = input.quota_policy ?? account.quota_policy;
-      account.external_ref =
-        input.external_ref === undefined ? account.external_ref : input.external_ref;
-      account.version += 1;
-      return HttpResponse.json(account);
-    }),
-  ),
-  http.get(
     "*/v1/admin/keys",
     guarded("admin:read", false, ({ request }) => {
       const provider = new URL(request.url).searchParams.get("provider");
@@ -337,12 +281,19 @@ export const handlers = [
   http.post(
     "*/v1/admin/keys",
     guarded("admin:keys:write", true, ({ body }) => {
-      const input = body as Schemas["KeyCreate"];
-      const account = mockDb.state.accounts.find((entry) => entry.id === input.account_id);
-      const key: Schemas["ProviderKey"] = {
-        id: `key_new_${mockDb.state.nextId++}`,
-        provider: account?.provider ?? "exa",
-        account_id: input.account_id,
+      const input = body as Schemas["UpstreamKeyCreate"];
+      const id = `key_new_${mockDb.state.nextId++}`;
+      const key: Schemas["UpstreamKey"] = {
+        id,
+        provider: input.provider,
+        association_ref: id,
+        association_evidence: "unknown",
+        quota_policy: input.quota_policy ?? {
+          unit: input.provider === "exa" ? "micro_usd" : "tavily_credit",
+          allocation: 0,
+          per_operation_reservation: 0,
+          active_jobs: 1,
+        },
         label: input.label,
         last_four: input.secret.slice(-4),
         fingerprint: "fp:mock",
@@ -364,7 +315,7 @@ export const handlers = [
     (action === "patch" ? http.patch : http.post)(
       action === "patch" ? "*/v1/admin/keys/:id" : `*/v1/admin/keys/:id/${action}`,
       guarded("admin:keys:write", true, ({ params, body }) => {
-        const input = body as { expected_version: number; enabled?: boolean };
+        const input = body as Schemas["UpstreamKeyPatch"];
         const key = mockDb.state.keys.find((entry) => entry.id === param(params, "id"));
         if (key === undefined) {
           return apiError(404, "not_found", "Key not found.");
@@ -373,6 +324,8 @@ export const handlers = [
           return apiError(409, "revision_conflict", "Stale version.");
         }
         key.version += 1;
+        key.label = input.label ?? key.label;
+        key.quota_policy = input.quota_policy ?? key.quota_policy;
         if (action === "patch" && input.enabled !== undefined) {
           key.enabled = input.enabled;
         }

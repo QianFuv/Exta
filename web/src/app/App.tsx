@@ -1,3 +1,5 @@
+import "@douyinfe/semi-ui/react19-adapter";
+import { SemiProvider } from "../components/SemiProvider";
 /** Application providers and the route table shared by the browser entry and tests. */
 import { lazy } from "react";
 import type { ReactNode } from "react";
@@ -21,6 +23,11 @@ const OverviewPage = lazy(() =>
 );
 const KeysPage = lazy(() =>
   import("../features/keys/KeysPage").then((module) => ({ default: module.KeysPage })),
+);
+const AccessKeysPage = lazy(() =>
+  import("../features/connections/AccessKeysPage").then((module) => ({
+    default: module.AccessKeysPage,
+  })),
 );
 const RequestsPage = lazy(() =>
   import("../features/requests/RequestsPage").then((module) => ({ default: module.RequestsPage })),
@@ -54,9 +61,11 @@ export function AppProviders({
     <ApiProvider value={apiClient}>
       <QueryClientProvider client={queryClient}>
         <I18nProvider {...(initialLocale === undefined ? {} : { initialLocale })}>
-          <SessionProvider>
-            <NotificationsProvider>{children}</NotificationsProvider>
-          </SessionProvider>
+          <SemiProvider>
+            <SessionProvider>
+              <NotificationsProvider>{children}</NotificationsProvider>
+            </SessionProvider>
+          </SemiProvider>
         </I18nProvider>
       </QueryClientProvider>
     </ApiProvider>
@@ -104,6 +113,7 @@ export const APP_ROUTES: RouteObject[] = [
           { index: true, element: <Navigate to="/overview" replace /> },
           { path: "/overview", element: <OverviewPage /> },
           { path: "/keys", element: <KeysPage /> },
+          { path: "/access-keys", element: <AccessKeysPage /> },
           { path: "/requests", element: <RequestsPage /> },
           { path: "/requests/:id", element: <RequestDetailPage /> },
           { path: "/settings", element: <SettingsPage /> },

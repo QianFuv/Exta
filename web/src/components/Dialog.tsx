@@ -1,7 +1,10 @@
+import IconClose from "@douyinfe/semi-icons/lib/es/icons/IconClose";
 /** Accessible modal dialog with focus containment, Escape handling and focus restore. */
 import { useEffect, useId, useRef } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
+import Modal from "@douyinfe/semi-ui/lib/es/modal";
+import SideSheet from "@douyinfe/semi-ui/lib/es/sideSheet";
+import { Button } from "./Controls";
 import { useI18n } from "../lib/i18n";
 
 const FOCUSABLE =
@@ -56,95 +59,125 @@ export function Dialog({
   const { t } = useI18n();
   const titleId = useId();
   const descriptionId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const previousRef = useRef(
+    document.activeElement instanceof HTMLElement ? document.activeElement : null,
+  );
+  const overflowRef = useRef(document.body.style.overflow);
+  const closeRef = useRef({ onClose, isBusy });
+  useEffect(() => {
+    closeRef.current = { onClose, isBusy };
+  }, [onClose, isBusy]);
 
   useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const panel = panelRef.current;
+    const panel = contentRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null;
+    panelRef.current = panel;
+    if (!panel) return;
+    panel.dataset.extaDialog = "true";
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-labelledby", titleId);
+    if (description) panel.setAttribute("aria-describedby", descriptionId);
+    else panel.removeAttribute("aria-describedby");
     const background = Array.from(document.body.children).filter(
       (element) => !element.contains(panel),
     );
     const inertBefore = background.map((element) => element.hasAttribute("inert"));
     background.forEach((element) => element.setAttribute("inert", ""));
-    const overflowBefore = document.body.style.overflow;
+    const overflowBefore = overflowRef.current;
     document.body.style.overflow = "hidden";
     const controls = focusableControls(panel);
-    const first = controls.find((element) => element.hasAttribute("data-autofocus")) ?? controls[0];
-    (first ?? panel)?.focus();
+    (
+      controls.find((element) => element.closest("[data-autofocus]")) ??
+      controls[0] ??
+      panel
+    ).focus();
+    /** Let an open nested popup consume Escape before dismissing its owner. */
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (!panel.contains(event.target as Node)) return;
+      if (event.key === "Escape") {
+        if (panel.querySelector('[data-exta-popup-open="true"]')) return;
+        event.stopPropagation();
+        if (!closeRef.current.isBusy) closeRef.current.onClose();
+      }
+      if (event.key !== "Tab") return;
+      event.stopPropagation();
+      const focusable = focusableControls(panel);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        panel.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    const previous = previousRef.current;
     return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
       background.forEach((element, index) => {
         if (!inertBefore[index]) element.removeAttribute("inert");
       });
       document.body.style.overflow = overflowBefore;
-      previous?.focus();
+      if (previous?.isConnected) previous.focus();
     };
-  }, []);
+  }, [titleId, descriptionId, description]);
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      if (!isBusy) {
-        onCloseRef.current();
-      }
-      return;
-    }
-    if (event.key !== "Tab" || panelRef.current === null) {
-      return;
-    }
-    const focusable = focusableControls(panelRef.current);
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (first === undefined || last === undefined) {
-      event.preventDefault();
-      return;
-    }
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
-  return createPortal(
-    <div className={`dialog-backdrop ${variant === "drawer" ? "drawer-backdrop" : ""}`}>
-      <div
-        ref={panelRef}
-        className={`dialog dialog-${size}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description === undefined ? undefined : descriptionId}
-        aria-busy={isBusy}
-        tabIndex={-1}
-        onKeyDown={onKeyDown}
-      >
-        <header className="dialog-header">
-          <h2 id={titleId}>{title}</h2>
-          <button
-            type="button"
-            className="button button-ghost button-icon"
-            onClick={onClose}
-            disabled={isBusy}
-            aria-label={t("common.close")}
-          >
-            ×
-          </button>
-        </header>
-        {description === undefined ? null : (
-          <p id={descriptionId} className="dialog-description">
-            {description}
-          </p>
-        )}
-        <div className="dialog-body">{children}</div>
-      </div>
-    </div>,
-    document.body,
+  const content = (
+    <div ref={contentRef} aria-busy={isBusy}>
+      <header className="dialog-header">
+        <h2 id={titleId}>{title}</h2>
+        <Button
+          className="button button-ghost button-icon"
+          onClick={() => {
+            if (!isBusy) onClose();
+          }}
+          disabled={isBusy}
+          aria-label={t("common.close")}
+        >
+          <IconClose aria-hidden />
+        </Button>
+      </header>
+      {description ? (
+        <p id={descriptionId} className="dialog-description">
+          {description}
+        </p>
+      ) : null}
+      <div className="dialog-body">{children}</div>
+    </div>
+  );
+  return variant === "drawer" ? (
+    <SideSheet
+      visible
+      motion={false}
+      keepDOM={false}
+      maskClosable={false}
+      closable={false}
+      closeOnEsc={false}
+      disableScroll
+      width="min(760px, 100vw)"
+      className="exta-drawer"
+    >
+      {content}
+    </SideSheet>
+  ) : (
+    <Modal
+      visible
+      motion={false}
+      keepDOM={false}
+      maskClosable={false}
+      closable={false}
+      closeOnEsc={false}
+      footer={null}
+      width={size === "large" ? 760 : 560}
+      className="exta-modal"
+    >
+      {content}
+    </Modal>
   );
 }

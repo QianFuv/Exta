@@ -1,4 +1,6 @@
-/** Account budget policy editing belongs to configuration, without touching the ledger. */
+import { DataTable } from "../../components/DataTable";
+import { Button } from "../../components/Controls";
+/** Key budget policy editing belongs to configuration, without touching the ledger. */
 import { useState } from "react";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
@@ -9,18 +11,18 @@ import { QueryView, EmptyState } from "../../components/Feedback";
 import { Section } from "../../components/Page";
 import { LoadMore } from "../../components/LoadMore";
 import { useUnitFormatter } from "../../components/Values";
-import { AccountDialog } from "../keys/KeyDialogs";
+import { KeySettingsDialog } from "../keys/KeyDialogs";
 
-/** Display versioned account policies with their own units and existing write permissions. */
+/** Display versioned providerKey policies with their own units and existing write permissions. */
 export function BudgetSettings() {
   const { t } = useI18n();
   const api = useApi();
   const { can } = useSession();
   const format = useUnitFormatter();
-  const [editing, setEditing] = useState<Schemas["Account"] | null>(null);
-  const { query, items } = useCursorList(["accounts", "budget-settings"], (cursor) =>
+  const [editing, setEditing] = useState<Schemas["UpstreamKey"] | null>(null);
+  const { query, items } = useCursorList(["keys", "budget-settings"], (cursor) =>
     call(
-      api.GET("/v1/admin/accounts", {
+      api.GET("/v1/admin/keys", {
         params: { query: { limit: 100, ...(cursor ? { cursor } : {}) } },
       }),
     ),
@@ -38,57 +40,92 @@ export function BudgetSettings() {
               aria-label={t("keys.budgetSettings")}
               tabIndex={0}
             >
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t("usage.account")}</th>
-                    <th>{t("common.provider")}</th>
-                    <th>{t("keys.allocation")}</th>
-                    <th>{t("keys.perOperation")}</th>
-                    <th>{t("keys.activeJobs")}</th>
-                    <th>{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((account) => (
-                    <tr key={account.id}>
-                      <td>
-                        <strong>{account.label}</strong>
-                        <small className="cell-secondary">{account.id}</small>
-                      </td>
-                      <td>{t(`provider.${account.provider}`)}</td>
-                      <td>{format(account.quota_policy.allocation, account.quota_policy.unit)}</td>
-                      <td>
-                        {format(
-                          account.quota_policy.per_operation_reservation,
-                          account.quota_policy.unit,
-                        )}
-                      </td>
-                      <td>{account.quota_policy.active_jobs}</td>
-                      <td>
-                        <button
-                          className="button button-small"
-                          disabled={!can("admin:accounts:write")}
-                          onClick={() => setEditing(account)}
-                        >
-                          {t("common.edit")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                dataSource={items}
+                rowKey={(providerKey) => providerKey.id}
+                columns={[
+                  {
+                    key: "column-0",
+                    title: <>{t("keys.key")}</>,
+                    render: (_value, providerKey) => {
+                      return (
+                        <>
+                          <strong>{providerKey.label}</strong>
+                          <small className="cell-secondary">
+                            <code>{providerKey.id}</code>
+                          </small>
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-1",
+                    title: <>{t("common.provider")}</>,
+                    render: (_value, providerKey) => {
+                      return <>{t(`provider.${providerKey.provider}`)}</>;
+                    },
+                  },
+                  {
+                    key: "column-2",
+                    title: <>{t("keys.allocation")}</>,
+                    render: (_value, providerKey) => {
+                      return (
+                        <>
+                          {format(
+                            providerKey.quota_policy.allocation,
+                            providerKey.quota_policy.unit,
+                          )}
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-3",
+                    title: <>{t("keys.perOperation")}</>,
+                    render: (_value, providerKey) => {
+                      return (
+                        <>
+                          {format(
+                            providerKey.quota_policy.per_operation_reservation,
+                            providerKey.quota_policy.unit,
+                          )}
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-4",
+                    title: <>{t("keys.activeJobs")}</>,
+                    render: (_value, providerKey) => {
+                      return <>{providerKey.quota_policy.active_jobs}</>;
+                    },
+                  },
+                  {
+                    key: "column-5",
+                    title: <>{t("common.actions")}</>,
+                    render: (_value, providerKey) => {
+                      return (
+                        <>
+                          <Button
+                            className="button button-small"
+                            disabled={!can("admin:keys:write")}
+                            onClick={() => setEditing(providerKey)}
+                          >
+                            {t("common.edit")}
+                          </Button>
+                        </>
+                      );
+                    },
+                  },
+                ]}
+              />
             </div>
           )
         }
       </QueryView>
       <LoadMore query={query} />
       {editing ? (
-        <AccountDialog
-          provider={editing.provider}
-          account={editing}
-          onClose={() => setEditing(null)}
-        />
+        <KeySettingsDialog providerKey={editing} onClose={() => setEditing(null)} />
       ) : null}
     </Section>
   );

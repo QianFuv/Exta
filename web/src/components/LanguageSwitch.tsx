@@ -1,3 +1,4 @@
+import { Button } from "./Controls";
 /** Chinese/English toggle. */
 import { useI18n } from "../lib/i18n";
 
@@ -10,7 +11,7 @@ export function LanguageSwitch() {
   const { locale, setLocale, t } = useI18n();
   const next = locale === "zh" ? "en" : "zh";
   return (
-    <button
+    <Button
       type="button"
       className="button button-ghost"
       onClick={() => setLocale(next)}
@@ -18,6 +19,6 @@ export function LanguageSwitch() {
       aria-label={`${t("language.switchTo")}: ${next === "en" ? "English" : "中文"}`}
     >
       {next === "en" ? "English" : "中文"}
-    </button>
+    </Button>
   );
 }

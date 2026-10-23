@@ -1,3 +1,4 @@
+import { Button } from "./Controls";
 /** Small value renderers shared across pages: money/credits, revisions, copy and dates. */
 import { useState } from "react";
 import type { Schemas } from "../lib/api";
@@ -102,7 +103,15 @@ export function DateTime({ value }: { value: string | null | undefined }) {
  * @param props - Text and accessible label.
  * @returns Copy button.
  */
-export function CopyButton({ text, label }: { text: string; label: string }) {
+export function CopyButton({
+  text,
+  label,
+  primary = false,
+}: {
+  text: string;
+  label: string;
+  primary?: boolean;
+}) {
   const { t } = useI18n();
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const copy = async () => {
@@ -115,14 +124,14 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
   };
   return (
     <span className="copy">
-      <button
+      <Button
         type="button"
-        className="button button-small"
+        className={primary ? "button button-primary" : "button button-small"}
         onClick={() => void copy()}
         aria-label={label}
       >
         {t("common.copy")}
-      </button>
+      </Button>
       <span className="muted" aria-live="polite">
         {state === "copied" ? t("common.copied") : state === "failed" ? t("common.copyFailed") : ""}
       </span>

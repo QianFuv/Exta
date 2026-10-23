@@ -7,6 +7,23 @@ import { server } from "./server";
 
 configure({ asyncUtilTimeout: 5000 });
 
+/** jsdom has no layout observer; geometry is verified against the packaged browser. */
+class StaticResizeObserver implements ResizeObserver {
+  /** Unit tests do not synthesize layout measurements. */
+  observe() {
+    return undefined;
+  }
+  /** Release a non-layout observation. */
+  unobserve() {
+    return undefined;
+  }
+  /** Release all non-layout observations. */
+  disconnect() {
+    return undefined;
+  }
+}
+globalThis.ResizeObserver = StaticResizeObserver;
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
 beforeEach(() => {

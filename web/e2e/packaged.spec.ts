@@ -15,7 +15,20 @@ function audit(page: Page) {
   }).analyze();
 }
 
-test("standalone four-area administration and persistent appearance", async ({
+/** Choose an official Semi option by its visible accessible label. */
+async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
+  const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
+  const preferences = page.getByRole("button", { name: "Preferences", exact: true });
+  if (await preferences.isVisible()) {
+    await preferences.click();
+    await page.getByRole("menuitem", { name: label, exact: true }).click();
+  } else {
+    await page.getByRole("combobox", { name: "Appearance", exact: true }).click();
+    await page.getByRole("option", { name: label, exact: true }).click();
+  }
+}
+
+test("standalone key-only administration and persistent appearance", async ({
   page,
   context,
 }, info) => {
@@ -46,7 +59,7 @@ test("standalone four-area administration and persistent appearance", async ({
     jobs: Record<string, string>;
     body: object;
     key: string;
-    account: string;
+    upstreamKey: string;
     request: string;
   };
   const socket = net.createServer();
@@ -96,7 +109,7 @@ test("standalone four-area administration and persistent appearance", async ({
       )
       .toBe(200);
     await page.goto(`${origin}/app/`);
-    await page.getByRole("button").filter({ hasText: "EN" }).click();
+    await page.getByRole("button", { name: /English/ }).click();
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
     await page.getByLabel("Operator credential").fill(credential);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -107,7 +120,7 @@ test("standalone four-area administration and persistent appearance", async ({
     for (const route of [
       "overview",
       "keys",
-      "keys?view=access",
+      "access-keys",
       "requests",
       "settings",
       "settings?view=routing",
@@ -118,8 +131,9 @@ test("standalone four-area administration and persistent appearance", async ({
       "overview?view=usage",
     ]) {
       const response = await page.goto(`${origin}/app/${route}`);
-      expect(response?.status()).toBe(200);
+      expect(response?.status(), route).toBe(200);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(page.locator(".state-loading")).toHaveCount(0);
     }
     const session = await (await page.request.get(`${origin}/v1/admin/session`)).json();
     expect(session.principal_id).toBe(fixture.owner);
@@ -129,22 +143,34 @@ test("standalone four-area administration and persistent appearance", async ({
     });
     expect(denied.status()).toBe(403);
     await page.goto(`${origin}/app/keys`);
-    const moreActions = page.locator(".key-secondary-actions summary").first();
-    await expect(page.getByRole("button", { name: "Retire", exact: true })).not.toBeVisible();
+    let moreActions = page.getByRole("button", {
+      name: "More actions for Invalid offline fixture key",
+      exact: true,
+    });
+    await expect(page.getByRole("menuitem", { name: "Retire", exact: true })).not.toBeVisible();
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await moreActions.focus();
       await page.keyboard.press("Enter");
-      await page.getByRole("button", { name: "Retire", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Retire", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
       await expect(moreActions).toBeFocused();
-      await expect(page.getByRole("button", { name: "Retire", exact: true })).not.toBeVisible();
+      await expect(page.getByRole("menuitem", { name: "Retire", exact: true })).not.toBeVisible();
     }
-    await page.getByRole("button", { name: "Edit account", exact: true }).click();
-    const accounts = await (await page.request.get(`${origin}/v1/admin/accounts`)).json();
-    const account = accounts.items.find((entry: { id: string }) => entry.id === fixture.account);
-    const concurrent = await page.request.patch(`${origin}/v1/admin/accounts/${fixture.account}`, {
-      data: { expected_version: account.version, label: "Concurrently updated fixture" },
+    await moreActions.click();
+    await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
+    const keyDialog = page.getByRole("dialog", { name: "Edit key & limits" });
+    const grouping = keyDialog.getByRole("combobox");
+    await grouping.click();
+    await expect(page.getByRole("option", { name: "1", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(grouping).toHaveAttribute("aria-expanded", "false");
+    await expect(keyDialog).toBeVisible();
+    expect((await audit(page)).violations).toEqual([]);
+    const keys = await (await page.request.get(`${origin}/v1/admin/keys`)).json();
+    const key = keys.items.find((entry: { id: string }) => entry.id === fixture.upstreamKey);
+    const concurrent = await page.request.patch(`${origin}/v1/admin/keys/${fixture.upstreamKey}`, {
+      data: { expected_version: key.version, label: "Concurrently updated fixture" },
       headers: { Origin: origin, "X-Exta-CSRF": session.csrf_token },
     });
     expect(concurrent.status()).toBe(200);
@@ -154,28 +180,29 @@ test("standalone four-area administration and persistent appearance", async ({
     ).toBeDisabled();
     await page.getByRole("button", { name: "Reload and review latest", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Concurrently updated fixture", exact: true }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Edit account", exact: true }).click();
+    await expect(page.getByText("Concurrently updated fixture", { exact: true })).toBeVisible();
+    moreActions = page.getByRole("button", {
+      name: "More actions for Concurrently updated fixture",
+      exact: true,
+    });
+    await moreActions.click();
+    await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
     await page
       .getByRole("dialog")
       .getByLabel("Label", { exact: true })
-      .fill("Reviewed fixture account");
+      .fill("Reviewed fixture key");
     await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Reviewed fixture account", exact: true }),
-    ).toBeVisible();
-    await page.goto(`${origin}/app/keys?view=access`);
-    await page.getByRole("button", { name: "Create token", exact: true }).click();
+    await expect(page.getByText("Reviewed fixture key", { exact: true })).toBeVisible();
+    await page.goto(`${origin}/app/access-keys`);
+    await page.getByRole("button", { name: "Create access key", exact: true }).click();
     await page
       .getByRole("dialog")
       .getByLabel("Label", { exact: true })
       .fill("Browser acceptance token");
     await page
       .getByRole("dialog")
-      .getByRole("button", { name: "Create token", exact: true })
+      .getByRole("button", { name: "Create access key", exact: true })
       .click();
     await page.getByRole("button", { name: "I have copied it", exact: true }).click();
     await page
@@ -193,12 +220,12 @@ test("standalone four-area administration and persistent appearance", async ({
       expect(response.headers()["content-type"]).toContain("application/json");
     }
     for (const theme of ["light", "dark"] as const) {
-      await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption(theme);
+      await chooseTheme(page, theme);
       await page.emulateMedia({ colorScheme: theme === "light" ? "dark" : "light" });
       for (const route of [
         "overview",
         "keys",
-        "keys?view=access",
+        "access-keys",
         "requests",
         "settings",
         "settings?view=routing",
@@ -210,13 +237,30 @@ test("standalone four-area administration and persistent appearance", async ({
       ]) {
         await page.goto(`${origin}/app/${route}`);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await expect(page.locator(".state-loading")).toHaveCount(0);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         expect(
           await page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme),
         ).toBe(theme);
+        const fontFamilies = await page
+          .locator("h1, .page-description, .nav-link, .semi-tag-content, .semi-button-content")
+          .evaluateAll((elements) => [
+            ...new Set(elements.map((element) => getComputedStyle(element).fontFamily)),
+          ]);
+        expect(fontFamilies, `${theme}: coherent typography on ${route}`).toHaveLength(1);
+        expect(fontFamilies[0]).toContain("Segoe UI Variable Text");
         expect.soft((await audit(page)).violations, `${theme}: ${route}`).toEqual([]);
       }
       await page.goto(`${origin}/app/requests`);
+      const dateField = page.getByLabel("Created after", { exact: true });
+      await dateField.focus();
+      await page.keyboard.press("ArrowDown");
+      await expect(page.locator(".semi-datepicker-month-grid")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await dateField.fill("not-a-date");
+      await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+      await dateField.fill("");
+      await page.keyboard.press("Escape");
       const opener = page.locator(`a[href$="?request=${fixture.request}"]`);
       for (let attempt = 0; attempt < 2; attempt++) {
         await opener.click();
@@ -234,12 +278,54 @@ test("standalone four-area administration and persistent appearance", async ({
       }
       await page.screenshot({ path: info.outputPath(`logs-${theme}.png`), fullPage: true });
       await page.setViewportSize({ width: 390, height: 844 });
-      for (const route of ["overview", "keys", "requests", "settings"]) {
+      await page.getByRole("button", { name: "Preferences", exact: true }).click();
+      await expect(page.getByRole("menuitem", { name: "System", exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
+      const resizedActive = page.locator('#primary-navigation [aria-current="page"]');
+      await expect
+        .poll(async () =>
+          resizedActive.evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            const bounds = document.getElementById("primary-navigation")!.getBoundingClientRect();
+            return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+          }),
+        )
+        .toBe(true);
+      for (const route of ["overview", "keys", "access-keys", "requests", "settings"]) {
         await page.goto(`${origin}/app/${route}`);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-          true,
-        );
+        await expect(page.locator(".state-loading")).toHaveCount(0);
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          `${theme}: mobile ${route}`,
+        ).toBe(true);
+        if (route === "keys" || route === "access-keys") {
+          const records = page.locator(".mobile-records").first();
+          await expect(records).toBeVisible();
+          expect(
+            await records.evaluate((element) => element.scrollWidth <= element.clientWidth),
+          ).toBe(true);
+          await expect(records.locator(".semi-tag").first()).toBeVisible();
+          if (route === "keys") {
+            const action = records.getByRole("button", { name: /More actions/ }).first();
+            await action.focus();
+            await page.keyboard.press("Enter");
+            await expect(page.getByRole("menuitem", { name: "Edit key" })).toBeVisible();
+            await page.keyboard.press("Escape");
+            await expect(action).toBeFocused();
+          }
+        }
+        const activeNavigation = page.locator('#primary-navigation [aria-current="page"]');
+        const navigation = page.locator("#primary-navigation");
+        expect(
+          await activeNavigation.evaluate(
+            (element, bounds) => {
+              const rect = element.getBoundingClientRect();
+              return rect.left >= bounds!.x && rect.right <= bounds!.x + bounds!.width;
+            },
+            await navigation.boundingBox(),
+          ),
+        ).toBe(true);
       }
       await page.screenshot({
         path: info.outputPath(`settings-mobile-${theme}.png`),
@@ -247,24 +333,26 @@ test("standalone four-area administration and persistent appearance", async ({
       });
       await page.setViewportSize({ width: 1440, height: 1000 });
     }
-    await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption("system");
+    await chooseTheme(page, "system");
     for (const scheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       expect(
         await page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme),
       ).toBe(scheme);
     }
-    await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption("dark");
+    await chooseTheme(page, "dark");
     await page.route("**/*.js", async (route) => {
       if (route.request().url().endsWith("/assets/theme-init.js")) return route.continue();
       await route.abort();
     });
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("body")).toHaveAttribute("theme-mode", "dark");
     expect(await page.locator("#root").textContent()).toBe("");
     await page.unroute("**/*.js");
     await page.reload();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator(".state-loading")).toHaveCount(0);
     for (const route of [
       "research",
       "research/job_unknown",
@@ -286,8 +374,8 @@ test("standalone four-area administration and persistent appearance", async ({
     ).toBe(0);
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
-    await page.locator(".session-menu summary").click();
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.getByRole("button", { name: "Preferences", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(401);
     await info.attach("binary-identity", {

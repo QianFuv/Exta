@@ -1,3 +1,4 @@
+import { Button, Input } from "../../components/Controls";
 /** Operator credential exchange for an HttpOnly admin session. */
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
@@ -79,8 +80,10 @@ export function LoginPage() {
         ) : null}
         <form onSubmit={onSubmit} className="form">
           <div className="field">
-            <label htmlFor={fieldId}>{t("login.credential")}</label>
-            <input
+            <label id={fieldId + "-label"} htmlFor={fieldId}>
+              {t("login.credential")}
+            </label>
+            <Input
               id={fieldId}
               type="password"
               autoComplete="current-password"
@@ -94,13 +97,14 @@ export function LoginPage() {
             </p>
           </div>
           {login.isError ? <InlineError error={login.error} /> : null}
-          <button
+          <Button
             type="submit"
             className="button button-primary"
             disabled={login.isPending || credential.length === 0}
+            loading={login.isPending}
           >
             {login.isPending ? t("login.signingIn") : t("login.signIn")}
-          </button>
+          </Button>
         </form>
       </main>
     </div>

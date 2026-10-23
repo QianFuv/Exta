@@ -63,11 +63,15 @@ export function ResultSummary({ record }: { record: RequestRecord }) {
   }
   return (
     <span>
-      {t("requests.resultCount", { count: formatNumber(record.result_count) })}
+      {t(record.result_count === 1 ? "requests.resultCountOne" : "requests.resultCount", {
+        count: formatNumber(record.result_count),
+      })}
       {record.failure_count === null ? null : (
         <>
           {" · "}
-          {t("requests.failureCount", { count: formatNumber(record.failure_count) })}
+          {t(record.failure_count === 1 ? "requests.failureCountOne" : "requests.failureCount", {
+            count: formatNumber(record.failure_count),
+          })}
         </>
       )}
     </span>

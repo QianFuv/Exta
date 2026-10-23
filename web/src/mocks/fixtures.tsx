@@ -10,7 +10,6 @@ type Job = Schemas["Job"];
 /** All admin permissions, for a fully privileged mock principal. */
 export const ALL_PERMISSIONS: Schemas["AdminPermission"][] = [
   "admin:read",
-  "admin:accounts:write",
   "admin:keys:write",
   "admin:routes:write",
   "admin:usage:refresh",
@@ -57,102 +56,50 @@ export function mockReadiness(overrides: Partial<Schemas["Readiness"]> = {}): Sc
   };
 }
 
-/** Synthetic accounts. */
-export function mockAccounts(): Schemas["Account"][] {
-  return [
-    {
-      id: "acc_exa_main",
-      provider: "exa",
-      label: "Exa main (fixture)",
-      external_ref: "team-a",
-      enabled: true,
-      billing_state: "eligible",
-      verification_state: "verified",
-      quota_policy: {
-        unit: "micro_usd",
-        allocation: 50_000_000,
-        per_operation_reservation: 1_000_000,
-        active_jobs: 1,
-      },
-      created_at: T0,
-      version: 3,
+/** Synthetic independent keys; no provider identity is inferred from their balances. */
+export function mockKeys(): Schemas["UpstreamKey"][] {
+  const makeKey = (
+    id: string,
+    provider: Schemas["Provider"],
+    label: string,
+  ): Schemas["UpstreamKey"] => ({
+    id,
+    provider,
+    label,
+    association_ref: id,
+    association_evidence: "unknown",
+    quota_policy: {
+      unit: provider === "exa" ? "micro_usd" : "tavily_credit",
+      allocation: provider === "exa" ? 50_000_000 : 1000,
+      per_operation_reservation: provider === "exa" ? 1_000_000 : 250,
+      active_jobs: 1,
     },
-    {
-      id: "acc_tavily_team",
-      provider: "tavily",
-      label: "Tavily team (fixture)",
-      external_ref: null,
-      enabled: true,
-      billing_state: "blocked",
-      verification_state: "unverified",
-      quota_policy: {
-        unit: "tavily_credit",
-        allocation: 1000,
-        per_operation_reservation: 250,
-        active_jobs: 1,
-      },
-      created_at: T0,
-      version: 1,
-    },
-  ];
-}
-
-/** Synthetic masked keys, including an invalid key and an unknown grouping. */
-export function mockKeys(): Schemas["ProviderKey"][] {
-  const base = {
-    billing_state: "eligible" as const,
-    breaker: "closed" as const,
+    billing_state: "eligible",
+    breaker: "closed",
     cooldown_until: null,
     created_at: T0,
     enabled: true,
     retained_credential_count: 0,
-    retirement_state: "active" as const,
-    validity: "valid" as const,
+    retirement_state: "active",
+    validity: "valid",
     version: 1,
-  };
+    last_four: "test",
+    fingerprint: `fixture-${id}`,
+  });
   return [
+    makeKey("key_exa_1", "exa", "Exa primary"),
     {
-      ...base,
-      id: "key_exa_1",
-      provider: "exa",
-      account_id: "acc_exa_main",
-      label: "Exa primary",
-      last_four: "a1b2",
-      fingerprint: "fp:9f2c41",
-    },
-    {
-      ...base,
-      id: "key_exa_2",
-      provider: "exa",
-      account_id: "acc_exa_main",
-      label: "Exa backup",
-      last_four: "c3d4",
-      fingerprint: "fp:1be770",
+      ...makeKey("key_exa_2", "exa", "Exa standby"),
       validity: "invalid",
       breaker: "open",
       cooldown_until: T2,
     },
     {
-      ...base,
-      id: "key_tavily_1",
-      provider: "tavily",
-      account_id: "acc_tavily_team",
-      label: "Tavily shared",
-      last_four: "e5f6",
-      fingerprint: "fp:44aa10",
+      ...makeKey("key_tavily_1", "tavily", "Tavily shared"),
       billing_state: "blocked",
       retained_credential_count: 1,
     },
-    {
-      ...base,
-      id: "key_tavily_orphan",
-      provider: "tavily",
-      account_id: "acc_missing",
-      label: "Tavily imported",
-      last_four: "0000",
-      fingerprint: "fp:00ff00",
-      validity: "unknown",
-    },
+    { ...makeKey("key_tavily_unverified", "tavily", "Tavily new"), validity: "unknown" },
   ];
 }
 
@@ -432,7 +379,7 @@ export function mockRequests(): Schemas["RequestDetail"][] {
     id: "att_1",
     attempt_number: 1,
     provider: "exa",
-    account_id: "acc_exa_main",
+    key_id: "key_exa_1",
     credential_version_id: "cred_v1",
     transmission_state: "response_received",
     http_status: 200,
@@ -459,7 +406,7 @@ export function mockRequests(): Schemas["RequestDetail"][] {
         failure_count: 2,
         usage: [],
       }),
-      attempts: [attempt({ id: "att_p", provider: "tavily", account_id: "acc_tavily_team" })],
+      attempts: [attempt({ id: "att_p", provider: "tavily", key_id: "key_tavily_1" })],
     },
     {
       request: record({
@@ -528,10 +475,12 @@ export function mockRequests(): Schemas["RequestDetail"][] {
 }
 
 /** Synthetic usage view with separated units and unknown/unlimited limits. */
-export function mockUsage(): Schemas["UsageView"] {
-  const row = (overrides: Partial<Schemas["AccountUsage"]>): Schemas["AccountUsage"] => ({
-    account_id: "acc_exa_main",
-    key_id: null,
+export function mockUsage(): Schemas["KeyUsageView"] {
+  const row = (overrides: Partial<Schemas["KeyUsage"]>): Schemas["KeyUsage"] => ({
+    association_ref: "key_exa_1",
+    association_evidence: "unknown",
+    scope: "key",
+    key_id: "key_exa_1",
     provider: "exa",
     unit: "micro_usd",
     source: "upstream",
@@ -579,7 +528,8 @@ export function mockUsage(): Schemas["UsageView"] {
         unavailable_reason: "service_permission_missing",
       }),
       row({
-        account_id: "acc_tavily_team",
+        association_ref: "key_tavily_1",
+        key_id: "key_tavily_1",
         provider: "tavily",
         unit: "tavily_credit",
         source: "upstream",

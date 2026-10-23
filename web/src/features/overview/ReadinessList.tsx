@@ -1,3 +1,4 @@
+import { DiagnosticReason } from "../../components/DiagnosticReason";
 /** Local readiness rendering shared by Overview and Settings; no upstream probing. */
 import type { Schemas } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
@@ -30,25 +31,33 @@ export function ReadinessList({ readiness }: { readiness: Schemas["Readiness"] }
       <dl className="details-grid">
         <dt>{t("readiness.overall")}</dt>
         <dd>
-          <Badge tone={readiness.ready ? "success" : "danger"}>
+          <Badge
+            tone={
+              readiness.ready
+                ? "success"
+                : readiness.database !== "ready" || readiness.secret_store !== "unlocked"
+                  ? "danger"
+                  : "warning"
+            }
+          >
             {readiness.ready ? t("readiness.ready") : t("readiness.notReady")}
           </Badge>
         </dd>
         <dt>{t("readiness.database")}</dt>
         <dd>
-          <Badge tone={readiness.database === "ready" ? "neutral" : "danger"}>
+          <Badge tone={readiness.database === "ready" ? "success" : "danger"}>
             {t(`dbState.${readiness.database}`)}
           </Badge>
         </dd>
         <dt>{t("readiness.secretStore")}</dt>
         <dd>
-          <Badge tone={readiness.secret_store === "unlocked" ? "neutral" : "danger"}>
+          <Badge tone={readiness.secret_store === "unlocked" ? "success" : "danger"}>
             {t(`secretStore.${readiness.secret_store}`)}
           </Badge>
         </dd>
         <dt>{t("readiness.assets")}</dt>
         <dd>
-          <Badge tone={readiness.assets === "ready" ? "neutral" : "warning"}>
+          <Badge tone={readiness.assets === "ready" ? "success" : "warning"}>
             {t(`assets.${readiness.assets}`)}
           </Badge>
         </dd>
@@ -72,11 +81,11 @@ function ProviderReadiness({ provider }: { provider: Schemas["Readiness"]["provi
   return (
     <>
       <dt>{t(`provider.${provider.provider}`)}</dt>
-      <dd>
-        <Badge tone={provider.enabled ? "neutral" : "warning"}>
-          {provider.enabled ? t("common.enabled") : t("common.disabled")}
+      <dd className="provider-readiness">
+        <Badge tone={provider.enabled ? "success" : "warning"}>
+          {provider.enabled ? t("dispatch.available") : t("dispatch.blocked")}
         </Badge>
-        {provider.reason === null ? null : <span className="muted"> {provider.reason}</span>}
+        {provider.reason === null ? null : <DiagnosticReason reason={provider.reason} />}
       </dd>
     </>
   );

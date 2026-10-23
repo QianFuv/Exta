@@ -1,3 +1,5 @@
+import { DataTable } from "../../components/DataTable";
+import { CheckboxField, Button, Input } from "../../components/Controls";
 /**
  * Scoped client tokens. A newly minted value is shown exactly once from component state;
  * it is removed when dismissed and never reaches the query cache or browser storage.
@@ -36,6 +38,20 @@ const SCOPES: readonly ClientScope[] = [
   "research:cancel",
   "research:observe",
 ];
+
+/** Show readable scope names while retaining exact protocol codes as secondary text. */
+function ScopeBadges({ scopes }: { scopes: readonly ClientScope[] }) {
+  const { t } = useI18n();
+  return (
+    <span className="badge-group">
+      {scopes.map((scope) => (
+        <span key={scope} title={scope} aria-label={`${t(`scope.${scope}`)} (${scope})`}>
+          <Badge tone="neutral">{t(`scope.${scope}`)}</Badge>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 /**
  * Format a Date as a `datetime-local` value in local time.
@@ -92,14 +108,14 @@ export function TokensSection() {
       title={t("tokens.title")}
       description={t("tokens.description")}
       actions={
-        <button
+        <Button
           type="button"
           className="button button-primary"
           disabled={!canWrite}
           onClick={() => setMintOpen(true)}
         >
           {t("tokens.mint")}
-        </button>
+        </Button>
       }
     >
       <PermissionHint permission="admin:tokens:write" />
@@ -109,10 +125,10 @@ export function TokensSection() {
             <p>{t("tokens.revealDetail")}</p>
             <pre className="code-block secret-value">{revealed.value}</pre>
             <div className="button-row">
-              <CopyButton text={revealed.value} label={t("tokens.copyToken")} />
-              <button type="button" className="button" onClick={() => setRevealed(null)}>
+              <CopyButton text={revealed.value} label={t("tokens.copyToken")} primary />
+              <Button type="button" className="button" onClick={() => setRevealed(null)}>
                 {t("tokens.dismiss")}
-              </button>
+              </Button>
             </div>
           </Notice>
         </div>
@@ -126,45 +142,89 @@ export function TokensSection() {
       ) : (
         <>
           {activeCount === 0 ? <Notice tone="info">{t("tokens.noneActive")}</Notice> : null}
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">{t("common.label")}</th>
-                  <th scope="col">{t("tokens.scopes")}</th>
-                  <th scope="col">{t("tokens.owner")}</th>
-                  <th scope="col">{t("tokens.expires")}</th>
-                  <th scope="col">{t("common.state")}</th>
-                  <th scope="col">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((token) => {
-                  const isRevoked = token.revoked_at !== null;
-                  const isExpired = Date.parse(token.expires_at) <= now;
-                  return (
-                    <tr key={token.id}>
-                      <td>
-                        {token.label}
-                        <br />
-                        <code className="muted">{token.id}</code>
-                      </td>
-                      <td>
-                        <span className="badge-group">
-                          {token.scopes.map((scope) => (
-                            <Badge key={scope} tone="neutral">
-                              {scope}
-                            </Badge>
-                          ))}
-                        </span>
-                      </td>
-                      <td>
-                        <code>{token.principal_id}</code>
-                      </td>
-                      <td>
+          <div className="table-wrap" role="region" aria-label={t("common.table")} tabIndex={0}>
+            <DataTable
+              mobileRow={(token) => (
+                <>
+                  <div className="mobile-record-heading">
+                    <strong>{token.label}</strong>
+                    <Badge
+                      tone={
+                        token.revoked_at
+                          ? "neutral"
+                          : Date.parse(token.expires_at) <= now
+                            ? "warning"
+                            : "success"
+                      }
+                    >
+                      {token.revoked_at
+                        ? t("tokens.revoked")
+                        : Date.parse(token.expires_at) <= now
+                          ? t("tokens.expired")
+                          : t("tokens.active")}
+                    </Badge>
+                  </div>
+                  <p className="cell-secondary">
+                    {t("tokens.expires")}: <DateTime value={token.expires_at} />
+                  </p>
+                  <p className="scope-summary">
+                    <ScopeBadges scopes={token.scopes} />
+                  </p>
+                  {token.revoked_at ? null : (
+                    <Button
+                      className="button button-danger button-ghost"
+                      disabled={!canWrite}
+                      onClick={() => setRevoking(token)}
+                    >
+                      {t("tokens.revoke")}
+                    </Button>
+                  )}
+                </>
+              )}
+              dataSource={items}
+              rowKey={(token) => token.id}
+              columns={[
+                {
+                  key: "column-0",
+                  title: <>{t("common.label")}</>,
+                  render: (_value, token) => {
+                    return (
+                      <>
+                        <span title={`${token.id} · ${token.principal_id}`}>{token.label}</span>
+                      </>
+                    );
+                  },
+                },
+                {
+                  key: "column-1",
+                  title: <>{t("tokens.scopes")}</>,
+                  render: (_value, token) => {
+                    return (
+                      <>
+                        <ScopeBadges scopes={token.scopes} />
+                      </>
+                    );
+                  },
+                },
+                {
+                  key: "column-3",
+                  title: <>{t("tokens.expires")}</>,
+                  render: (_value, token) => {
+                    return (
+                      <>
                         <DateTime value={token.expires_at} />
-                      </td>
-                      <td>
+                      </>
+                    );
+                  },
+                },
+                {
+                  key: "column-4",
+                  title: <>{t("common.state")}</>,
+                  render: (_value, token) => {
+                    const isRevoked = token.revoked_at !== null;
+                    const isExpired = Date.parse(token.expires_at) <= now;
+                    return (
+                      <>
                         <Badge tone={isRevoked ? "neutral" : isExpired ? "warning" : "info"}>
                           {isRevoked
                             ? t("tokens.revoked")
@@ -172,22 +232,35 @@ export function TokensSection() {
                               ? t("tokens.expired")
                               : t("tokens.active")}
                         </Badge>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="button button-small button-danger"
-                          disabled={!canWrite || isRevoked}
-                          onClick={() => setRevoking(token)}
-                        >
-                          {t("tokens.revoke")}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </>
+                    );
+                  },
+                },
+                {
+                  key: "column-5",
+                  title: <>{t("common.actions")}</>,
+                  render: (_value, token) => {
+                    const isRevoked = token.revoked_at !== null;
+                    return (
+                      <>
+                        {isRevoked ? (
+                          "—"
+                        ) : (
+                          <Button
+                            type="button"
+                            className="button button-small button-danger button-ghost"
+                            disabled={!canWrite || isRevoked}
+                            onClick={() => setRevoking(token)}
+                          >
+                            {t("tokens.revoke")}
+                          </Button>
+                        )}
+                      </>
+                    );
+                  },
+                },
+              ]}
+            />
           </div>
         </>
       )}
@@ -269,13 +342,16 @@ function MintDialog({
           } else {
             const field =
               label.trim() === "" ? "label" : scopes.length === 0 ? "scope-0" : "expires";
-            document.getElementById(`${formId}-${field}`)?.focus();
+            const target = document.getElementById(`${formId}-${field}`);
+            (target?.querySelector("input") ?? target)?.focus();
           }
         }}
       >
         <div className="field">
-          <label htmlFor={`${formId}-label`}>{t("common.label")}</label>
-          <input
+          <label id={`${formId}-label` + "-label"} htmlFor={`${formId}-label`}>
+            {t("common.label")}
+          </label>
+          <Input
             id={`${formId}-label`}
             value={label}
             onChange={(event) => setLabel(event.target.value)}
@@ -293,27 +369,29 @@ function MintDialog({
             </p>
           ) : null}
         </div>
-        <fieldset className="checkbox-group">
+        <fieldset className="checkbox-group fieldset scope-fields">
           <legend>{t("tokens.scopes")}</legend>
           {SCOPES.map((scope, index) => (
-            <label key={scope} className="checkbox">
-              <input
-                type="checkbox"
-                id={`${formId}-scope-${index}`}
-                aria-describedby={
-                  hasSubmitted && scopes.length === 0 ? `${formId}-scope-error` : undefined
-                }
-                checked={scopes.includes(scope)}
-                onChange={(event) =>
-                  setScopes((current) =>
-                    event.target.checked
-                      ? [...current, scope]
-                      : current.filter((entry) => entry !== scope),
-                  )
-                }
-              />
-              <code>{scope}</code>
-            </label>
+            <CheckboxField
+              key={scope}
+              label={
+                <span>
+                  {t(`scope.${scope}`)} <code className="cell-secondary">{scope}</code>
+                </span>
+              }
+              id={`${formId}-scope-${index}`}
+              aria-describedby={
+                hasSubmitted && scopes.length === 0 ? `${formId}-scope-error` : undefined
+              }
+              checked={scopes.includes(scope)}
+              onChange={(event) =>
+                setScopes((current) =>
+                  event.target.checked
+                    ? [...current, scope]
+                    : current.filter((entry) => entry !== scope),
+                )
+              }
+            />
           ))}
           {hasSubmitted && scopes.length === 0 ? (
             <p className="field-error" id={`${formId}-scope-error`}>
@@ -322,8 +400,10 @@ function MintDialog({
           ) : null}
         </fieldset>
         <div className="field">
-          <label htmlFor={`${formId}-expires`}>{t("tokens.expires")}</label>
-          <input
+          <label id={`${formId}-expires` + "-label"} htmlFor={`${formId}-expires`}>
+            {t("tokens.expires")}
+          </label>
+          <Input
             id={`${formId}-expires`}
             type="datetime-local"
             value={expiresAt}
@@ -340,12 +420,17 @@ function MintDialog({
         <p className="field-hint">{t("tokens.noAdminScopes")}</p>
         <InlineError error={mint.error} />
         <div className="button-row">
-          <button type="button" className="button" onClick={onClose} disabled={mint.isPending}>
+          <Button type="button" className="button" onClick={onClose} disabled={mint.isPending}>
             {t("common.cancel")}
-          </button>
-          <button type="submit" className="button button-primary" disabled={mint.isPending}>
+          </Button>
+          <Button
+            type="submit"
+            className="button button-primary"
+            disabled={mint.isPending}
+            loading={mint.isPending}
+          >
             {mint.isPending ? t("common.working") : t("tokens.mint")}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>
@@ -393,7 +478,7 @@ function RevokeDialog({ token, onClose }: { token: ClientToken; onClose: () => v
       <InlineError error={revoke.error} />
       <ConflictRecovery error={revoke.error} onClose={onClose} />
       <div className="button-row">
-        <button
+        <Button
           type="button"
           className="button"
           onClick={onClose}
@@ -401,8 +486,8 @@ function RevokeDialog({ token, onClose }: { token: ClientToken; onClose: () => v
           data-autofocus
         >
           {t("common.cancel")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           className="button button-danger"
           onClick={() => {
@@ -411,7 +496,7 @@ function RevokeDialog({ token, onClose }: { token: ClientToken; onClose: () => v
           disabled={revoke.isPending || isConflict(revoke.error)}
         >
           {revoke.isPending ? t("common.working") : t("tokens.revoke")}
-        </button>
+        </Button>
       </div>
     </Dialog>
   );

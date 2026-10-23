@@ -1,3 +1,5 @@
+import { Button } from "../../components/Controls";
+import { useKeyNames } from "../../lib/useKeyNames";
 /** Sanitized request detail with per-attempt timeline. */
 import { Link, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -40,7 +42,7 @@ export function RequestDetailPage() {
       title={t("requests.detailTitle")}
       description={id}
       actions={
-        <Link className="button" to="/requests">
+        <Link className="text-action" to="/requests">
           {t("requests.backToList")}
         </Link>
       }
@@ -77,6 +79,7 @@ export function RequestDetailPage() {
  * @returns Detail sections.
  */
 export function RequestDetail({ id }: { id: string }) {
+  const names = useKeyNames();
   const { t, formatDuration } = useI18n();
   const api = useApi();
   const query = useQuery({
@@ -97,14 +100,14 @@ export function RequestDetail({ id }: { id: string }) {
         actions={
           <>
             <RequestStatusBadges record={request} />
-            <button
+            <Button
               type="button"
               className="button"
               disabled={query.isFetching}
               onClick={() => void query.refetch()}
             >
               {t("common.refresh")}
-            </button>
+            </Button>
           </>
         }
       >
@@ -201,9 +204,14 @@ export function RequestDetail({ id }: { id: string }) {
                   <dd>{attempt.http_status ?? "—"}</dd>
                   <dt>{t("requests.retryReason")}</dt>
                   <dd>{attempt.retry_reason ?? "—"}</dd>
-                  <dt>{t("usage.account")}</dt>
+                  <dt>{t("keys.key")}</dt>
                   <dd>
-                    <code>{attempt.account_id}</code>
+                    <span>
+                      {attempt.key_id ? (names.get(attempt.key_id) ?? attempt.key_id) : "—"}
+                    </span>
+                    <small className="cell-secondary">
+                      <code>{attempt.key_id}</code>
+                    </small>
                   </dd>
                   <dt>{t("requests.credentialVersion")}</dt>
                   <dd>

@@ -10,7 +10,7 @@ describe("settings and audit", () => {
   it("groups settings by purpose with explicit units and one save action", async () => {
     renderApp("/settings");
     const traffic = await screen.findByRole("group", { name: "Traffic and concurrency" });
-    expect(within(traffic).getAllByRole("textbox")).toHaveLength(3);
+    expect(within(traffic).getAllByRole("spinbutton")).toHaveLength(3);
     const research = screen.getByRole("group", { name: "Research capacity and observation" });
     expect(within(research).getByLabelText("Max polls")).toHaveAccessibleDescription(/polls/);
     const payload = screen.getByRole("group", { name: "Request and response size" });
@@ -27,7 +27,7 @@ describe("settings and audit", () => {
     };
     renderApp("/settings?view=health");
     expect(await screen.findByText("Incompatible contract")).toBeInTheDocument();
-    expect(screen.getByText("Mismatch")).toHaveClass("badge-danger");
+    expect(screen.getByText("Mismatch").closest(".semi-tag")).toHaveClass("status-danger");
   });
 
   it("saves limits with the settings version and constant fields", async () => {
@@ -69,8 +69,8 @@ describe("settings and audit", () => {
   it("lists redacted audit events", async () => {
     mockDb.state.session = mockSession(["admin:audit:read"]);
     renderApp("/settings?view=audit");
-    expect(await screen.findByText("route.replace")).toBeInTheDocument();
-    expect(screen.getByText("key.create")).toBeInTheDocument();
+    expect(await screen.findByText("Update route")).toBeInTheDocument();
+    expect(screen.getByText("Add upstream key")).toBeInTheDocument();
     expect(callsTo("GET", "/v1/admin/settings")).toHaveLength(0);
   });
 });

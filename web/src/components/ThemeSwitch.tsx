@@ -1,3 +1,4 @@
+import { Select } from "./Controls";
 /** Persistent appearance selection, independent of authentication and server state. */
 import { useState } from "react";
 import { useI18n } from "../lib/i18n";
@@ -9,13 +10,21 @@ export function ThemeSwitch() {
   const [isSessionOnly, setSessionOnly] = useState(false);
   return (
     <div className="theme-control">
-      <label>
+      <div>
         <span className="visually-hidden">{t("theme.label")}</span>
-        <select
+        <Select
+          aria-label={t("theme.label")}
           value={theme}
           onChange={(event) => {
             const value = event.target.value;
             document.documentElement.dataset.theme = value;
+            document.body.setAttribute(
+              "theme-mode",
+              value === "dark" ||
+                (value === "system" && window.matchMedia?.("(prefers-color-scheme: dark)").matches)
+                ? "dark"
+                : "light",
+            );
             setTheme(value);
             try {
               localStorage.setItem("exta.theme", value);
@@ -28,8 +37,8 @@ export function ThemeSwitch() {
           <option value="light">{t("theme.light")}</option>
           <option value="dark">{t("theme.dark")}</option>
           <option value="system">{t("theme.system")}</option>
-        </select>
-      </label>
+        </Select>
+      </div>
       {isSessionOnly ? (
         <span className="field-hint" role="status">
           {t("theme.sessionOnly")}

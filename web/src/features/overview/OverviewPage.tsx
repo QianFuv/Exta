@@ -1,3 +1,6 @@
+import { keyRestriction } from "../keys/KeyStatus";
+import { DiagnosticReason } from "../../components/DiagnosticReason";
+import { DataTable } from "../../components/DataTable";
 /**
  * Overview of local readiness, queue/slot/rate counters, active research and recent
  * errors. Each panel loads independently and shows its own failure; nothing is inferred
@@ -106,15 +109,7 @@ function MetricsPanel() {
     refetchInterval: 30_000,
   });
   return (
-    <Section
-      title={t("overview.activity")}
-      description={t("overview.activityWindow")}
-      actions={
-        <Link className="button button-small" to="/overview?view=usage">
-          {t("nav.usage")}
-        </Link>
-      }
-    >
+    <section className="section metrics-section" aria-label={t("overview.activity")}>
       <QueryView query={usage}>
         {(data) => {
           const staleCount = data.items.filter((item) => item.freshness !== "fresh").length;
@@ -139,7 +134,8 @@ function MetricsPanel() {
               </p>
               {staleCount > 0 ? (
                 <Notice tone="warning" title={t("overview.staleUsage", { count: staleCount })}>
-                  {t("overview.staleUsageDetail")}
+                  {t("overview.staleUsageDetail")}{" "}
+                  <Link to="/overview?view=usage">{t("overview.refreshUsage")}</Link>
                 </Notice>
               ) : null}
               {data.items.length === 0 ? <p className="muted">{t("overview.noUsage")}</p> : null}
@@ -147,7 +143,7 @@ function MetricsPanel() {
           );
         }}
       </QueryView>
-    </Section>
+    </section>
   );
 }
 
@@ -167,7 +163,7 @@ function KeysPanel() {
     <Section
       title={t("overview.keys")}
       actions={
-        <Link className="button button-small" to="/keys">
+        <Link className="text-action" to="/keys">
           {t("nav.keys")}
         </Link>
       }
@@ -186,14 +182,7 @@ function KeysPanel() {
             return {
               provider,
               total: providerKeys.length,
-              usable: providerKeys.filter(
-                (key) =>
-                  key.enabled &&
-                  key.retirement_state === "active" &&
-                  key.validity !== "invalid" &&
-                  key.breaker !== "open" &&
-                  key.billing_state !== "blocked",
-              ).length,
+              usable: providerKeys.filter((key) => keyRestriction(key) === null).length,
             };
           });
           return (
@@ -203,7 +192,7 @@ function KeysPanel() {
                   <strong>{t(`provider.${entry.provider}`)}</strong>:{" "}
                   {t("overview.keyCounts", { usable: entry.usable, total: entry.total })}
                   {entry.total > 0 && entry.usable === 0 ? (
-                    <span className="inline-warning"> {t("overview.noUsableKeys")}</span>
+                    <span className="inline-warning"> · {t("overview.noUsableKeys")}</span>
                   ) : null}
                 </li>
               ))}
@@ -243,39 +232,72 @@ function RecentCalls() {
               aria-label={t("overview.recentRequests")}
               tabIndex={0}
             >
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t("common.created")}</th>
-                    <th>{t("requests.operation")}</th>
-                    <th>{t("common.state")}</th>
-                    <th>{t("requests.duration")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.slice(0, 5).map((record) => (
-                    <tr key={record.id}>
-                      <td>
-                        <Link to={`/requests/${encodeURIComponent(record.id)}`}>
-                          <DateTime value={record.created_at} />
-                        </Link>
-                      </td>
-                      <td>
-                        <code>{record.operation}</code>
-                        <small className="cell-secondary">
-                          {record.source_provider === null
-                            ? "—"
-                            : t(`provider.${record.source_provider}`)}
-                        </small>
-                      </td>
-                      <td>
-                        <RequestStatusBadges record={record} />
-                      </td>
-                      <td className="numeric">{formatDuration(record.duration_ms)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                mobileRow={(record) => (
+                  <>
+                    <div className="mobile-record-heading">
+                      <Link to={`/requests/${encodeURIComponent(record.id)}`}>
+                        {record.operation}
+                      </Link>
+                      <RequestStatusBadges record={record} />
+                    </div>
+                    <p className="cell-secondary">
+                      <DateTime value={record.created_at} /> · {formatDuration(record.duration_ms)}
+                    </p>
+                  </>
+                )}
+                dataSource={data.items.slice(0, 5)}
+                rowKey={(record) => record.id}
+                columns={[
+                  {
+                    key: "column-0",
+                    title: <>{t("common.created")}</>,
+                    render: (_value, record) => {
+                      return (
+                        <>
+                          <Link to={`/requests/${encodeURIComponent(record.id)}`}>
+                            <DateTime value={record.created_at} />
+                          </Link>
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-1",
+                    title: <>{t("requests.operation")}</>,
+                    render: (_value, record) => {
+                      return (
+                        <>
+                          <span className="operation-name">{record.operation}</span>
+                          <small className="cell-secondary">
+                            {record.source_provider === null
+                              ? "—"
+                              : t(`provider.${record.source_provider}`)}
+                          </small>
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-2",
+                    title: <>{t("common.state")}</>,
+                    render: (_value, record) => {
+                      return (
+                        <>
+                          <RequestStatusBadges record={record} />
+                        </>
+                      );
+                    },
+                  },
+                  {
+                    key: "column-3",
+                    title: <>{t("requests.duration")}</>,
+                    render: (_value, record) => {
+                      return <>{formatDuration(record.duration_ms)}</>;
+                    },
+                  },
+                ]}
+              />
             </div>
           )
         }
@@ -311,10 +333,9 @@ function ErrorsPanel() {
                   <Link to={`/requests/${encodeURIComponent(record.id)}`}>
                     <DateTime value={record.created_at} />
                   </Link>{" "}
-                  <code>{record.operation}</code> <RequestStatusBadges record={record} />{" "}
-                  {record.error === null ? null : (
-                    <code className="muted">{record.error.code}</code>
-                  )}
+                  <span className="operation-name">{record.operation}</span>{" "}
+                  <RequestStatusBadges record={record} />{" "}
+                  {record.error === null ? null : <DiagnosticReason reason={record.error.code} />}
                 </li>
               ))}
             </ul>

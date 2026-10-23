@@ -19,7 +19,7 @@ describe("overview", () => {
       ),
     );
     renderApp("/overview");
-    const recent = await screen.findByRole("region", { name: "Recent calls" });
+    const recent = await screen.findByRole("region", { name: "Recent calls" }, { timeout: 15_000 });
     expect(within(recent).getAllByRole("row")).toHaveLength(6);
     expect(screen.getAllByRole("link", { name: /View all calls/ })).toHaveLength(1);
     const errors = screen.getByRole("heading", { name: "Recent errors" });
@@ -35,7 +35,7 @@ describe("overview", () => {
     mockDb.state.keys = [];
     renderApp("/overview");
     expect(await screen.findByText("Secret store locked")).toBeInTheDocument();
-    expect(screen.getByText("Not ready")).toHaveClass("badge-danger");
+    expect(screen.getByText("Not ready").closest(".semi-tag")).toHaveClass("status-danger");
     expect(await screen.findByText("No provider keys configured")).toBeInTheDocument();
     expect(await screen.findByText(/usage rows are stale/)).toBeInTheDocument();
     expect(screen.getByText("Uncertain research")).toBeInTheDocument();

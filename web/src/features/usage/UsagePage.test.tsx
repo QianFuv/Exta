@@ -23,15 +23,15 @@ describe("usage", () => {
   });
   it("labels unlimited, unknown, missing permission and ledger divergence distinctly", async () => {
     renderApp("/overview?view=usage");
-    expect(await screen.findByText("Unlimited")).toBeInTheDocument();
-    expect(screen.getAllByText("Limit unknown").length).toBeGreaterThan(0);
+    expect(await screen.findByText(/Unlimited/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Limit unknown/).length).toBeGreaterThan(0);
     expect(screen.getByText(/lacks the service permission/)).toBeInTheDocument();
     expect(
       screen.getAllByText("Local ledger differs from upstream snapshot").length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("Stale")).toBeInTheDocument();
-    expect(screen.getByText("640 credits")).toBeInTheDocument();
-    expect(screen.getAllByText("$12.50").length).toBeGreaterThan(0);
+    expect(screen.getByText(/640 credits/)).toBeInTheDocument();
+    expect(screen.getAllByText(/\$12.50/).length).toBeGreaterThan(0);
   });
 
   it("shows the refresh cooldown from a 429 response", async () => {

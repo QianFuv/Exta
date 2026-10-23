@@ -1,3 +1,7 @@
+import Tag from "@douyinfe/semi-ui/lib/es/tag";
+import Banner from "@douyinfe/semi-ui/lib/es/banner";
+import Spin from "@douyinfe/semi-ui/lib/es/spin";
+import { Button } from "./Controls";
 /** Shared loading, error, empty, locked and status presentation. */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +20,25 @@ export type Tone = "success" | "warning" | "danger" | "info" | "neutral";
  * @returns Badge element.
  */
 export function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+  return (
+    <Tag
+      color={
+        tone === "danger"
+          ? "red"
+          : tone === "warning"
+            ? "orange"
+            : tone === "success"
+              ? "green"
+              : tone === "info"
+                ? "blue"
+                : "grey"
+      }
+      className={`status-${tone}`}
+      shape="square"
+    >
+      {children}
+    </Tag>
+  );
 }
 
 /**
@@ -37,9 +59,14 @@ export function Notice({
   role?: "alert" | "status";
 }) {
   return (
-    <div className={`notice notice-${tone}`} role={role}>
-      {title === undefined ? null : <p className="notice-title">{title}</p>}
-      {children === undefined ? null : <div className="notice-body">{children}</div>}
+    <div role={role} className="exta-notice">
+      <Banner
+        fullMode={false}
+        type={tone === "neutral" ? "info" : tone}
+        title={title}
+        description={children}
+        closeIcon={null}
+      />
     </div>
   );
 }
@@ -54,7 +81,7 @@ export function LoadingState({ label }: { label?: string }) {
   const { t } = useI18n();
   return (
     <div className="state state-loading" role="status" aria-live="polite">
-      <span className="spinner" aria-hidden="true" />
+      <Spin size="small" />
       <span>{label ?? t("common.loading")}</span>
     </div>
   );
@@ -147,7 +174,7 @@ export function ErrorState({
     <div className="state state-error" role="alert">
       <p className="state-title">{title ?? describeError(error, t)}</p>
       {title === undefined ? null : <p className="state-description">{describeError(error, t)}</p>}
-      {detail === null ? null : (
+      {detail === null || detail.code === "invalid_token" ? null : (
         <dl className="error-meta">
           <dt>{t("error.code")}</dt>
           <dd>
@@ -168,9 +195,9 @@ export function ErrorState({
         </dl>
       )}
       {onRetry === undefined ? null : (
-        <button type="button" className="button" onClick={onRetry}>
+        <Button type="button" className="button" onClick={onRetry}>
           {t("common.retry")}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -189,19 +216,32 @@ export function InlineError({ error }: { error: unknown }) {
   }
   const detail = error instanceof ApiFailure ? error.detail : null;
   return (
-    <p className="inline-error" role="alert">
-      {describeError(error, t)}
-      {detail === null ? null : (
-        <>
-          {" "}
-          <span className="muted">
-            ({detail.code}
-            {detail.retry_after_ms === null ? "" : `, ${Math.ceil(detail.retry_after_ms / 1000)} s`}
-            )
-          </span>
-        </>
-      )}
-    </p>
+    <div className="exta-notice">
+      <Banner
+        fullMode={false}
+        type="danger"
+        closeIcon={null}
+        description={
+          <>
+            {describeError(error, t)}
+            {detail === null ||
+            detail.code === "invalid_token" ||
+            detail.code === "revision_conflict" ? null : (
+              <>
+                {" "}
+                <span className="muted">
+                  ({detail.code}
+                  {detail.retry_after_ms === null
+                    ? ""
+                    : `, ${Math.ceil(detail.retry_after_ms / 1000)} s`}
+                  )
+                </span>
+              </>
+            )}
+          </>
+        }
+      />
+    </div>
   );
 }
 
@@ -250,7 +290,7 @@ export function ConflictRecovery({ error, onClose }: { error: unknown; onClose: 
   return (
     <>
       <InlineError error={reloadError} />
-      <button
+      <Button
         type="button"
         className="button"
         disabled={isLoading}
@@ -267,7 +307,7 @@ export function ConflictRecovery({ error, onClose }: { error: unknown; onClose: 
         }}
       >
         {t("common.reviewLatest")}
-      </button>
+      </Button>
     </>
   );
 }

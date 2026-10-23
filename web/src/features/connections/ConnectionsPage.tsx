@@ -1,3 +1,6 @@
+import { Link } from "react-router";
+import { DiagnosticReason } from "../../components/DiagnosticReason";
+import { DataTable } from "../../components/DataTable";
 /** REST/MCP connection details, readiness diagnostics and scoped client tokens. */
 import { useQuery } from "@tanstack/react-query";
 import { call, useApi } from "../../lib/api";
@@ -79,6 +82,9 @@ export function ConnectionDetails() {
             title={t("connections.examples")}
             description={t("connections.examplesDescription")}
           >
+            <p>
+              <Link to="/access-keys">{t("keys.access")}</Link>
+            </p>
             {data.examples.length === 0 ? (
               <p className="muted">{t("connections.noExamples")}</p>
             ) : (
@@ -159,54 +165,89 @@ function CapabilityTable({ capabilities }: { capabilities: Schemas["Capability"]
   const { t } = useI18n();
   return (
     <Section title={t("connections.capabilities")}>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th scope="col">{t("routing.capability")}</th>
-              <th scope="col">{t("common.state")}</th>
-              <th scope="col">{t("connections.profiles")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {capabilities.map((capability) => (
-              <tr key={capability.operation}>
-                <th scope="row">
-                  <code>{capability.operation}</code>
-                </th>
-                <td>
-                  <Badge tone={capability.enabled ? "neutral" : "warning"}>
-                    {capability.enabled ? t("common.enabled") : t("common.disabled")}
-                  </Badge>
-                  {capability.unavailable_reason === null ? null : (
-                    <p className="muted">{capability.unavailable_reason}</p>
-                  )}
-                </td>
-                <td>
-                  <ul className="plain-list">
-                    {capability.profiles.map((profile) => (
-                      <li key={`${profile.provider}-${profile.profile}`}>
-                        {t(`provider.${profile.provider}`)} · <code>{profile.profile}</code>{" "}
-                        {profile.enabled ? null : (
-                          <Badge tone="warning">{t("common.disabled")}</Badge>
-                        )}{" "}
-                        <span className="muted">
-                          {t("connections.cancellation")}:{" "}
-                          {profile.cancellation.upstream
-                            ? t("connections.upstreamCancel")
-                            : t("connections.noUpstreamCancel")}
-                        </span>
-                        {profile.unavailable_reason === null ? null : (
-                          <span className="muted"> · {profile.unavailable_reason}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {capabilities.some((entry) => !entry.enabled) ? (
+        <Notice tone="warning">
+          {t(
+            capabilities.every((entry) => !entry.enabled)
+              ? "dispatch.allRoutesUnavailable"
+              : "dispatch.routeNotice",
+          )}{" "}
+          <Link to="/keys">{t("keys.upstream")}</Link>
+        </Notice>
+      ) : null}
+      <div className="table-wrap" role="region" aria-label={t("common.table")} tabIndex={0}>
+        <DataTable
+          dataSource={capabilities}
+          rowKey={(capability) => capability.operation}
+          columns={[
+            {
+              key: "column-0",
+              title: <>{t("routing.capability")}</>,
+              render: (_value, capability) => {
+                return (
+                  <>
+                    <span className="operation-name">{capability.operation}</span>
+                  </>
+                );
+              },
+            },
+            {
+              key: "column-1",
+              title: <>{t("common.state")}</>,
+              render: (_value, capability) => {
+                return (
+                  <>
+                    <Badge tone={capability.enabled ? "success" : "warning"}>
+                      {capability.enabled ? t("dispatch.available") : t("dispatch.blocked")}
+                    </Badge>
+                    {capability.unavailable_reason === null ? null : (
+                      <div className="cell-secondary">
+                        <DiagnosticReason reason={capability.unavailable_reason} />
+                      </div>
+                    )}
+                  </>
+                );
+              },
+            },
+            {
+              key: "column-2",
+              title: <>{t("connections.profiles")}</>,
+              render: (_value, capability) => {
+                return (
+                  <>
+                    <ul className="plain-list">
+                      {capability.profiles.map((profile) => (
+                        <li key={`${profile.provider}-${profile.profile}`}>
+                          {t(`provider.${profile.provider}`)} · <span>{profile.profile}</span>{" "}
+                          {profile.enabled ? null : (
+                            <span
+                              className="availability-dot"
+                              role="img"
+                              title={profile.unavailable_reason ?? t("dispatch.blocked")}
+                              aria-label={t("dispatch.blocked")}
+                            />
+                          )}{" "}
+                          {capability.operation.startsWith("research") ? (
+                            <span className="cell-secondary">
+                              {t("connections.cancellation")}:{" "}
+                              {profile.cancellation.upstream
+                                ? t("connections.upstreamCancel")
+                                : t("connections.noUpstreamCancel")}
+                            </span>
+                          ) : null}
+                          {profile.unavailable_reason === null ||
+                          capability.unavailable_reason !== null ? null : (
+                            <DiagnosticReason reason={profile.unavailable_reason} />
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                );
+              },
+            },
+          ]}
+        />
       </div>
     </Section>
   );

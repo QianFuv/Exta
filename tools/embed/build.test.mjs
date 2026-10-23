@@ -1,7 +1,8 @@
+import path from "node:path";
 /** Packaging regressions use synthetic output and never invoke Vite or providers. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { digest, packageOutput, rewriteIndex, validateNames, sourceDigest, virtualOwner, requireProduction } from "./build.mjs";
+import { digest, packageOutput, rewriteIndex, validateNames, sourceDigest, virtualOwner, requireProduction, dependencyRoot, ROOT } from "./build.mjs";
 
 /** Produce a cyclic split graph whose chunk bytes must survive relocation. */
 function fixture() {
@@ -56,7 +57,7 @@ test("attributes Vite preload runtime and refuses nonproduction or unknown virtu
 });
 
 /** The early script remains external, blocking and inside the integrity namespace. */
-test("packages the prepaint theme bootstrap and only the four management destinations", () => {
+test("packages the prepaint theme bootstrap and separate upstream and service key destinations", () => {
   const output=fixture();
   output[0].source='<html><head><script src="./assets/theme-init.js"></script><link href="./assets/app.css" rel="stylesheet"><script type="module" src="./assets/main.js"></script></head></html>';
   output.push({type:"asset",fileName:"assets/theme-init.js",source:'document.documentElement.dataset.theme="dark";'});
@@ -65,5 +66,14 @@ test("packages the prepaint theme bootstrap and only the four management destina
   assert.ok(index.indexOf("theme-init.js") < index.indexOf("app.css"));
   assert.match(index, /<script src="[^"]+theme-init.js"><\/script>/);
   const manifest=JSON.parse(result.get("manifest.json"));
-  assert.deepEqual(manifest.routes,["/app/","/app/login","/app/overview","/app/keys","/app/requests","/app/requests/:id","/app/settings"]);
+  assert.deepEqual(manifest.routes,["/app/","/app/login","/app/overview","/app/keys","/app/access-keys","/app/requests","/app/requests/:id","/app/settings"]);
+});
+
+/** Nested module-mode metadata does not own shipped code or its license. */
+test("attributes nested ESM metadata and nested installations to their locked package roots", () => {
+  const modules = path.join(ROOT, "web/node_modules");
+  assert.equal(dependencyRoot(path.join(modules, "date-fns/esm/format/index.js")), path.join(modules, "date-fns"));
+  assert.equal(dependencyRoot(path.join(modules, "@douyinfe/semi-ui/lib/es/button/index.js")), path.join(modules, "@douyinfe/semi-ui"));
+  assert.equal(dependencyRoot(path.join(modules, "parent/node_modules/child/lib/index.js")), path.join(modules, "parent/node_modules/child"));
+  assert.throws(() => dependencyRoot(path.resolve(ROOT, "../outside/node_modules/child/index.js")), /outside/);
 });
