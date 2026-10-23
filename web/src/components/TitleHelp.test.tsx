@@ -26,6 +26,14 @@ describe("heading help", () => {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
     expect(dialog).toBeInTheDocument();
+    const input = within(dialog).getAllByRole("spinbutton")[0]!;
+    input.focus();
+    await userEvent.hover(help);
+    expect(await screen.findByRole("tooltip")).toBeVisible();
+    expect(input).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
+    expect(dialog).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
   });

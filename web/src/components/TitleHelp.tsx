@@ -13,6 +13,19 @@ export function TitleHelp({ title, children }: { title: string; children: string
   const host = useRef<HTMLSpanElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(closeTimer.current), []);
+  useEffect(() => {
+    if (!isOpen) return;
+    /** Hover help must also dismiss when keyboard focus remains in another control. */
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      clearTimeout(closeTimer.current);
+      setOpen(false);
+    };
+    document.addEventListener("keydown", onEscape, true);
+    return () => document.removeEventListener("keydown", onEscape, true);
+  }, [isOpen]);
   /** Cancel delayed pointer dismissal when focus or the popup keeps help in use. */
   function open() {
     clearTimeout(closeTimer.current);
