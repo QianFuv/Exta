@@ -487,6 +487,40 @@ time {
 }
 .numeric-control > .semi-input-number {
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--semi-color-bg-0);
+  border: 1px solid var(--control-border);
+  border-radius: var(--semi-border-radius-small);
+}
+.numeric-control > .semi-input-number:hover:not(:has(input:disabled)) {
+  background: var(--semi-color-fill-1);
+  border-color: var(--semi-color-text-1);
+}
+.numeric-control > .semi-input-number:focus-within {
+  border-color: var(--semi-color-focus-border);
+}
+.numeric-control > .semi-input-number:has(input[aria-invalid="true"]) {
+  border-color: var(--semi-color-danger);
+}
+.numeric-control > .semi-input-number:has(input:disabled) {
+  background: var(--semi-color-fill-0);
+  border-color: var(--semi-color-border);
+  box-shadow: none;
+}
+.numeric-control .semi-input-number > .semi-input-wrapper {
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.numeric-control .semi-input-number-suffix-btns {
+  margin-left: 0;
+  border: 0;
+  border-left: 1px solid var(--semi-color-border);
+  border-radius: 0;
+  background: transparent;
 }
 .numeric-control .semi-slider-marks {
   font-size: 12px;
