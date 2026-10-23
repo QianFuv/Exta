@@ -19,6 +19,7 @@ import {
   mockSettings,
   mockTokens,
   mockUsage,
+  mockCallTrends,
 } from "./fixtures";
 
 /** A recorded request for test assertions. */
@@ -383,6 +384,14 @@ export const handlers = [
       });
       return HttpResponse.json(route);
     }),
+  ),
+  http.get(
+    "*/v1/admin/usage/trends",
+    guarded("admin:read", false, ({ request }) =>
+      HttpResponse.json(
+        mockCallTrends(Number(new URL(request.url).searchParams.get("hours") ?? 24)),
+      ),
+    ),
   ),
   http.get(
     "*/v1/admin/usage",

@@ -215,3 +215,5 @@ five-target packaging and native-platform release evidence remain later tasks.
 Local key policy inputs accept missing/null numeric limits and normalize them to zero. Zero allocation or active-job ceiling means no local cap; zero per-operation reservation uses the operation estimate. An omitted PATCH policy preserves it, while an explicit null resets local controls. Upstream balance remains independently unknown.
 
 The session `credential` wire field carries the persistent administrator password. Legacy generated administrator credentials remain reusable without automatic reset or rehash. New initialization reads a password from stdin and emits no secret.
+
+`GET /v1/admin/usage/trends?hours=24|168|720` counts retained accepted logical calls by UTC creation time and current execution outcome. Synchronous requests and research jobs each contribute once; attempts, polling and idempotent replay do not. Rejections before persistence are excluded, and retention limits historical coverage. Counts are independent of monetary/credit usage and billing uncertainty.

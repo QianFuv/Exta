@@ -7,6 +7,30 @@ import { CONTRACT_SHA256 } from "../generated/client.gen";
 
 type Job = Schemas["Job"];
 
+/** Deterministic counts are synthetic development evidence, never production traffic. */
+export function mockCallTrends(hours = 24): Schemas["CallTrends"] {
+  const width = hours === 720 ? 86400 : 3600;
+  const end = Date.parse("2026-10-24T12:00:00Z");
+  const count = (hours * 3600) / width;
+  const start = end - count * width * 1000;
+  return {
+    observed_at: new Date(end).toISOString(),
+    from: new Date(start).toISOString(),
+    to: new Date(end).toISOString(),
+    bucket_seconds: width,
+    coverage: "retained_accepted_calls",
+    buckets: Array.from({ length: count }, (_, index) => ({
+      start: new Date(start + index * width * 1000).toISOString(),
+      total: index === count - 2 ? 3 : 0,
+      succeeded: index === count - 2 ? 2 : 0,
+      failed: index === count - 2 ? 1 : 0,
+      pending: 0,
+      uncertain: 0,
+      cancelled: 0,
+    })),
+  };
+}
+
 /** All admin permissions, for a fully privileged mock principal. */
 export const ALL_PERMISSIONS: Schemas["AdminPermission"][] = [
   "admin:read",

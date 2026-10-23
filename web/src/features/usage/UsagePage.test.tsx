@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { renderApp } from "../../test/renderApp";
-import { findDivergence, lastSuccessfulObservation } from "./UsagePage";
+import { lastSuccessfulObservation } from "./UsagePage";
+import { mockCallTrends } from "../../mocks/fixtures";
 import { mockDb } from "../../mocks/handlers";
 import { server } from "../../test/server";
 
@@ -23,29 +24,27 @@ describe("usage", () => {
     ).toBe(item.observed_at);
     expect(lastSuccessfulObservation([{ ...item, freshness: "unknown" }])).toBeNull();
   });
-  it("does not compare unknown or different accounting periods", () => {
-    const upstream = mockDb.state.usage.items.find((entry) => entry.source === "upstream");
-    if (!upstream) throw new Error("Missing usage fixture");
-    const local = { ...upstream, source: "local" as const, used: (upstream.used ?? 0) + 10 };
-    expect(findDivergence([upstream, local]).size).toBe(1);
-    expect(
-      findDivergence([upstream, { ...local, period_start: null, period_end: null }]).size,
-    ).toBe(0);
-    expect(
-      findDivergence([upstream, { ...local, period_start: "2026-01-01T00:00:00Z" }]).size,
-    ).toBe(0);
-  });
-  it("labels unlimited, unknown, missing permission and ledger divergence distinctly", async () => {
+  it("renders call counts and an accessible table without money or balance figures", async () => {
     renderApp("/overview?view=usage");
-    expect(await screen.findByText(/Unlimited/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Limit unknown/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/lacks the service permission/)).toBeInTheDocument();
-    expect(
-      screen.getAllByText("Local ledger differs from upstream snapshot").length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByText("Stale")).toBeInTheDocument();
-    expect(screen.getByText(/640 credits/)).toBeInTheDocument();
-    expect(screen.getAllByText(/\$12.50/).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("img", { name: /Call trends.*Total: 3/ })).toBeInTheDocument();
+    expect(screen.queryByText(/640 credits|\$12.50|Limit unknown/)).toBeNull();
+    await userEvent.click(screen.getByText("View count data"));
+    expect(await screen.findByRole("region", { name: "View count data" })).toBeInTheDocument();
+  });
+
+  it("keeps zero axes with an explicit empty state", async () => {
+    const data = mockCallTrends();
+    server.use(
+      http.get("*/v1/admin/usage/trends", () =>
+        HttpResponse.json({
+          ...data,
+          buckets: data.buckets.map((bucket) => ({ ...bucket, total: 0, succeeded: 0, failed: 0 })),
+        }),
+      ),
+    );
+    renderApp("/overview?view=usage");
+    expect(await screen.findByText("No calls in this period")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Call trends.*Total: 0/ })).toBeInTheDocument();
   });
 
   it("shows the refresh cooldown from a 429 response", async () => {

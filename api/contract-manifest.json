@@ -1,13 +1,13 @@
 {
   "contract_version": "1.0.0",
-  "contract_sha256": "ffe9129cc3435499dea1750e1d96a1c3651cc30d75d739428c282c6e2aecf53d",
+  "contract_sha256": "02ea761879aed54219f4b929db56a68e1ee744c8fbfed82871d25d11c8483954",
   "generator": "exta-contract-v1/openapi-typescript-7.13.0/defaultNonNullable=false",
   "files": {
-    "api/schemas/exta.json": "f53855e5b0cea1f9fb54cdd7f7a6513e3561285b78cad12b06353fad0660aed0",
-    "api/schemas/mcp-tools.json": "9ce7640a103b3ba42fac8388834f1cbc03a509f2a43dfb6bb1288b970bdd6eda",
-    "internal/domain/schemas.gen.json": "f53855e5b0cea1f9fb54cdd7f7a6513e3561285b78cad12b06353fad0660aed0",
-    "internal/domain/types.gen.go": "07f4f6f9b610e6306adbb1726608598b1b4ecf0bd69042a11fd7212d99e7da9b",
-    "web/src/generated/client.gen.tsx": "38e82a510031e526e4e8055bc8a01ea0758bfaff5fd6fefef59e731a067942ef",
-    "web/src/generated/types.gen.ts": "cd85f1f202dfbcb9e85fc341d05633275b234f2fc09651301664b1312f96eba3"
+    "api/schemas/exta.json": "f22d81e6420d85bab3eac7b95740bd896d7ab14e4e3a775be38d631c5e95600a",
+    "api/schemas/mcp-tools.json": "1d254d6a97028b9dc4bb6675ab6a8353d24beabff906d21b8d6b44f6cc3781e3",
+    "internal/domain/schemas.gen.json": "f22d81e6420d85bab3eac7b95740bd896d7ab14e4e3a775be38d631c5e95600a",
+    "internal/domain/types.gen.go": "90d6fe7e4853d7b09bfb8983cea71a7ee7d72b167405e03820137efff649044e",
+    "web/src/generated/client.gen.tsx": "c1a276147d2dd71a1a92affe88a5a72c38da3fe8caf777de2e165a2248f802a8",
+    "web/src/generated/types.gen.ts": "6a0c5e8211482538a9c1d21514ed7beb14d947cc1fe949cabe0e8f525332dc1a"
   }
 }

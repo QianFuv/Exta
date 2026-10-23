@@ -3734,6 +3734,85 @@
         "x-permission": "admin:audit:read",
         "x-auth-before-use-case": true
       }
+    },
+    "/v1/admin/usage/trends": {
+      "get": {
+        "operationId": "usageTrends",
+        "summary": "Logical call counts by creation time",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "AdminSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                24,
+                168,
+                720
+              ],
+              "default": 24
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful resource response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallTrends"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "401": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "404": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "405": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "409": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "413": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "422": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ApiError"
+          },
+          "504": {
+            "$ref": "#/components/responses/ApiError"
+          }
+        },
+        "x-permission": "admin:read",
+        "x-auth-before-use-case": true
+      }
     }
   },
   "components": {
@@ -7822,6 +7901,102 @@
         },
         "required": [],
         "description": "Replacement local safety policy. Missing/null numeric values normalize to zero (no local cap, or automatic operation reservation). Missing unit is inferred from the key provider. Null policy clears local limits. Existing charges and unresolved holds are preserved."
+      },
+      "CallTrendBucket": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "succeeded": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "uncertain": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "cancelled": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "start",
+          "total",
+          "succeeded",
+          "failed",
+          "pending",
+          "uncertain",
+          "cancelled"
+        ]
+      },
+      "CallTrends": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Current outcomes of retained accepted logical calls, grouped by UTC creation time. One synchronous request or research job per call; attempts, polls and idempotent replay do not add calls. Validation/authentication rejections are not recorded. Retention may remove older synchronous records.",
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bucket_seconds": {
+            "type": "integer",
+            "enum": [
+              3600,
+              86400
+            ]
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "retained_accepted_calls"
+            ]
+          },
+          "buckets": {
+            "type": "array",
+            "maxItems": 168,
+            "items": {
+              "$ref": "#/components/schemas/CallTrendBucket"
+            }
+          }
+        },
+        "required": [
+          "observed_at",
+          "from",
+          "to",
+          "bucket_seconds",
+          "coverage",
+          "buckets"
+        ]
       }
     },
     "securitySchemes": {

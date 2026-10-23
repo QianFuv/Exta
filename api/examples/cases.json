@@ -1914,5 +1914,56 @@
     "value": {
       "allocation": -1
     }
+  },
+  {
+    "name": "CallTrendBucket-structural",
+    "schema": "CallTrendBucket",
+    "valid": true,
+    "value": {
+      "start": "2026-10-24T00:00:00Z",
+      "total": 0,
+      "succeeded": 0,
+      "failed": 0,
+      "pending": 0,
+      "uncertain": 0,
+      "cancelled": 0
+    }
+  },
+  {
+    "name": "CallTrends-structural",
+    "schema": "CallTrends",
+    "valid": true,
+    "value": {
+      "observed_at": "2026-10-24T01:00:00Z",
+      "from": "2026-10-24T00:00:00Z",
+      "to": "2026-10-24T01:00:00Z",
+      "bucket_seconds": 3600,
+      "coverage": "retained_accepted_calls",
+      "buckets": [
+        {
+          "start": "2026-10-24T00:00:00Z",
+          "total": 0,
+          "succeeded": 0,
+          "failed": 0,
+          "pending": 0,
+          "uncertain": 0,
+          "cancelled": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "CallTrendBucket-negative-count",
+    "schema": "CallTrendBucket",
+    "valid": false,
+    "value": {
+      "start": "2026-10-24T00:00:00Z",
+      "total": -1,
+      "succeeded": 0,
+      "failed": 0,
+      "pending": 0,
+      "uncertain": 0,
+      "cancelled": 0
+    }
   }
 ]

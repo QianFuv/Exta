@@ -120,6 +120,19 @@ func Register(mux *http.ServeMux, auth *security.Auth, core *service.Service, us
 	register("GET /v1/admin/requests/{id}", "admin:read", true, func(_ http.ResponseWriter, request *http.Request, _ store.Identity) (any, error) {
 		return core.Store.Request(request.Context(), "", request.PathValue("id"))
 	})
+	register("GET /v1/admin/usage/trends", "admin:read", true, func(_ http.ResponseWriter, request *http.Request, _ store.Identity) (any, error) {
+		hours := 24
+		switch request.URL.Query().Get("hours") {
+		case "", "24":
+		case "168":
+			hours = 168
+		case "720":
+			hours = 720
+		default:
+			return nil, store.Reject("invalid_request", 400, "Invalid trend range")
+		}
+		return core.Store.CallTrends(request.Context(), hours)
+	})
 	register("GET /v1/admin/usage", "admin:read", true, func(_ http.ResponseWriter, request *http.Request, _ store.Identity) (any, error) {
 		items, err := core.Store.Usage(request.Context())
 		if err != nil {

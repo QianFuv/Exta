@@ -474,6 +474,102 @@
       ],
       "type": "object"
     },
+    "CallTrendBucket": {
+      "additionalProperties": false,
+      "properties": {
+        "cancelled": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "failed": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pending": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "succeeded": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uncertain": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "total",
+        "succeeded",
+        "failed",
+        "pending",
+        "uncertain",
+        "cancelled"
+      ],
+      "type": "object"
+    },
+    "CallTrends": {
+      "additionalProperties": false,
+      "description": "Current outcomes of retained accepted logical calls, grouped by UTC creation time. One synchronous request or research job per call; attempts, polls and idempotent replay do not add calls. Validation/authentication rejections are not recorded. Retention may remove older synchronous records.",
+      "properties": {
+        "bucket_seconds": {
+          "enum": [
+            3600,
+            86400
+          ],
+          "type": "integer"
+        },
+        "buckets": {
+          "items": {
+            "$ref": "#/$defs/CallTrendBucket"
+          },
+          "maxItems": 168,
+          "type": "array"
+        },
+        "coverage": {
+          "enum": [
+            "retained_accepted_calls"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "to": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observed_at",
+        "from",
+        "to",
+        "bucket_seconds",
+        "coverage",
+        "buckets"
+      ],
+      "type": "object"
+    },
     "CancelCapability": {
       "additionalProperties": false,
       "properties": {
@@ -4088,5 +4184,5 @@
   },
   "$id": "https://exta.invalid/contract",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-contract-sha256": "ffe9129cc3435499dea1750e1d96a1c3651cc30d75d739428c282c6e2aecf53d"
+  "x-contract-sha256": "02ea761879aed54219f4b929db56a68e1ee744c8fbfed82871d25d11c8483954"
 }

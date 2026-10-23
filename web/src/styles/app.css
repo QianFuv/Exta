@@ -1767,3 +1767,56 @@ h3 {
 .session-sign-out {
   margin-left: 8px;
 }
+
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  gap: 24px;
+  margin: 0 0 20px;
+}
+.trend-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.trend-swatch {
+  width: 20px;
+  border-top: 3px solid currentColor;
+}
+.trend-total {
+  color: var(--text-muted);
+  stroke: var(--text-muted);
+}
+.trend-succeeded {
+  color: var(--brand);
+  stroke: var(--brand);
+}
+.trend-failed {
+  color: var(--danger-fg);
+  stroke: var(--danger-fg);
+}
+.trend-chart svg {
+  display: block;
+  width: 100%;
+  min-height: 190px;
+}
+.trend-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.trend-line.trend-total {
+  stroke-dasharray: 5 4;
+}
+.trend-line.trend-failed {
+  stroke-dasharray: 2 3;
+}
+.trend-grid {
+  stroke: var(--border);
+}
+.trend-axis-label {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
