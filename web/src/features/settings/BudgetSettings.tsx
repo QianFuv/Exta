@@ -71,10 +71,12 @@ export function BudgetSettings() {
                     render: (_value, providerKey) => {
                       return (
                         <>
-                          {format(
-                            providerKey.quota_policy.allocation,
-                            providerKey.quota_policy.unit,
-                          )}
+                          {providerKey.quota_policy.allocation === 0
+                            ? t("keys.unlimited")
+                            : format(
+                                providerKey.quota_policy.allocation,
+                                providerKey.quota_policy.unit,
+                              )}
                         </>
                       );
                     },
@@ -85,10 +87,12 @@ export function BudgetSettings() {
                     render: (_value, providerKey) => {
                       return (
                         <>
-                          {format(
-                            providerKey.quota_policy.per_operation_reservation,
-                            providerKey.quota_policy.unit,
-                          )}
+                          {providerKey.quota_policy.per_operation_reservation === 0
+                            ? t("keys.automaticReservation")
+                            : format(
+                                providerKey.quota_policy.per_operation_reservation,
+                                providerKey.quota_policy.unit,
+                              )}
                         </>
                       );
                     },
@@ -97,7 +101,7 @@ export function BudgetSettings() {
                     key: "column-4",
                     title: <>{t("keys.activeJobs")}</>,
                     render: (_value, providerKey) => {
-                      return <>{providerKey.quota_policy.active_jobs}</>;
+                      return <>{providerKey.quota_policy.active_jobs || t("keys.unlimited")}</>;
                     },
                   },
                   {

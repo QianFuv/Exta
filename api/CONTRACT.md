@@ -211,3 +211,5 @@ credentials, provider charges, deployments and remote Git operations are unused.
 T1 verification covers the contract and boundary behavior only. Stateful replay,
 retained-resource accounting, admin authentication flows, all eight real UI pages,
 five-target packaging and native-platform release evidence remain later tasks.
+
+Local key policy inputs accept missing/null numeric limits and normalize them to zero. Zero allocation or active-job ceiling means no local cap; zero per-operation reservation uses the operation estimate. An omitted PATCH policy preserves it, while an explicit null resets local controls. Upstream balance remains independently unknown.

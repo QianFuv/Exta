@@ -129,7 +129,9 @@ function KeyInventory() {
                       </p>
                       <p className="numeric">
                         {t("keys.allocation")}:{" "}
-                        {format(key.quota_policy.allocation, key.quota_policy.unit)}
+                        {key.quota_policy.allocation === 0
+                          ? t("keys.unlimited")
+                          : format(key.quota_policy.allocation, key.quota_policy.unit)}
                       </p>
                       <KeyActions providerKey={key} canWrite={canWrite} onDialog={setDialog} />
                     </>
@@ -170,14 +172,11 @@ function KeyInventory() {
                       render: (_value, key) => (
                         <>
                           <span className="numeric">
-                            {format(key.quota_policy.allocation, key.quota_policy.unit)}
+                            {key.quota_policy.allocation === 0
+                              ? t("keys.unlimited")
+                              : format(key.quota_policy.allocation, key.quota_policy.unit)}
                           </span>
-                          <small className="cell-secondary">
-                            {key.quota_policy.allocation > 0 &&
-                            key.quota_policy.per_operation_reservation > 0
-                              ? t("keys.localLimit")
-                              : t("keys.needsLimits")}
-                          </small>
+                          <small className="cell-secondary">{t("keys.localLimit")}</small>
                         </>
                       ),
                     },

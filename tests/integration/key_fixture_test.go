@@ -10,7 +10,7 @@ import (
 func addLinkedKey(t *testing.T, state *store.Store, owner string, first domain.UpstreamKey, input domain.UpstreamKeyCreate) (domain.UpstreamKey, error) {
 	t.Helper()
 	input.Provider = first.Provider
-	input.QuotaPolicy = &first.QuotaPolicy
+	input.QuotaPolicy = first.QuotaPolicy.Input()
 	key, err := state.AddKey(t.Context(), owner, input)
 	if err != nil {
 		return key, err

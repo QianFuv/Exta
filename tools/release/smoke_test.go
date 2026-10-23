@@ -119,7 +119,7 @@ func TestPackagedRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}, Label: "Synthetic offline key", Enabled: true, Secret: "synthetic-invalid-offline-smoke-key"})
+	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}).Input(), Label: "Synthetic offline key", Enabled: true, Secret: "synthetic-invalid-offline-smoke-key"})
 	if err != nil {
 		t.Fatal(err)
 	}

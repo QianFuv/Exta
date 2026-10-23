@@ -6006,7 +6006,7 @@
           },
           "active_jobs": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 0,
             "maximum": 2
           }
         },
@@ -6016,7 +6016,7 @@
           "per_operation_reservation",
           "active_jobs"
         ],
-        "description": "No budget configured means no upstream dispatch; currency units are never combined."
+        "description": "Canonical local safety policy. Zero allocation or active_jobs means no additional local cap. Zero per_operation_reservation uses the operation estimate. These settings never assert an upstream balance; positive caps remain enforced."
       },
       "KeyRotate": {
         "type": "object",
@@ -7497,7 +7497,7 @@
             "$ref": "#/components/schemas/Provider"
           },
           "quota_policy": {
-            "$ref": "#/components/schemas/QuotaPolicy"
+            "$ref": "#/components/schemas/QuotaPolicyInput"
           }
         },
         "required": [
@@ -7525,7 +7525,7 @@
             "type": "boolean"
           },
           "quota_policy": {
-            "$ref": "#/components/schemas/QuotaPolicy"
+            "$ref": "#/components/schemas/QuotaPolicyInput"
           }
         },
         "required": [
@@ -7784,6 +7784,44 @@
           }
         },
         "required": []
+      },
+      "QuotaPolicyInput": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "unit": {
+            "$ref": "#/components/schemas/UsageUnit"
+          },
+          "allocation": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "per_operation_reservation": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "active_jobs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 2
+          }
+        },
+        "required": [],
+        "description": "Replacement local safety policy. Missing/null numeric values normalize to zero (no local cap, or automatic operation reservation). Missing unit is inferred from the key provider. Null policy clears local limits. Existing charges and unresolved holds are preserved."
       }
     },
     "securitySchemes": {

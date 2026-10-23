@@ -97,10 +97,6 @@ func (state *Store) ReserveTx(ctx context.Context, tx *sql.Tx, input Admission, 
 		if amount == 0 {
 			amount = int64(key.QuotaPolicy.PerOperationReservation)
 		}
-		if amount <= 0 {
-			selectionErr = Reject("quota_unavailable", 503, "Per-operation safety reservation is not configured")
-			continue
-		}
 		amount = max(amount, input.MinimumAmount)
 		if err = keyBudgetTx(ctx, tx, key, amount, input.Research); err != nil {
 			var fault *Fault

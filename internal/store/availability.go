@@ -26,9 +26,6 @@ func (state *Store) Available(ctx context.Context, provider string, minimumAmoun
 			return err
 		}
 		for _, candidate := range keys {
-			if candidate.Key.QuotaPolicy.PerOperationReservation <= 0 {
-				continue
-			}
 			err = keyBudgetTx(ctx, tx, candidate.Key, max(minimumAmount, int64(candidate.Key.QuotaPolicy.PerOperationReservation)), false)
 			if err == nil {
 				available = true

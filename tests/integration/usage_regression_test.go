@@ -24,7 +24,7 @@ func TestUsageSharedCooldownSurvivesAccountsAndCallerCancellation(t *testing.T) 
 		t.Run(store.JSON(disconnect), func(t *testing.T) {
 			state, principal, _, _ := foundation(t)
 			first := addTavily(t, state, principal)
-			second, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 1, ActiveJobs: 1}, Enabled: true, Label: "Second", Secret: "synthetic-independent-usage-key"})
+			second, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: (domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 1, ActiveJobs: 1}).Input(), Enabled: true, Label: "Second", Secret: "synthetic-independent-usage-key"})
 			if err != nil {
 				t.Fatal(err)
 			}

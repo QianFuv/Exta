@@ -69,7 +69,7 @@ func TestBrowserFixture(t *testing.T) {
 	if err := state.DB.QueryRow("SELECT id FROM principals LIMIT 1").Scan(&owner); err != nil {
 		t.Fatal(err)
 	}
-	upstreamKey, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}, Label: "Invalid offline fixture key", Enabled: true, Secret: "synthetic-invalid-browser-fixture-key"})
+	upstreamKey, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10000000, PerOperationReservation: 1000000, ActiveJobs: 2}).Input(), Label: "Invalid offline fixture key", Enabled: true, Secret: "synthetic-invalid-browser-fixture-key"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,8 +135,8 @@ func TestBrowserFixture(t *testing.T) {
 		}
 	}
 	for _, input := range []domain.UpstreamKeyCreate{
-		{Provider: "exa", Label: "Exa secondary · offline fixture", Enabled: false, Secret: "synthetic-invalid-secondary-key", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 5000000, PerOperationReservation: 500000, ActiveJobs: 1}},
-		{Provider: "tavily", Label: "Tavily search · offline fixture", Enabled: false, Secret: "synthetic-invalid-tavily-key", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 10000, PerOperationReservation: 100, ActiveJobs: 1}},
+		{Provider: "exa", Label: "Exa secondary · offline fixture", Enabled: false, Secret: "synthetic-invalid-secondary-key", QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: 5000000, PerOperationReservation: 500000, ActiveJobs: 1}).Input()},
+		{Provider: "tavily", Label: "Tavily search · offline fixture", Enabled: false, Secret: "synthetic-invalid-tavily-key", QuotaPolicy: (domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 10000, PerOperationReservation: 100, ActiveJobs: 1}).Input()},
 	} {
 		if _, err := state.AddKey(t.Context(), owner, input); err != nil {
 			t.Fatal(err)

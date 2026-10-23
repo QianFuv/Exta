@@ -44,6 +44,7 @@ function useRefreshPools(): () => void {
  */
 function parseInteger(text: string): number {
   const trimmed = text.trim();
+  if (trimmed === "") return 0;
   if (!/^\d+$/.test(trimmed)) {
     return Number.NaN;
   }
@@ -100,7 +101,7 @@ export function KeySettingsDialog({
   const [perOperation, setPerOperation] = useState(
     String(providerKey.quota_policy.per_operation_reservation ?? 0),
   );
-  const [activeJobs, setActiveJobs] = useState(String(providerKey.quota_policy.active_jobs ?? 1));
+  const [activeJobs, setActiveJobs] = useState(String(providerKey.quota_policy.active_jobs ?? 0));
 
   const allocationValue = parseInteger(allocation);
   const perOperationValue = parseInteger(perOperation);
@@ -110,7 +111,7 @@ export function KeySettingsDialog({
     label.length <= 128 &&
     !Number.isNaN(allocationValue) &&
     !Number.isNaN(perOperationValue) &&
-    (activeJobsValue === 1 || activeJobsValue === 2);
+    (activeJobsValue === 0 || activeJobsValue === 1 || activeJobsValue === 2);
 
   const save = useMutation({
     mutationFn: () => {
@@ -190,7 +191,9 @@ export function KeySettingsDialog({
               <p id={`${formId}-allocation-preview`} className="field-hint">
                 {Number.isNaN(allocationValue)
                   ? t("common.invalidNumber")
-                  : format(allocationValue, unit)}
+                  : allocationValue === 0
+                    ? t("keys.unlimited")
+                    : format(allocationValue, unit)}
               </p>
             </div>
             <div className="field">
@@ -208,7 +211,9 @@ export function KeySettingsDialog({
               <p id={`${formId}-per-op-preview`} className="field-hint">
                 {Number.isNaN(perOperationValue)
                   ? t("common.invalidNumber")
-                  : format(perOperationValue, unit)}
+                  : perOperationValue === 0
+                    ? t("keys.automaticReservation")
+                    : format(perOperationValue, unit)}
               </p>
             </div>
             <div className="field">
@@ -220,6 +225,7 @@ export function KeySettingsDialog({
                 value={activeJobs}
                 onChange={(event) => setActiveJobs(event.target.value)}
               >
+                <option value="0">{t("keys.unlimited")}</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
               </Select>
@@ -338,7 +344,7 @@ export function KeyCreateDialog({
               unit: PROVIDER_UNIT[provider],
               allocation: parseInteger(allocation),
               per_operation_reservation: parseInteger(perOperation),
-              active_jobs: 1,
+              active_jobs: 0,
             },
             label: label.trim(),
             secret: value.secret,
@@ -399,7 +405,9 @@ export function KeyCreateDialog({
             />
             <p id={`${formId}-allocation-preview`} className="field-hint">
               {Number.isSafeInteger(parseInteger(allocation))
-                ? format(parseInteger(allocation), PROVIDER_UNIT[provider])
+                ? parseInteger(allocation) === 0
+                  ? t("keys.unlimited")
+                  : format(parseInteger(allocation), PROVIDER_UNIT[provider])
                 : t("common.invalidNumber")}
             </p>
           </div>
@@ -417,7 +425,9 @@ export function KeyCreateDialog({
             />
             <p id={`${formId}-reservation-preview`} className="field-hint">
               {Number.isSafeInteger(parseInteger(perOperation))
-                ? format(parseInteger(perOperation), PROVIDER_UNIT[provider])
+                ? parseInteger(perOperation) === 0
+                  ? t("keys.automaticReservation")
+                  : format(parseInteger(perOperation), PROVIDER_UNIT[provider])
                 : t("common.invalidNumber")}
             </p>
           </div>

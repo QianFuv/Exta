@@ -46,7 +46,7 @@ func fixture(t *testing.T) (*Engine, string, *time.Time) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100000000, PerOperationReservation: 1000000, ActiveJobs: 2}, Label: "Synthetic", Enabled: true, Secret: "synthetic-original-research-secret"})
+	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100000000, PerOperationReservation: 1000000, ActiveJobs: 2}).Input(), Label: "Synthetic", Enabled: true, Secret: "synthetic-original-research-secret"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -742,7 +742,7 @@ func TestCancelledClaimRollbackIsAnOrdinaryShutdown(t *testing.T) {
 func TestTavilyKnownIdentityPollsAndUnknownIdentityFailsClosed(t *testing.T) {
 	for _, known := range []bool{true, false} {
 		engine, owner, now := fixture(t)
-		_, err := engine.Store.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 110, ActiveJobs: 2}, Enabled: true, Label: "Synthetic", Secret: "synthetic-original-tavily-secret"})
+		_, err := engine.Store.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: (domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 110, ActiveJobs: 2}).Input(), Enabled: true, Label: "Synthetic", Secret: "synthetic-original-tavily-secret"})
 		if err != nil {
 			t.Fatal(err)
 		}

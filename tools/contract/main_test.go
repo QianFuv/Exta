@@ -23,6 +23,18 @@ func loadTestContract(t *testing.T) document {
 	return contract
 }
 
+func TestNullablePolicyGeneratesTypedOptionalFields(t *testing.T) {
+	output, err := generateGo(loadTestContract(t), "synthetic_hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, declaration := range []string{"type QuotaPolicyInput struct", "*QuotaPolicyInput", "*Integer"} {
+		if !strings.Contains(string(output), declaration) {
+			t.Fatalf("missing typed nullable policy: %s", declaration)
+		}
+	}
+}
+
 func TestBackendGenerationExcludesFrontendArtifacts(t *testing.T) {
 	contract := loadTestContract(t)
 	artifacts, err := generate(contract, "synthetic_hash", true)

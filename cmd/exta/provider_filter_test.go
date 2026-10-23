@@ -37,7 +37,7 @@ func TestManagementProviderFiltersBeforePagination(t *testing.T) {
 			unit = "tavily_credit"
 		}
 		for range 2 {
-			if _, err := state.AddKey(t.Context(), session.PrincipalId, domain.UpstreamKeyCreate{Provider: provider, Label: "Filter key", Secret: "synthetic-filter-" + store.ID("key"), QuotaPolicy: &domain.QuotaPolicy{Unit: unit, ActiveJobs: 1}}); err != nil {
+			if _, err := state.AddKey(t.Context(), session.PrincipalId, domain.UpstreamKeyCreate{Provider: provider, Label: "Filter key", Secret: "synthetic-filter-" + store.ID("key"), QuotaPolicy: (domain.QuotaPolicy{Unit: unit, ActiveJobs: 1}).Input()}); err != nil {
 				t.Fatal(err)
 			}
 		}

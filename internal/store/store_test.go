@@ -40,7 +40,7 @@ func openStore(t *testing.T) (*store.Store, string) {
 
 func addAccount(t *testing.T, state *store.Store, principal string, allocation int64) (domain.UpstreamKey, domain.UpstreamKey) {
 	t.Helper()
-	key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: domain.Integer(allocation), PerOperationReservation: 10, ActiveJobs: 2}, Label: "Test key", Enabled: true, Secret: fakeProviderKey})
+	key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: domain.Integer(allocation), PerOperationReservation: 10, ActiveJobs: 2}).Input(), Label: "Test key", Enabled: true, Secret: fakeProviderKey})
 	if err != nil {
 		t.Fatal(err)
 	}

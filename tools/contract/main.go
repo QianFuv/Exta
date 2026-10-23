@@ -403,7 +403,7 @@ func generateGo(contract document, hash string) ([]byte, error) {
 	for _, name := range sortedKeys(schemaMap(contract)) {
 		schema := asMap(schemaMap(contract)[name])
 		fmt.Fprintf(&output, "\n// %s represents the canonical %s schema. Validate JSON before decoding.\n", name, name)
-		if schema["type"] != "object" || schema["properties"] == nil {
+		if schemaType(schema) != "object" || schema["properties"] == nil {
 			typeName := goType(schema)
 			if typeName == "json.RawMessage" || typeName == "Integer" {
 				fmt.Fprintf(&output, "type %s = %s\n", name, typeName)
@@ -444,6 +444,9 @@ func goType(schema document) string {
 	if variants, exists := schema["anyOf"].([]any); exists && len(variants) == 2 && asMap(variants[1])["type"] == "null" {
 		return "*" + goType(asMap(variants[0]))
 	}
+	if types, ok := schema["type"].([]any); ok && len(types) == 2 && types[1] == "null" {
+		return "*" + goType(document{"type": types[0]})
+	}
 	switch schema["type"] {
 	case "string":
 		return "string"
@@ -458,6 +461,14 @@ func goType(schema document) string {
 	default:
 		return "json.RawMessage"
 	}
+}
+
+// schemaType identifies nullable OpenAPI 3.1 object definitions without losing their fields.
+func schemaType(schema document) any {
+	if types, ok := schema["type"].([]any); ok && len(types) == 2 && types[1] == "null" {
+		return types[0]
+	}
+	return schema["type"]
 }
 
 func exportedName(value string) string {

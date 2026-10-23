@@ -1875,5 +1875,44 @@
       },
       "account_id": "account_old"
     }
+  },
+  {
+    "name": "quota-input-empty",
+    "schema": "QuotaPolicyInput",
+    "valid": true,
+    "value": {}
+  },
+  {
+    "name": "quota-input-null",
+    "schema": "QuotaPolicyInput",
+    "valid": true,
+    "value": null
+  },
+  {
+    "name": "quota-input-nullable",
+    "schema": "QuotaPolicyInput",
+    "valid": true,
+    "value": {
+      "allocation": null,
+      "per_operation_reservation": null,
+      "active_jobs": null
+    }
+  },
+  {
+    "name": "quota-input-zero",
+    "schema": "QuotaPolicyInput",
+    "valid": true,
+    "value": {
+      "allocation": 0,
+      "active_jobs": 0
+    }
+  },
+  {
+    "name": "quota-input-negative",
+    "schema": "QuotaPolicyInput",
+    "valid": false,
+    "value": {
+      "allocation": -1
+    }
   }
 ]

@@ -65,7 +65,7 @@ func retrievalService(t *testing.T, state *store.Store, exa, tavily *mockProvide
 
 func addTavily(t *testing.T, state *store.Store, principal string) domain.UpstreamKey {
 	t.Helper()
-	account, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 10, ActiveJobs: 2}, Enabled: true, Label: "Synthetic Tavily", Secret: "synthetic-tavily-key-only"})
+	account, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", QuotaPolicy: (domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 1000, PerOperationReservation: 10, ActiveJobs: 2}).Input(), Enabled: true, Label: "Synthetic Tavily", Secret: "synthetic-tavily-key-only"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -42,7 +42,7 @@ func TestRetrievalUnderfundedIntentNeverDispatches(t *testing.T) {
 			quota := account.QuotaPolicy
 			quota.Allocation = 1
 			quota.PerOperationReservation = 1
-			if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: &quota}); err != nil {
+			if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: quota.Input()}); err != nil {
 				t.Fatal(err)
 			}
 			profile := domain.Profile("common")
@@ -176,7 +176,7 @@ func TestRetrievalEntireFetchFailureIsNotSuccess(t *testing.T) {
 
 func TestRetrievalSharedRateLimitSurvivesAccountChangeAndRestart(t *testing.T) {
 	state, principal, _, _ := foundation(t)
-	_, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 1000000, PerOperationReservation: 1000, ActiveJobs: 2}, Label: "Other team", Enabled: true, Secret: "synthetic-other-account-key"})
+	_, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: 1000000, PerOperationReservation: 1000, ActiveJobs: 2}).Input(), Label: "Other team", Enabled: true, Secret: "synthetic-other-account-key"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,14 +198,14 @@ func TestRetrievalSharedRateLimitSurvivesAccountChangeAndRestart(t *testing.T) {
 	}
 }
 
-func TestRetrievalRejectsUnconfiguredReservationAndEmptyStatusEvidence(t *testing.T) {
+func TestRetrievalUsesAutomaticReservationButRejectsEmptyStatusEvidence(t *testing.T) {
 	for _, emptyStatus := range []bool{false, true} {
 		t.Run(strconv.FormatBool(emptyStatus), func(t *testing.T) {
 			state, principal, account, _ := foundation(t)
 			if !emptyStatus {
 				quota := account.QuotaPolicy
 				quota.PerOperationReservation = 0
-				if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: &quota}); err != nil {
+				if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: quota.Input()}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -215,8 +215,8 @@ func TestRetrievalRejectsUnconfiguredReservationAndEmptyStatusEvidence(t *testin
 			if err == nil {
 				t.Fatal("unconfigured or empty retrieval accepted")
 			}
-			if !emptyStatus && len(mock.Calls()) != 0 {
-				t.Fatal("zero reservation replaced by price floor")
+			if len(mock.Calls()) != 1 {
+				t.Fatal("automatic estimate did not dispatch exactly once")
 			}
 		})
 	}
@@ -228,7 +228,7 @@ func TestRetrievalConcurrentAdmissionReservesFullSelectedCost(t *testing.T) {
 	quota := account.QuotaPolicy
 	quota.Allocation = 3
 	quota.PerOperationReservation = 1
-	if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: &quota}); err != nil {
+	if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: quota.Input()}); err != nil {
 		t.Fatal(err)
 	}
 	routeOnly(t, state, principal, "advanced_search", []domain.RouteTarget{{Provider: "tavily", Profile: "tavily_advanced"}}, false, 30)

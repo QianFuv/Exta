@@ -134,7 +134,7 @@ describe("key pools", () => {
         unit: "micro_usd",
         allocation: 0,
         per_operation_reservation: 0,
-        active_jobs: 1,
+        active_jobs: 0,
       },
       label: "Exa third",
       secret: "synthetic-secret-9999",

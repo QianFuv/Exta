@@ -51,14 +51,14 @@ func KeyBalanceTx(ctx context.Context, tx *sql.Tx, key string) (int64, int64, er
 }
 
 func keyBudgetTx(ctx context.Context, tx *sql.Tx, key domain.UpstreamKey, amount int64, research bool) error {
-	if amount <= 0 {
-		return Reject("quota_unavailable", 503, "Per-operation safety reservation is not configured")
+	if amount < 0 {
+		return Reject("invalid_request", 400, "Reservation cannot be negative")
 	}
 	used, held, err := KeyBalanceTx(ctx, tx, key.Id)
 	if err != nil {
 		return err
 	}
-	if int64(key.QuotaPolicy.Allocation)-used-held < amount {
+	if key.QuotaPolicy.Allocation > 0 && int64(key.QuotaPolicy.Allocation)-used-held < amount {
 		return Reject("quota_unavailable", 503, "Configured key safety limit is exhausted")
 	}
 	if research {
@@ -66,7 +66,7 @@ func keyBudgetTx(ctx context.Context, tx *sql.Tx, key domain.UpstreamKey, amount
 		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM budget_reservations WHERE key_id=? AND active_slot=1", key.Id).Scan(&active); err != nil {
 			return err
 		}
-		if active >= int64(key.QuotaPolicy.ActiveJobs) {
+		if key.QuotaPolicy.ActiveJobs > 0 && active >= int64(key.QuotaPolicy.ActiveJobs) {
 			return Reject("capacity_unavailable", 503, "Key active slots remain held")
 		}
 	}
@@ -75,7 +75,7 @@ func keyBudgetTx(ctx context.Context, tx *sql.Tx, key domain.UpstreamKey, amount
 		if err != nil {
 			return err
 		}
-		if int64(shared.Allocation)-used-held < amount {
+		if shared.Allocation > 0 && int64(shared.Allocation)-used-held < amount {
 			return Reject("quota_unavailable", 503, "Shared safety limit is exhausted")
 		}
 		if research {
@@ -83,7 +83,7 @@ func keyBudgetTx(ctx context.Context, tx *sql.Tx, key domain.UpstreamKey, amount
 			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM budget_reservations WHERE association_ref=? AND active_slot=1", key.AssociationRef).Scan(&active); err != nil {
 				return err
 			}
-			if active >= int64(shared.ActiveJobs) {
+			if shared.ActiveJobs > 0 && active >= int64(shared.ActiveJobs) {
 				return Reject("capacity_unavailable", 503, "Shared active slots remain held")
 			}
 		}

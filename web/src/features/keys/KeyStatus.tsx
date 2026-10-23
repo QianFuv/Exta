@@ -12,8 +12,6 @@ export function keyRestriction(key: Schemas["UpstreamKey"]): MessageKey | null {
   if (key.billing_state === "blocked") return "billingState.blocked";
   if (key.breaker !== "closed") return "dispatch.breaker";
   if (key.cooldown_until && Date.parse(key.cooldown_until) > Date.now()) return "dispatch.cooldown";
-  if (key.quota_policy.allocation <= 0 || key.quota_policy.per_operation_reservation <= 0)
-    return "keys.needsLimits";
   return null;
 }
 

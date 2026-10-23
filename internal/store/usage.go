@@ -135,7 +135,11 @@ func (state *Store) Usage(ctx context.Context) ([]domain.KeyUsage, error) {
 			if estimates > 0 {
 				source = "estimate"
 			}
-			items = append(items, domain.KeyUsage{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: "key", KeyId: &key.Id, Provider: key.Provider, Source: source, ObservedAt: &observed, Freshness: "fresh", Unit: key.QuotaPolicy.Unit, Used: &spent, Reserved: domain.Integer(held), LimitKind: "finite", Limit: &limit, Remaining: &remaining})
+			item := domain.KeyUsage{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: "key", KeyId: &key.Id, Provider: key.Provider, Source: source, ObservedAt: &observed, Freshness: "fresh", Unit: key.QuotaPolicy.Unit, Used: &spent, Reserved: domain.Integer(held), LimitKind: "finite", Limit: &limit, Remaining: &remaining}
+			if limit == 0 {
+				item.LimitKind, item.Limit, item.Remaining = "unlimited", nil, nil
+			}
+			items = append(items, item)
 			if key.SharedLimit != nil && !seen[key.AssociationRef] {
 				seen[key.AssociationRef] = true
 				used, held, err = BalanceTx(ctx, tx, key.AssociationRef)
@@ -144,7 +148,11 @@ func (state *Store) Usage(ctx context.Context) ([]domain.KeyUsage, error) {
 				}
 				sharedSpent, sharedLimit := domain.Integer(used), key.SharedLimit.Allocation
 				sharedRemaining := max(domain.Integer(0), sharedLimit-sharedSpent-domain.Integer(held))
-				items = append(items, domain.KeyUsage{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: "shared", Provider: key.Provider, Source: "local", ObservedAt: &observed, Freshness: "fresh", Unit: key.QuotaPolicy.Unit, Used: &sharedSpent, Reserved: domain.Integer(held), LimitKind: "finite", Limit: &sharedLimit, Remaining: &sharedRemaining})
+				shared := domain.KeyUsage{AssociationRef: key.AssociationRef, AssociationEvidence: key.AssociationEvidence, Scope: "shared", Provider: key.Provider, Source: "local", ObservedAt: &observed, Freshness: "fresh", Unit: key.QuotaPolicy.Unit, Used: &sharedSpent, Reserved: domain.Integer(held), LimitKind: "finite", Limit: &sharedLimit, Remaining: &sharedRemaining}
+				if sharedLimit == 0 {
+					shared.LimitKind, shared.Limit, shared.Remaining = "unlimited", nil, nil
+				}
+				items = append(items, shared)
 			}
 		}
 		return nil

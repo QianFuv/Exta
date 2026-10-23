@@ -288,12 +288,7 @@ export const handlers = [
         provider: input.provider,
         association_ref: id,
         association_evidence: "unknown",
-        quota_policy: input.quota_policy ?? {
-          unit: input.provider === "exa" ? "micro_usd" : "tavily_credit",
-          allocation: 0,
-          per_operation_reservation: 0,
-          active_jobs: 1,
-        },
+        quota_policy: normalizePolicy(input.provider, input.quota_policy),
         label: input.label,
         last_four: input.secret.slice(-4),
         fingerprint: "fp:mock",
@@ -325,7 +320,8 @@ export const handlers = [
         }
         key.version += 1;
         key.label = input.label ?? key.label;
-        key.quota_policy = input.quota_policy ?? key.quota_policy;
+        if (input.quota_policy !== undefined)
+          key.quota_policy = normalizePolicy(key.provider, input.quota_policy);
         if (action === "patch" && input.enabled !== undefined) {
           key.enabled = input.enabled;
         }
@@ -652,3 +648,16 @@ export const handlers = [
     ),
   ),
 ];
+
+/** Normalize fixture policy inputs using the management contract's zero semantics. */
+function normalizePolicy(
+  provider: Schemas["Provider"],
+  input: Schemas["QuotaPolicyInput"] | undefined,
+): Schemas["QuotaPolicy"] {
+  return {
+    unit: input?.unit ?? (provider === "exa" ? "micro_usd" : "tavily_credit"),
+    allocation: input?.allocation ?? 0,
+    per_operation_reservation: input?.per_operation_reservation ?? 0,
+    active_jobs: input?.active_jobs ?? 0,
+  };
+}

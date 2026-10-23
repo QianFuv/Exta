@@ -75,13 +75,7 @@ func (state *Store) AddKey(ctx context.Context, actor string, input domain.Upstr
 		return item, Reject("invalid_request", 400, "Invalid upstream key")
 	}
 	err := state.Write(ctx, func(tx *sql.Tx) error {
-		quota := domain.QuotaPolicy{Unit: "micro_usd", ActiveJobs: 1}
-		if input.Provider == "tavily" {
-			quota.Unit = "tavily_credit"
-		}
-		if input.QuotaPolicy != nil {
-			quota = *input.QuotaPolicy
-		}
+		quota := normalizeQuota(input.Provider, input.QuotaPolicy)
 		if err := validateQuota(input.Provider, quota); err != nil {
 			return err
 		}
@@ -129,7 +123,7 @@ func (state *Store) ChangeKey(ctx context.Context, actor, id string, version dom
 }
 
 // ChangeKey applies one versioned metadata, rotation or retirement mutation.
-func (state *Store) changeKey(ctx context.Context, actor, id string, version domain.Integer, label *string, enabled *bool, secret *string, retire bool, quota *domain.QuotaPolicy) (domain.UpstreamKey, error) {
+func (state *Store) changeKey(ctx context.Context, actor, id string, version domain.Integer, label *string, enabled *bool, secret *string, retire bool, policy *domain.QuotaPolicyInput) (domain.UpstreamKey, error) {
 	var item domain.UpstreamKey
 	err := state.Write(ctx, func(tx *sql.Tx) error {
 		var active string
@@ -141,18 +135,19 @@ func (state *Store) changeKey(ctx context.Context, actor, id string, version dom
 		if item.Version != version {
 			return Reject("revision_conflict", 409, "Key changed; reload before saving")
 		}
-		if quota != nil {
-			if err = validateQuota(item.Provider, *quota); err != nil {
+		if policy != nil {
+			quota := normalizeQuota(item.Provider, policy)
+			if err = validateQuota(item.Provider, quota); err != nil {
 				return err
 			}
 			used, held, err := KeyBalanceTx(ctx, tx, item.Id)
 			if err != nil {
 				return err
 			}
-			if int64(quota.Allocation) < used+held {
+			if quota.Allocation > 0 && int64(quota.Allocation) < used+held {
 				return Reject("invalid_request", 400, "Key limit cannot erase existing charges or unsettled holds")
 			}
-			item.QuotaPolicy = *quota
+			item.QuotaPolicy = quota
 		}
 		if label != nil {
 			item.Label = *label
@@ -242,4 +237,28 @@ func (state *Store) Credential(ctx context.Context, id string) (string, error) {
 func IsConflict(err error) bool {
 	var fault *Fault
 	return errors.As(err, &fault) && fault.Code == "revision_conflict"
+}
+
+// normalizeQuota resolves missing local controls without inventing upstream funds.
+func normalizeQuota(provider domain.Provider, input *domain.QuotaPolicyInput) domain.QuotaPolicy {
+	policy := domain.QuotaPolicy{Unit: "micro_usd"}
+	if provider == "tavily" {
+		policy.Unit = "tavily_credit"
+	}
+	if input == nil {
+		return policy
+	}
+	if input.Unit != nil {
+		policy.Unit = *input.Unit
+	}
+	if input.Allocation != nil {
+		policy.Allocation = *input.Allocation
+	}
+	if input.PerOperationReservation != nil {
+		policy.PerOperationReservation = *input.PerOperationReservation
+	}
+	if input.ActiveJobs != nil {
+		policy.ActiveJobs = *input.ActiveJobs
+	}
+	return policy
 }

@@ -7,18 +7,18 @@ import (
 	"exta/internal/domain"
 )
 
-func TestCapabilitiesRequireConfiguredAndSufficientReservation(t *testing.T) {
+func TestCapabilitiesRespectPositiveCapsAndAutomaticEstimates(t *testing.T) {
 	for _, fixture := range []struct {
 		name                    string
 		allocation, reservation domain.Integer
 		enabled                 bool
-	}{{"unset", 1000000, 0, false}, {"configured exceeds allocation", 5, 10, false}, {"profile floor exceeds allocation", 6000, 1, false}, {"eligible", 7000, 1, true}} {
+	}{{"automatic estimate", 1000000, 0, true}, {"unlimited", 0, 0, true}, {"configured exceeds allocation", 5, 10, false}, {"profile floor exceeds allocation", 6000, 1, false}, {"eligible", 7000, 1, true}} {
 		t.Run(fixture.name, func(t *testing.T) {
 			state, principal, account, _ := foundation(t)
 			quota := account.QuotaPolicy
 			quota.Allocation = fixture.allocation
 			quota.PerOperationReservation = fixture.reservation
-			if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: &quota}); err != nil {
+			if _, err := state.PatchKey(t.Context(), principal, account.Id, domain.UpstreamKeyPatch{ExpectedVersion: account.Version, QuotaPolicy: quota.Input()}); err != nil {
 				t.Fatal(err)
 			}
 			mock := newMockProvider(t)

@@ -18,7 +18,7 @@ func TestDirectKeysNeedNoParentOrVerifiedIdentity(t *testing.T) {
 	quota := domain.QuotaPolicy{Unit: "micro_usd", Allocation: 10, PerOperationReservation: 10, ActiveJobs: 1}
 	keys := []domain.UpstreamKey{}
 	for _, secret := range []string{"synthetic-independent-one", "synthetic-independent-two"} {
-		key, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Independent", Secret: secret, Enabled: true, QuotaPolicy: &quota})
+		key, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Independent", Secret: secret, Enabled: true, QuotaPolicy: quota.Input()})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,11 +40,19 @@ func TestDirectKeysNeedNoParentOrVerifiedIdentity(t *testing.T) {
 	}
 	_, err := state.Reserve(t.Context(), store.Admission{ParentId: store.ID("request"), PrincipalId: owner, Provider: "exa", Operation: "search"})
 	faultCode(t, err, "quota_unavailable")
-	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Duplicate", Secret: "synthetic-independent-one", Enabled: true, QuotaPolicy: &quota})
+	_, err = state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Duplicate", Secret: "synthetic-independent-one", Enabled: true, QuotaPolicy: quota.Input()})
+	faultCode(t, err, "invalid_request")
+	quota.Allocation = 1
+	_, err = state.PatchKey(t.Context(), owner, keys[0].Id, domain.UpstreamKeyPatch{ExpectedVersion: keys[0].Version, QuotaPolicy: quota.Input()})
 	faultCode(t, err, "invalid_request")
 	quota.Allocation = 0
-	_, err = state.PatchKey(t.Context(), owner, keys[0].Id, domain.UpstreamKeyPatch{ExpectedVersion: keys[0].Version, QuotaPolicy: &quota})
-	faultCode(t, err, "invalid_request")
+	if _, err = state.PatchKey(t.Context(), owner, keys[0].Id, domain.UpstreamKeyPatch{ExpectedVersion: keys[0].Version, QuotaPolicy: quota.Input()}); err != nil {
+		t.Fatal(err)
+	}
+	var held int64
+	if err = state.DB.QueryRow("SELECT sum(amount) FROM budget_reservations WHERE state='held'").Scan(&held); err != nil || held != 20 {
+		t.Fatalf("clearing cap erased holds: %d %v", held, err)
+	}
 }
 
 func TestKeyMetadataShowsEnforcedSharedGate(t *testing.T) {
@@ -71,7 +79,7 @@ func TestLinkedKeysShareOneReservationCeiling(t *testing.T) {
 	shared.Allocation = 30
 	keys := []domain.UpstreamKey{}
 	for _, secret := range []string{"synthetic-linked-one", "synthetic-linked-two"} {
-		key, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Linked", Secret: secret, Enabled: true, QuotaPolicy: &quota})
+		key, err := state.AddKey(t.Context(), owner, domain.UpstreamKeyCreate{Provider: "exa", Label: "Linked", Secret: secret, Enabled: true, QuotaPolicy: quota.Input()})
 		if err != nil {
 			t.Fatal(err)
 		}

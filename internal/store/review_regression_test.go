@@ -103,7 +103,7 @@ func TestAccountKeyFairnessAndProviderIsolation(t *testing.T) {
 	for index := 0; index < 2; index++ {
 		var first domain.UpstreamKey
 		for keyIndex := 0; keyIndex < 2; keyIndex++ {
-			key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", Label: fmt.Sprintf("Key %d", keyIndex), Enabled: true, Secret: fmt.Sprintf("synthetic-fairness-%d-%d", index, keyIndex), QuotaPolicy: &domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 2}})
+			key, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "exa", Label: fmt.Sprintf("Key %d", keyIndex), Enabled: true, Secret: fmt.Sprintf("synthetic-fairness-%d-%d", index, keyIndex), QuotaPolicy: (domain.QuotaPolicy{Unit: "micro_usd", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 2}).Input()})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -144,7 +144,7 @@ func TestAccountKeyFairnessAndProviderIsolation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	_, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", Label: "Independent", Enabled: true, Secret: "synthetic-independent-tavily", QuotaPolicy: &domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 1}})
+	_, err := state.AddKey(t.Context(), principal, domain.UpstreamKeyCreate{Provider: "tavily", Label: "Independent", Enabled: true, Secret: "synthetic-independent-tavily", QuotaPolicy: (domain.QuotaPolicy{Unit: "tavily_credit", Allocation: 100, PerOperationReservation: 1, ActiveJobs: 1}).Input()})
 	if err != nil {
 		t.Fatal(err)
 	}
