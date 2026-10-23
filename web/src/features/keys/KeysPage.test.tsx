@@ -37,7 +37,7 @@ describe("key pools", () => {
     const dialog = screen.getByRole("dialog");
     await userEvent.type(within(dialog).getByLabelText("Label"), "Duplicate fixture");
     await userEvent.type(within(dialog).getByLabelText("Secret"), "synthetic-duplicate-secret");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Add key", exact: true }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add key" }));
     expect(
       await screen.findByText("This key already exists and cannot be added again."),
     ).toBeVisible();
@@ -138,14 +138,11 @@ describe("key pools", () => {
     expect(summary).toHaveFocus();
   });
 
-  it("shows key-owned limits and unknown identity without an account workflow", async () => {
+  it("shows per-key usage without ownership identification or an account workflow", async () => {
     renderApp("/keys");
     expect(await screen.findByText("Exa primary")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "About Upstream provider keys" }));
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "Unknown shared balances are never added together",
-    );
-    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: "About Upstream provider keys" })).toBeNull();
+    expect(screen.queryByText(/not independently verified|shared allowance/i)).toBeNull();
     expect(screen.queryByText(/billing account/i)).toBeNull();
     expect(screen.queryByRole("columnheader", { name: "Shared allowance" })).toBeNull();
     expect(screen.queryByRole("columnheader", { name: "Local safety limit" })).toBeNull();

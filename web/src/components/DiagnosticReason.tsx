@@ -12,7 +12,7 @@ export function DiagnosticReason({ reason }: { reason: string }) {
           reason.startsWith("Profile is not currently configured")
         ? t("diagnostic.noRoute")
         : reason === "account_total_unavailable"
-          ? t("diagnostic.sharedUnknown")
+          ? t("diagnostic.totalUnknown")
           : reason === "not_refreshed"
             ? t("diagnostic.notRefreshed")
             : reason === "service_permission_missing"

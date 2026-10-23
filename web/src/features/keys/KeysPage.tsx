@@ -33,7 +33,7 @@ export function KeysPage() {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("keys.upstream")} help={t("keys.identityNotice")} />
+      <PageHeader title={t("keys.upstream")} />
       <RequirePermission permission="admin:read">
         <KeyInventory />
       </RequirePermission>

@@ -20,20 +20,15 @@ export const EN_MESSAGES = {
   "usage.evidence": "Usage evidence",
   "diagnostic.noKey": "No eligible key is configured.",
   "diagnostic.noRoute": "No eligible route is configured.",
-  "diagnostic.sharedUnknown": "Shared upstream total is unavailable.",
+  "diagnostic.totalUnknown": "Upstream total is unavailable.",
 
   "common.status": "Status",
   "language.label": "Language",
   "keys.inventory": "Key inventory",
   "keys.keySaved": "Key saved.",
   "keys.editKey": "Edit key & limits",
-  "keys.identityNotice":
-    "Provider identity is not always available. Unknown shared balances are never added together; local safety limits govern dispatch.",
   "keys.localLimit": "Local safety limit",
   "keys.needsLimits": "Safety limits need configuration",
-  "keys.sharedAllowance": "Shared allowance",
-  "keys.identityUnknown": "Not independently verified",
-  "keys.sharedKnown": "Linked keys share this allowance",
   "keys.accessDescription":
     "Credentials issued by Exta for MCP and API clients. These are separate from provider keys.",
   "common.scrollTable": "Scroll horizontally for more columns",
@@ -791,7 +786,7 @@ export const ZH_MESSAGES: Record<MessageKey, string> = {
   "usage.evidence": "用量依据",
   "diagnostic.noKey": "尚无符合条件的已配置密钥。",
   "diagnostic.noRoute": "尚无符合条件的路由。",
-  "diagnostic.sharedUnknown": "无法取得共享上游总额度。",
+  "diagnostic.totalUnknown": "无法取得上游总额度。",
 
   "common.helpFor": "关于{title}",
   "common.status": "状态",
@@ -799,13 +794,8 @@ export const ZH_MESSAGES: Record<MessageKey, string> = {
   "keys.inventory": "密钥列表",
   "keys.keySaved": "密钥已保存。",
   "keys.editKey": "编辑密钥与限额",
-  "keys.identityNotice":
-    "上游不一定提供可验证归属。未知的共享余额不会累加；调用受每个密钥明确配置的本地安全限额约束。",
   "keys.localLimit": "本地安全限额",
   "keys.needsLimits": "待配置安全限额",
-  "keys.sharedAllowance": "共享额度",
-  "keys.identityUnknown": "归属尚未独立核验",
-  "keys.sharedKnown": "关联密钥共用此额度",
   "keys.accessDescription":
     "由 Exta 签发给 MCP 与 API 客户端的访问凭证，与上游提供商密钥独立管理。",
   "common.scrollTable": "可横向滚动查看更多列",
