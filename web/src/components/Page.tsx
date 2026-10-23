@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useI18n } from "../lib/i18n";
 import { useSession } from "../lib/session";
 import type { AdminPermission } from "../lib/session";
+import { TitleHelp } from "./TitleHelp";
 import { LockedState } from "./Feedback";
 
 /**
@@ -15,10 +16,12 @@ import { LockedState } from "./Feedback";
 export function PageHeader({
   title,
   description,
+  help,
   actions,
 }: {
   title: string;
   description?: string;
+  help?: string;
   actions?: ReactNode;
 }) {
   useEffect(() => {
@@ -27,7 +30,10 @@ export function PageHeader({
   return (
     <header className="page-header">
       <div>
-        <h1>{title}</h1>
+        <div className="heading-with-help">
+          <h1>{title}</h1>
+          {help ? <TitleHelp title={title}>{help}</TitleHelp> : null}
+        </div>
         {description === undefined ? null : <p className="page-description">{description}</p>}
       </div>
       {actions === undefined ? null : <div className="page-actions">{actions}</div>}
@@ -46,17 +52,22 @@ export function Section({
   actions,
   children,
   description,
+  help,
 }: {
   title: string;
   actions?: ReactNode;
   description?: string;
+  help?: string;
   children: ReactNode;
 }) {
   return (
     <section className="section">
       <div className="section-header">
         <div>
-          <h2>{title}</h2>
+          <div className="heading-with-help">
+            <h2>{title}</h2>
+            {help ? <TitleHelp title={title}>{help}</TitleHelp> : null}
+          </div>
           {description === undefined ? null : <p className="section-description">{description}</p>}
         </div>
         {actions === undefined ? null : <div className="section-actions">{actions}</div>}

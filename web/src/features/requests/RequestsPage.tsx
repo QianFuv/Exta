@@ -74,7 +74,7 @@ export function RequestsPage() {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("requests.title")} description={t("requests.description")} />
+      <PageHeader title={t("requests.title")} help={t("requests.noRawContent")} />
       <RequirePermission permission="admin:read">
         <RequestsContent />
       </RequirePermission>
@@ -134,7 +134,6 @@ function RequestsContent() {
     <>
       <Section
         title={t("requests.listTitle")}
-        description={t("requests.noRawContent")}
         actions={
           <Button
             type="button"

@@ -491,3 +491,85 @@ time {
     gap: 14px;
   }
 }
+
+/* Graphite surfaces and restrained indigo, shared by controls and body-mounted portals. */
+html body {
+  --semi-color-bg-0: #f6f7f9;
+  --semi-color-bg-1: #ffffff;
+  --semi-color-bg-2: #f0f1f5;
+  --semi-color-bg-3: #e9ebf1;
+  --semi-color-bg-4: #ffffff;
+  --semi-color-text-0: #232633;
+  --semi-color-text-1: #606575;
+  --semi-color-text-2: #697080;
+  --semi-color-text-3: #8b91a0;
+  --semi-color-fill-0: #f0f1f5;
+  --semi-color-fill-1: #e8eaf0;
+  --semi-color-fill-2: #dde0e8;
+  --semi-color-border: #dfe2e8;
+  --semi-color-primary: #5a61a8;
+  --semi-color-primary-hover: #4c5397;
+  --semi-color-primary-active: #404780;
+  --semi-color-primary-disabled: #c8cbe4;
+  --semi-color-primary-light-default: #eeeff8;
+  --semi-color-primary-light-hover: #e3e5f3;
+  --semi-color-primary-light-active: #d9dced;
+  --semi-color-focus-border: #5a61a8;
+  --semi-color-link: #5a61a8;
+  --semi-color-link-hover: #4c5397;
+  --semi-color-link-active: #404780;
+  --semi-color-info: #5a61a8;
+  --semi-color-info-light-default: #eeeff8;
+  --semi-color-tertiary: #606575;
+  --semi-color-tertiary-hover: #444b5d;
+  --semi-color-tertiary-active: #303748;
+}
+html body[theme-mode="dark"] {
+  --semi-color-bg-0: #14161c;
+  --semi-color-bg-1: #1c1f27;
+  --semi-color-bg-2: #252933;
+  --semi-color-bg-3: #2e333e;
+  --semi-color-bg-4: #252933;
+  --semi-color-text-0: #e7e9ef;
+  --semi-color-text-1: #b3b8c7;
+  --semi-color-text-2: #a2a9bc;
+  --semi-color-text-3: #788195;
+  --semi-color-fill-0: #252933;
+  --semi-color-fill-1: #2e333e;
+  --semi-color-fill-2: #3a4050;
+  --semi-color-border: #3a4050;
+  --semi-color-primary: #a7ade5;
+  --semi-color-primary-hover: #bbc0f1;
+  --semi-color-primary-active: #d1d5fc;
+  --semi-color-primary-disabled: #424961;
+  --semi-color-primary-light-default: #292e48;
+  --semi-color-primary-light-hover: #343b59;
+  --semi-color-primary-light-active: #414a6a;
+  --semi-color-focus-border: #a7ade5;
+  --semi-color-link: #a7ade5;
+  --semi-color-link-hover: #bbc0f1;
+  --semi-color-link-active: #d1d5fc;
+  --semi-color-info: #a7ade5;
+  --semi-color-info-light-default: #292e48;
+  --semi-color-tertiary: #b3b8c7;
+  --semi-color-tertiary-hover: #ccd1df;
+  --semi-color-tertiary-active: #e7e9ef;
+}
+.heading-with-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.heading-with-help > h1,
+.heading-with-help > h2 {
+  margin-bottom: 0;
+}
+.title-help.semi-button {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+.title-help-content {
+  max-width: min(360px, calc(100vw - 32px));
+  font-size: 13px;
+  line-height: 1.6;
+}

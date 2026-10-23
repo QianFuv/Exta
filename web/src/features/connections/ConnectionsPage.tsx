@@ -19,7 +19,7 @@ export function ConnectionsPage() {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("connections.title")} description={t("connections.description")} />
+      <PageHeader title={t("connections.title")} help={t("connections.description")} />
       <RequirePermission permission="admin:read">
         <ConnectionDetails />
       </RequirePermission>
@@ -78,10 +78,7 @@ export function ConnectionDetails() {
             </Notice>
           </Section>
           <NetworkDiagnostics readiness={data.readiness} />
-          <Section
-            title={t("connections.examples")}
-            description={t("connections.examplesDescription")}
-          >
+          <Section title={t("connections.examples")} help={t("connections.examplesDescription")}>
             <p>
               <Link to="/access-keys">{t("keys.access")}</Link>
             </p>

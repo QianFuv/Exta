@@ -106,7 +106,6 @@ export function TokensSection() {
   return (
     <Section
       title={t("tokens.title")}
-      description={t("tokens.description")}
       actions={
         <Button
           type="button"

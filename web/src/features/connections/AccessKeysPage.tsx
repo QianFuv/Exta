@@ -8,7 +8,7 @@ export function AccessKeysPage() {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("keys.access")} description={t("keys.accessDescription")} />
+      <PageHeader title={t("keys.access")} help={t("keys.accessDescription")} />
       <RequirePermission permission="admin:read">
         <TokensSection />
       </RequirePermission>

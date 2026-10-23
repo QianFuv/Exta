@@ -69,7 +69,6 @@ export function LoginPage() {
           <BrandMark />
           <h1>Exta</h1>
         </div>
-        <p className="muted">{t("login.subtitle")}</p>
         {signedOutReason === "expired" ? (
           <Notice tone="warning" role="status" title={t("login.expired")} />
         ) : null}

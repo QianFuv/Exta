@@ -1,6 +1,7 @@
 /** English and Chinese interface text. English defines the key set; Chinese must match it. */
 
 export const EN_MESSAGES = {
+  "common.helpFor": "About {title}",
   "dispatch.configuration": "Configuration",
   "dispatch.routeNotice":
     "Some profiles are currently unavailable. Enabled configuration does not guarantee dispatch; key limits and readiness are checked for every request.",
@@ -780,6 +781,7 @@ export const ZH_MESSAGES: Record<MessageKey, string> = {
   "diagnostic.noRoute": "尚无符合条件的路由。",
   "diagnostic.sharedUnknown": "无法取得共享上游总额度。",
 
+  "common.helpFor": "关于{title}",
   "common.status": "状态",
   "language.label": "语言",
   "keys.inventory": "密钥列表",

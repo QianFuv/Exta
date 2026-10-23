@@ -28,7 +28,7 @@ export function BudgetSettings() {
     ),
   );
   return (
-    <Section title={t("keys.budgetSettings")} description={t("usage.unitsNeverCombined")}>
+    <Section title={t("keys.budgetSettings")} help={t("usage.unitsNeverCombined")}>
       <QueryView query={query}>
         {() =>
           items.length === 0 ? (

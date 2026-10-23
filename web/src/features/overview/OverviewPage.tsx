@@ -45,7 +45,7 @@ export function OverviewPage() {
   const [params] = useSearchParams();
   return (
     <>
-      <PageHeader title={t("overview.title")} description={t("overview.description")} />
+      <PageHeader title={t("overview.title")} />
       <SectionNav
         label={t("overview.title")}
         items={[
@@ -113,7 +113,6 @@ function MetricsPanel() {
     <section className="section metrics-section" aria-label={t("overview.activity")}>
       <QueryView query={usage}>
         {(data) => {
-          const staleCount = data.items.filter((item) => item.freshness !== "fresh").length;
           return (
             <>
               <ul className="metrics">
@@ -130,16 +129,6 @@ function MetricsPanel() {
                   );
                 })}
               </ul>
-              <p className="muted">
-                {t("usage.observedAt")}: <DateTime value={data.overview.observed_at} />
-              </p>
-              {staleCount > 0 ? (
-                <Notice tone="warning" title={t("overview.staleUsage", { count: staleCount })}>
-                  {t("overview.staleUsageDetail")}{" "}
-                  <Link to="/overview?view=usage">{t("overview.refreshUsage")}</Link>
-                </Notice>
-              ) : null}
-              {data.items.length === 0 ? <p className="muted">{t("overview.noUsage")}</p> : null}
             </>
           );
         }}
@@ -226,11 +215,7 @@ function RecentCalls() {
   return (
     <Section
       title={t("overview.recentRequests")}
-      actions={
-        <Link to="/requests">
-          {t("overview.allCalls")} →
-        </Link>
-      }
+      actions={<Link to="/requests">{t("overview.allCalls")} →</Link>}
     >
       <div className="activity-filters" role="group" aria-label={t("overview.recentRequests")}>
         <Button

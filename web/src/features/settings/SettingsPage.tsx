@@ -77,7 +77,7 @@ export function SettingsPage() {
   const view = params.get("view") ?? "general";
   return (
     <>
-      <PageHeader title={t("settings.title")} description={t("settings.description")} />
+      <PageHeader title={t("settings.title")} />
       <SectionNav
         label={t("settings.title")}
         items={[
@@ -125,10 +125,7 @@ function SettingsContent({ health }: { health: boolean }) {
                 <BuildDiagnostics settings={data} />
                 <ReadinessList readiness={data.readiness} />
               </Section>
-              <Section
-                title={t("settings.protected")}
-                description={t("settings.protectedDescription")}
-              >
+              <Section title={t("settings.protected")} help={t("settings.protectedDescription")}>
                 {data.protected_fields.length === 0 ? (
                   <p className="muted">—</p>
                 ) : (
@@ -333,10 +330,7 @@ function LimitsForm({ settings }: { settings: Settings }) {
   };
 
   return (
-    <Section
-      title={t("settings.limitsTitle")}
-      description={t("settings.limitsDescription", { version: settings.version })}
-    >
+    <Section title={t("settings.limitsTitle")}>
       <PermissionHint permission="admin:settings:write" />
       <form
         className="form settings-form"

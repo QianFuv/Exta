@@ -87,9 +87,7 @@ export function RoutingPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   return (
     <>
-      {embedded ? null : (
-        <PageHeader title={t("routing.title")} description={t("routing.description")} />
-      )}
+      {embedded ? null : <PageHeader title={t("routing.title")} help={t("routing.description")} />}
       <RequirePermission permission="admin:read">
         <RoutePolicies />
       </RequirePermission>

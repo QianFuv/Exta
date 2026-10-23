@@ -3,7 +3,7 @@ import { KeyStatus } from "./KeyStatus";
 import { useState } from "react";
 import { Button, Input, Select, ActionMenu } from "../../components/Controls";
 import { DataTable } from "../../components/DataTable";
-import { EmptyState, InlineError, QueryView, Notice } from "../../components/Feedback";
+import { EmptyState, InlineError, QueryView } from "../../components/Feedback";
 import { PageHeader, PermissionHint, RequirePermission, Section } from "../../components/Page";
 import { LoadMore } from "../../components/LoadMore";
 import { useUnitFormatter } from "../../components/Values";
@@ -32,7 +32,7 @@ export function KeysPage() {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("keys.upstream")} description={t("keys.description")} />
+      <PageHeader title={t("keys.upstream")} help={t("keys.identityNotice")} />
       <RequirePermission permission="admin:read">
         <KeyInventory />
       </RequirePermission>
@@ -103,7 +103,6 @@ function KeyInventory() {
           {t("common.refresh")}
         </Button>
       </div>
-      <Notice tone="info">{t("keys.identityNotice")}</Notice>
       <QueryView query={query}>
         {() =>
           visible.length === 0 ? (

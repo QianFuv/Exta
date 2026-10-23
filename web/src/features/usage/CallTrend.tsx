@@ -22,7 +22,7 @@ export function CallTrend() {
   return (
     <Section
       title={t("trends.title")}
-      description={t("trends.coverage")}
+      help={t("trends.coverage")}
       actions={
         <>
           <Select

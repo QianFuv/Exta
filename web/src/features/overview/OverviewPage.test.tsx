@@ -31,7 +31,7 @@ describe("overview", () => {
     expect(screen.getAllByRole("link", { name: /View all calls/ })).toHaveLength(1);
   });
 
-  it("shows locked secret store, missing keys and stale usage", async () => {
+  it("shows locked secret store and missing keys without unrelated usage banners", async () => {
     mockDb.state.settings = {
       ...mockDb.state.settings,
       readiness: mockReadiness({ ready: false, secret_store: "locked" }),
@@ -41,7 +41,7 @@ describe("overview", () => {
     expect(await screen.findByText("Secret store locked")).toBeInTheDocument();
     expect(screen.getByText("Not ready").closest(".semi-tag")).toHaveClass("status-danger");
     expect(await screen.findByText("No provider keys configured")).toBeInTheDocument();
-    expect(await screen.findByText(/usage rows are stale/)).toBeInTheDocument();
+    expect(screen.queryByText(/usage rows are stale/)).toBeNull();
     expect(screen.getByText("Uncertain research")).toBeInTheDocument();
   });
 

@@ -109,9 +109,11 @@ describe("key pools", () => {
   it("shows key-owned limits and unknown identity without an account workflow", async () => {
     renderApp("/keys");
     expect(await screen.findByText("Exa primary")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Manage Exa and Tavily keys, enablement and safety limits directly/),
-    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "About Upstream provider keys" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Unknown shared balances are never added together",
+    );
+    await userEvent.keyboard("{Escape}");
     expect(screen.queryByText(/billing account/i)).toBeNull();
     expect(screen.getAllByText("Not independently verified")).toHaveLength(4);
     expect(screen.queryByRole("button", { name: "Add account" })).toBeNull();
