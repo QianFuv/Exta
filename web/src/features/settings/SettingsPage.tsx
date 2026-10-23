@@ -121,7 +121,7 @@ function SettingsContent({ health }: { health: boolean }) {
         <>
           {health ? (
             <div className="settings-health">
-              <Section title={t("settings.diagnostics")}>
+              <Section title={t("settings.diagnostics")} help={t("readiness.localOnly")}>
                 <BuildDiagnostics settings={data} />
                 <ReadinessList readiness={data.readiness} />
               </Section>

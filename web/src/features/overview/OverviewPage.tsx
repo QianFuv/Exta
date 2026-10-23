@@ -88,7 +88,7 @@ function ReadinessPanel() {
     queryFn: () => call(api.GET("/v1/admin/settings")),
   });
   return (
-    <Section title={t("overview.readiness")}>
+    <Section title={t("overview.readiness")} help={t("readiness.localOnly")}>
       <QueryView query={settings}>
         {(data) => <ReadinessList readiness={data.readiness} />}
       </QueryView>

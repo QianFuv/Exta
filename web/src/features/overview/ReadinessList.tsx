@@ -65,7 +65,6 @@ export function ReadinessList({ readiness }: { readiness: Schemas["Readiness"] }
           <ProviderReadiness key={provider.provider} provider={provider} />
         ))}
       </dl>
-      <p className="muted">{t("readiness.localOnly")}</p>
     </div>
   );
 }

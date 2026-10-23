@@ -147,7 +147,12 @@ export function KeySettingsDialog({
   });
 
   return (
-    <Dialog title={t("keys.editKey")} onClose={onClose} isBusy={save.isPending}>
+    <Dialog
+      title={t("keys.editKey")}
+      help={t("keys.noBudgetNoDispatch")}
+      onClose={onClose}
+      isBusy={save.isPending}
+    >
       <form
         className="form"
         onSubmit={(event) => {
@@ -375,6 +380,7 @@ export function KeyCreateDialog({
   return (
     <Dialog
       title={`${t("keys.addKey")} · ${t(`provider.${provider}`)}`}
+      help={t("keys.noBudgetNoDispatch")}
       onClose={onClose}
       isBusy={create.isPending}
     >
@@ -451,8 +457,7 @@ export function KeyCreateDialog({
         <p className="field-hint">
           {t("keys.quotaUnit", {
             unit: t(provider === "exa" ? "keys.unitMicroUsd" : "keys.unitCredits"),
-          })}{" "}
-          {t("keys.noBudgetNoDispatch")}
+          })}
         </p>
         <div className="field field-checkbox">
           <SwitchField

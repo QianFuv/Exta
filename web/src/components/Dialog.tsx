@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Modal from "@douyinfe/semi-ui/lib/es/modal";
 import SideSheet from "@douyinfe/semi-ui/lib/es/sideSheet";
 import { Button } from "./Controls";
+import { TitleHelp } from "./TitleHelp";
 import { useI18n } from "../lib/i18n";
 
 const FOCUSABLE =
@@ -42,6 +43,7 @@ function focusableControls(panel: HTMLElement | null) {
 export function Dialog({
   title,
   description,
+  help,
   onClose,
   isBusy = false,
   children,
@@ -50,6 +52,7 @@ export function Dialog({
 }: {
   title: string;
   description?: string;
+  help?: string;
   onClose: () => void;
   isBusy?: boolean;
   children: ReactNode;
@@ -89,7 +92,7 @@ export function Dialog({
     const controls = focusableControls(panel);
     (
       controls.find((element) => element.closest("[data-autofocus]")) ??
-      controls[0] ??
+      controls.find((element) => !element.closest(".title-help-host")) ??
       panel
     ).focus();
     /** Let an open nested popup consume Escape before dismissing its owner. */
@@ -131,7 +134,10 @@ export function Dialog({
   const content = (
     <div ref={contentRef} aria-busy={isBusy}>
       <header className="dialog-header">
-        <h2 id={titleId}>{title}</h2>
+        <div className="heading-with-help">
+          <h2 id={titleId}>{title}</h2>
+          {help ? <TitleHelp title={title}>{help}</TitleHelp> : null}
+        </div>
         <Button
           className="button button-ghost button-icon"
           onClick={() => {

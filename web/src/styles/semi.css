@@ -585,3 +585,8 @@ html body[theme-mode="dark"] {
   font-size: 13px;
   line-height: 1.6;
 }
+
+.title-help-host {
+  display: inline-flex;
+  flex: 0 0 auto;
+}

@@ -380,7 +380,7 @@ function RouteEditDialog({
   return (
     <Dialog
       title={t("routing.editTitle", { capability: policy.capability })}
-      description={t("routing.editDescription", { revision: policy.revision })}
+      help={`${t("routing.editDescription", { revision: policy.revision })} ${t("routing.noDowngrade")}`}
       onClose={onClose}
       isBusy={save.isPending}
       size="large"
@@ -497,7 +497,6 @@ function RouteEditDialog({
               </Button>
             </div>
           ) : null}
-          <p className="field-hint">{t("routing.noDowngrade")}</p>
         </fieldset>
         <div className="field-row">
           <div className="field">

@@ -1,5 +1,5 @@
 /** Optional explanations remain available to pointer, keyboard and touch users. */
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderApp } from "../test/renderApp";
@@ -9,6 +9,27 @@ beforeAll(async () => {
 });
 
 describe("heading help", () => {
+  it("keeps route explanations inside dialog help and dismisses help before the dialog", async () => {
+    renderApp("/settings?view=routing");
+    const operation = await screen.findByText("advanced_search", {
+      selector: "td .operation-name",
+    });
+    await userEvent.click(within(operation.closest("tr")!).getByRole("button", { name: "Edit" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.querySelector(".dialog-description")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    const help = within(dialog).getByRole("button", { name: /About Edit route/ });
+    help.focus();
+    const tooltip = await screen.findByRole("tooltip");
+    expect(dialog).toContainElement(tooltip);
+    expect(tooltip).toHaveTextContent(/revision/i);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
+    expect(dialog).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("opens on focus, hover or click and dismisses without moving focus", async () => {
     renderApp("/access-keys");
     const help = await screen.findByRole("button", { name: "About Service access keys" });

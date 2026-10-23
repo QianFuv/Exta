@@ -10,6 +10,7 @@ export function TitleHelp({ title, children }: { title: string; children: string
   const { t } = useI18n();
   const [isOpen, setOpen] = useState(false);
   const hasFocus = useRef(false);
+  const host = useRef<HTMLSpanElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(closeTimer.current), []);
   /** Cancel delayed pointer dismissal when focus or the popup keeps help in use. */
@@ -30,45 +31,50 @@ export function TitleHelp({ title, children }: { title: string; children: string
     setOpen(false);
   }
   return (
-    <Tooltip
-      trigger="custom"
-      content={
-        <span onMouseEnter={open} onMouseLeave={leave}>
-          {children}
-        </span>
-      }
-      visible={isOpen}
-      onClickOutSide={close}
-      motion={false}
-      position="bottomLeft"
-      guardFocus={false}
-      closeOnEsc
-      onEscKeyDown={close}
-      className="title-help-content"
-    >
-      <Button
-        className="title-help"
-        theme="borderless"
-        type="tertiary"
-        size="small"
-        icon={<IconHelpCircle aria-hidden />}
-        aria-label={t("common.helpFor", { title })}
-        aria-expanded={isOpen}
-        onClick={open}
-        onMouseEnter={open}
-        onMouseLeave={leave}
-        onFocus={() => {
-          hasFocus.current = true;
-          open();
-        }}
-        onBlur={() => {
-          hasFocus.current = false;
-          leave();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") close();
-        }}
-      />
-    </Tooltip>
+    <span ref={host} className="title-help-host" data-exta-popup-open={isOpen}>
+      <Tooltip
+        getPopupContainer={() =>
+          host.current?.closest<HTMLElement>('[role="dialog"]') ?? document.body
+        }
+        trigger="custom"
+        content={
+          <span onMouseEnter={open} onMouseLeave={leave}>
+            {children}
+          </span>
+        }
+        visible={isOpen}
+        onClickOutSide={close}
+        motion={false}
+        position="bottomLeft"
+        guardFocus={false}
+        closeOnEsc
+        onEscKeyDown={close}
+        className="title-help-content"
+      >
+        <Button
+          className="title-help"
+          theme="borderless"
+          type="tertiary"
+          size="small"
+          icon={<IconHelpCircle aria-hidden />}
+          aria-label={t("common.helpFor", { title })}
+          aria-expanded={isOpen}
+          onClick={open}
+          onMouseEnter={open}
+          onMouseLeave={leave}
+          onFocus={() => {
+            hasFocus.current = true;
+            open();
+          }}
+          onBlur={() => {
+            hasFocus.current = false;
+            close();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") close();
+          }}
+        />
+      </Tooltip>
+    </span>
   );
 }
