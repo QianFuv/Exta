@@ -213,3 +213,5 @@ retained-resource accounting, admin authentication flows, all eight real UI page
 five-target packaging and native-platform release evidence remain later tasks.
 
 Local key policy inputs accept missing/null numeric limits and normalize them to zero. Zero allocation or active-job ceiling means no local cap; zero per-operation reservation uses the operation estimate. An omitted PATCH policy preserves it, while an explicit null resets local controls. Upstream balance remains independently unknown.
+
+The session `credential` wire field carries the persistent administrator password. Legacy generated administrator credentials remain reusable without automatic reset or rehash. New initialization reads a password from stdin and emits no secret.

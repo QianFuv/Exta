@@ -23,10 +23,10 @@ export EXTA_IMAGE=exta:local
 export EXTA_UID="$(id -u)"
 export EXTA_GID="$(id -g)"
 mkdir -m 700 exta-data
-docker compose run --rm --no-deps exta init --data-dir /var/lib/exta/state
+docker compose run --rm -T --no-deps exta init --password-stdin --data-dir /var/lib/exta/state < /private/path/admin-password.txt
 ```
 
-Save the one-time operator credential privately. Initialization does not contact providers. The bind mount retains the SQLite database/WAL, master key, configuration and idempotency/recovery evidence across container replacement. Back up the database and separately protect its master-key recovery output using the [operational commands](operations.md); copying a live SQLite main file is not a backup.
+Supply your own 16–512-character administrator password from a private file or secret manager. Do not type it in command arguments or commit it. Initialization prints no password. The same password can be used repeatedly; existing administrator credentials remain valid without reset. Initialization does not contact providers. The bind mount retains the SQLite database/WAL, master key, configuration and idempotency/recovery evidence across container replacement. Back up the database and separately protect its master-key recovery output using the [operational commands](operations.md); copying a live SQLite main file is not a backup.
 
 ## HTTP behind NPM and Cloudflare
 

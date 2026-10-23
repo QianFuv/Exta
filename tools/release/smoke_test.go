@@ -56,6 +56,7 @@ func TestPackagedRuntime(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 		defer cancel()
 		process := exec.CommandContext(ctx, binary, args...)
+		process.Stdin = strings.NewReader("synthetic-packaged-administrator-password\n")
 		process.Dir = root
 		process.Env = environment
 		hideProcess(process)
@@ -82,7 +83,7 @@ func TestPackagedRuntime(t *testing.T) {
 		t.Fatalf("native build identity: %+v %v", build, err)
 	}
 	directory := filepath.Join(root, "state")
-	if _, err = invoke("init", "--data-dir", directory); err != nil {
+	if _, err = invoke("init", "--password-stdin", "--data-dir", directory); err != nil {
 		t.Fatal("native init failed", err)
 	}
 	for _, path := range []string{directory, filepath.Join(directory, "master.key"), filepath.Join(directory, "exta.sqlite")} {
@@ -90,7 +91,7 @@ func TestPackagedRuntime(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	expectRefusal("init requires a new or empty data directory", "init", "--data-dir", directory)
+	expectRefusal("init requires a new or empty data directory", "init", "--password-stdin", "--data-dir", directory)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)

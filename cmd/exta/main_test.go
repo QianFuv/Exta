@@ -36,7 +36,7 @@ func TestInitCreatesPrivateParentsAndAcceptsPrivateEmptyLeaf(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if err := initialize(t.Context(), directory+string(os.PathSeparator), new(bytes.Buffer)); err != nil {
+		if err := initialize(t.Context(), directory+string(os.PathSeparator), "synthetic-administrator-password", new(bytes.Buffer)); err != nil {
 			t.Fatal(err)
 		}
 		for _, path := range []string{parent, directory, filepath.Join(directory, "master.key"), filepath.Join(directory, "config.json")} {
@@ -46,7 +46,7 @@ func TestInitCreatesPrivateParentsAndAcceptsPrivateEmptyLeaf(t *testing.T) {
 		}
 	}
 	root := t.TempDir()
-	if err := initialize(t.Context(), root+string(os.PathSeparator)+"missing/../state", new(bytes.Buffer)); err == nil {
+	if err := initialize(t.Context(), root+string(os.PathSeparator)+"missing/../state", "synthetic-administrator-password", new(bytes.Buffer)); err == nil {
 		t.Fatal("accepted raw parent traversal")
 	}
 	entries, err := os.ReadDir(root)
@@ -58,12 +58,12 @@ func TestInitCreatesPrivateParentsAndAcceptsPrivateEmptyLeaf(t *testing.T) {
 func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
-	if err := run(t.Context(), []string{"init", "--data-dir", directory}, &output, &output); err != nil {
+	if err := runWithInput(t.Context(), []string{"init", "--password-stdin", "--data-dir", directory}, strings.NewReader("synthetic-administrator-password"), &output, &output); err != nil {
 		t.Fatal(err)
 	}
-	credential := strings.TrimSpace(strings.Split(output.String(), "\n")[1])
+	credential := "synthetic-administrator-password"
 	output.Reset()
-	if err := run(t.Context(), []string{"init", "--data-dir", directory}, &output, &output); err == nil {
+	if err := runWithInput(t.Context(), []string{"init", "--password-stdin", "--data-dir", directory}, strings.NewReader("synthetic-administrator-password"), &output, &output); err == nil {
 		t.Fatal("second init overwrote state")
 	}
 	state, auth, configuration, lock, err := openRuntime(t.Context(), directory)
@@ -134,7 +134,7 @@ func TestSyntheticRuntimeInitializationAndSafeStartup(t *testing.T) {
 func TestWrongMasterKeyLeavesReadOnlyMetadataAvailable(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
-	if err := initialize(t.Context(), directory, &output); err != nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", &output); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(directory, "master.key"), bytes.Repeat([]byte{42}, 32), 0600); err != nil {
@@ -206,10 +206,10 @@ func TestServeRejectsEmptyAndIncompleteBootstrap(t *testing.T) {
 func TestEightCharacterCredentialCreationAndRotation(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
-	if err := initialize(t.Context(), directory, &output); err != nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", &output); err != nil {
 		t.Fatal(err)
 	}
-	credential := strings.TrimSpace(strings.Split(output.String(), "\n")[1])
+	credential := "synthetic-administrator-password"
 	state, auth, configuration, lock, err := openRuntime(t.Context(), directory)
 	if err != nil {
 		t.Fatal(err)

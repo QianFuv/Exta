@@ -20,7 +20,7 @@ func TestMain(tests *testing.M) {
 
 func TestLiveRuntimeFilesRemainUserOwned(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state")
-	if err := initialize(t.Context(), directory, new(bytes.Buffer)); err != nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", new(bytes.Buffer)); err != nil {
 		t.Fatal(err)
 	}
 	state, _, _, lock, err := openRuntime(t.Context(), directory)

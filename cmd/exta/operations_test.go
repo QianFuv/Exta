@@ -23,7 +23,7 @@ func operationFixture(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()
 	directory := filepath.Join(root, "runtime")
-	if err := initialize(t.Context(), directory, new(bytes.Buffer)); err != nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", new(bytes.Buffer)); err != nil {
 		t.Fatal(err)
 	}
 	return directory, filepath.Join(root, "backup ' 测试")
@@ -97,7 +97,7 @@ func TestRestoreFailsClosedOnActivityIdentityAndCorruption(t *testing.T) {
 				}
 			case "lineage":
 				other := filepath.Join(filepath.Dir(directory), "other")
-				if err := initialize(t.Context(), other, new(bytes.Buffer)); err != nil {
+				if err := initialize(t.Context(), other, "synthetic-administrator-password", new(bytes.Buffer)); err != nil {
 					t.Fatal(err)
 				}
 				key, _ := os.ReadFile(filepath.Join(directory, "master.key"))

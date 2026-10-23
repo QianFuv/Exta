@@ -18,9 +18,9 @@ docker network create "$network" >/dev/null
 gateway="$(docker network inspect --format '{{(index .IPAM.Config 0).Gateway}}' "$network")"
 identity="$(id -u):$(id -g)"
 mkdir -m 700 "$temporary/data"
-docker run --rm --network none --user "$identity" \
+printf '%s\n' 'synthetic-container-administrator-password' | docker run -i --rm --network none --user "$identity" \
   --mount "type=bind,src=$temporary/data,dst=/var/lib/exta" \
-  "$image" init --data-dir /var/lib/exta/state > "$temporary/bootstrap"
+  "$image" init --password-stdin --data-dir /var/lib/exta/state > "$temporary/bootstrap"
 printf '{"listen":"0.0.0.0:8789","origin":"https://exta.example.test","trusted_proxy":{"ips":["%s"]}}\n' \
   "$gateway" > "$temporary/data/state/config.json"
 docker run -d --name "$container" --network "$network" --user "$identity" \

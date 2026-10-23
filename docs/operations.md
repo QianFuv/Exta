@@ -20,3 +20,9 @@ File hashes detect corruption, not an attacker who can rewrite both payload and 
 Retention performs at most 100 changes per category per transaction, with a five-second cancellation bound and a one-minute interval. It records cleanup counts. Expired sessions, resolved request/attempt metadata, resolved research content, old audit/events and expired resolved idempotency bindings are eligible. Latest upstream observations and latest known amounts remain available. Unresolved research evidence and frozen replay context are preserved. Financial ledger entries, settlement deduplication, reservations, credential versions and upstream job identities are retained; cleanup never replenishes spent budget. Encrypted content removal does not securely erase old storage blocks or external backups.
 
 Production builds embed the management UI and support Windows/Linux x64. Browser and native platform acceptance are recorded separately against each executable hash; build success alone does not establish them. Live paid-provider validation is not performed. Current schema-1 no-op migration tests do not establish a real schema-upgrade interruption result.
+
+## Administrator password
+
+Initialize new state with `exta init --password-stdin --data-dir <new-private-directory>`, piping one UTF-8 password of 16–512 characters from protected input. A terminal newline is optional; spaces are significant. Direct terminal stdin does not hide typing. Initialization never prints the password.
+
+The password is persistent; logging in or out does not consume it. New state stores a salted PBKDF2-HMAC-SHA256 verifier (600,000 iterations). Existing random administrator credentials and their stored verifiers remain unchanged and reusable. An older binary cannot authenticate a newly initialized password verifier. No automatic reset, conversion or production credential change occurs. Client API/MCP access keys remain separate; the encryption master key is not a login password.

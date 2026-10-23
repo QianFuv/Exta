@@ -31,9 +31,9 @@ docker run --rm --network none "$image" version > "$evidence/version.json"
 
 mkdir -m 700 "$temporary/data"
 identity="$(id -u):$(id -g)"
-docker run --rm --network none --user "$identity" \
+printf '%s\n' 'synthetic-container-administrator-password' | docker run -i --rm --network none --user "$identity" \
   --mount "type=bind,src=$temporary/data,dst=/var/lib/exta" \
-  "$image" init --data-dir /var/lib/exta/state > "$temporary/bootstrap"
+  "$image" init --password-stdin --data-dir /var/lib/exta/state > "$temporary/bootstrap"
 test "$(stat -c '%a' "$temporary/data/state/master.key")" = 600
 mkdir -m 700 "$temporary/data/tls"
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \

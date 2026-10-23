@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"exta/internal/domain"
@@ -17,10 +16,10 @@ import (
 func TestManagementProviderFiltersBeforePagination(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
-	if err := initialize(t.Context(), directory, &output); err != nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", &output); err != nil {
 		t.Fatal(err)
 	}
-	credential := strings.TrimSpace(strings.Split(output.String(), "\n")[1])
+	credential := "synthetic-administrator-password"
 	state, auth, configuration, lock, err := openRuntime(t.Context(), directory)
 	if err != nil {
 		t.Fatal(err)

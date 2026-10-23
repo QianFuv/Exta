@@ -31,13 +31,17 @@ func RandomToken() string {
 	return base64.RawURLEncoding.EncodeToString(value)
 }
 
-// BootstrapAdmin accepts an explicit operator/test credential; serve never calls it.
+// BootstrapAdmin creates the single administrator from an explicit persistent password.
 func (state *Store) BootstrapAdmin(ctx context.Context, credential string) (string, error) {
-	if len(credential) < 16 {
-		return "", Reject("invalid_request", 400, "Bootstrap credential is too short")
+	if !ValidPassword(credential) {
+		return "", Reject("invalid_request", 400, "Password must contain 16 to 512 characters on one line")
+	}
+	verifier, err := hashPassword(credential)
+	if err != nil {
+		return "", err
 	}
 	principal := ID("principal")
-	err := state.Write(ctx, func(tx *sql.Tx) error {
+	err = state.Write(ctx, func(tx *sql.Tx) error {
 		var count int
 		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM principals").Scan(&count); err != nil {
 			return err
@@ -45,7 +49,7 @@ func (state *Store) BootstrapAdmin(ctx context.Context, credential string) (stri
 		if count != 0 {
 			return Reject("revision_conflict", 409, "Administrator already initialized")
 		}
-		_, err := tx.ExecContext(ctx, "INSERT INTO principals VALUES(?,?,?,?)", principal, Digest([]byte(credential)), JSON(AdminPermissions), Stamp(state.Now()))
+		_, err := tx.ExecContext(ctx, "INSERT INTO principals VALUES(?,?,?,?)", principal, verifier, JSON(AdminPermissions), Stamp(state.Now()))
 		return err
 	})
 	return principal, err
@@ -54,51 +58,59 @@ func (state *Store) BootstrapAdmin(ctx context.Context, credential string) (stri
 // Login rate-limits credential checks and issues a new session without changing ownership.
 func (state *Store) Login(ctx context.Context, credential, address string) (domain.Session, string, error) {
 	var result domain.Session
-	token := RandomToken()
+	var principal, verifier string
+	var attempts int
 	err := state.Write(ctx, func(tx *sql.Tx) error {
-		now := state.Now()
-		window := now.UnixMilli() / 60000 * 60000
+		window := state.Now().UnixMilli() / 60000 * 60000
 		if _, err := tx.ExecContext(ctx, `INSERT INTO login_limits VALUES(?,?,1) ON CONFLICT(address) DO UPDATE SET attempts=CASE WHEN window_ms=excluded.window_ms THEN attempts+1 ELSE 1 END,window_ms=excluded.window_ms`, Digest([]byte(address)), window); err != nil {
 			return err
 		}
-		var attempts int
 		if err := tx.QueryRowContext(ctx, "SELECT attempts FROM login_limits WHERE address=?", Digest([]byte(address))).Scan(&attempts); err != nil {
 			return err
 		}
 		if attempts > 10 {
 			return nil
 		}
-		var principal, permissions string
-		err := tx.QueryRowContext(ctx, "SELECT id,permissions FROM principals WHERE credential_hash=?", Digest([]byte(credential))).Scan(&principal, &permissions)
-		if errors.Is(err, sql.ErrNoRows) {
+		var count int
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM principals").Scan(&count); err != nil {
+			return err
+		}
+		if count != 1 {
 			return nil
 		}
-		if err != nil {
-			return err
-		}
-		if err = json.Unmarshal([]byte(permissions), &result.Permissions); err != nil {
-			return err
-		}
-		result.PrincipalId = principal
-		result.CsrfToken = RandomToken()
-		result.ExpiresAt = Stamp(now.Add(8 * time.Hour))
-		_, err = tx.ExecContext(ctx, "INSERT INTO admin_sessions VALUES(?,?,?,?)", Digest([]byte(token)), principal, result.CsrfToken, result.ExpiresAt)
-		return err
+		return tx.QueryRowContext(ctx, "SELECT id,credential_hash FROM principals").Scan(&principal, &verifier)
 	})
 	if err != nil {
 		return result, "", err
 	}
-	if result.PrincipalId == "" {
-		var attempts int
-		if err = state.DB.QueryRowContext(ctx, "SELECT attempts FROM login_limits WHERE address=?", Digest([]byte(address))).Scan(&attempts); err != nil {
-			return result, "", err
+	if attempts > 10 {
+		fault := Reject("local_rate_limited", 429, "Too many login attempts")
+		fault.RetryAfterMs = 60000
+		return result, "", fault
+	}
+	if principal == "" || !verifyPassword(credential, verifier) {
+		return result, "", Reject("invalid_token", 401, "Invalid administrator password")
+	}
+	token := RandomToken()
+	err = state.Write(ctx, func(tx *sql.Tx) error {
+		var permissions string
+		if err := tx.QueryRowContext(ctx, "SELECT permissions FROM principals WHERE id=? AND credential_hash=?", principal, verifier).Scan(&permissions); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return Reject("invalid_token", 401, "Administrator password changed")
+			}
+			return err
 		}
-		if attempts > 10 {
-			fault := Reject("local_rate_limited", 429, "Too many login attempts")
-			fault.RetryAfterMs = 60000
-			return result, "", fault
+		if err := json.Unmarshal([]byte(permissions), &result.Permissions); err != nil {
+			return err
 		}
-		return result, "", Reject("invalid_token", 401, "Invalid operator credential")
+		result.PrincipalId = principal
+		result.CsrfToken = RandomToken()
+		result.ExpiresAt = Stamp(state.Now().Add(8 * time.Hour))
+		_, err := tx.ExecContext(ctx, "INSERT INTO admin_sessions VALUES(?,?,?,?)", Digest([]byte(token)), principal, result.CsrfToken, result.ExpiresAt)
+		return err
+	})
+	if err != nil {
+		return domain.Session{}, "", err
 	}
 	return result, token, nil
 }

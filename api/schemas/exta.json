@@ -3531,7 +3531,7 @@
     },
     "SessionCreate": {
       "additionalProperties": false,
-      "description": "Login needs an exact allowed Origin and a local operator credential; no pre-session CSRF token exists. Rate-limited. A wrong credential returns 401 invalid_token; a missing or expired existing session returns 401 authentication_required.",
+      "description": "Login needs an exact allowed Origin and the persistent administrator password; no pre-session CSRF token exists. Rate-limited. A wrong credential returns 401 invalid_token; a missing or expired existing session returns 401 authentication_required.",
       "properties": {
         "credential": {
           "maxLength": 512,
@@ -4088,5 +4088,5 @@
   },
   "$id": "https://exta.invalid/contract",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-contract-sha256": "fa6a05aa04fb9777c597808445ac0425d3843fcbdc76074866e7a737a2616280"
+  "x-contract-sha256": "ffe9129cc3435499dea1750e1d96a1c3651cc30d75d739428c282c6e2aecf53d"
 }

@@ -45,7 +45,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := run(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
+	if err := runWithInput(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -70,6 +70,10 @@ func defaultDirectory() string {
 }
 
 func run(ctx context.Context, args []string, output, diagnostics io.Writer) error {
+	return runWithInput(ctx, args, nil, output, diagnostics)
+}
+
+func runWithInput(ctx context.Context, args []string, input io.Reader, output, diagnostics io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("usage: exta <version|init|serve|doctor|backup|restore|migrate> [--data-dir path]")
 	}
@@ -79,6 +83,7 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 	flags := flag.NewFlagSet("exta "+args[0], flag.ContinueOnError)
 	flags.SetOutput(diagnostics)
 	directory := flags.String("data-dir", defaultDirectory(), "Absolute external state directory")
+	passwordStdin := flags.Bool("password-stdin", false, "Read the administrator password from standard input")
 	maintenance := flags.Bool("maintenance", false, "Serve local inspection without provider dispatch")
 	backupOutput := flags.String("output", "", "New backup directory")
 	keyOutput := flags.String("key-output", "", "Separate new key-recovery directory (default: backup directory plus .key-recovery)")
@@ -92,7 +97,14 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 	}
 	switch args[0] {
 	case "init":
-		return initialize(ctx, *directory, output)
+		if !*passwordStdin || input == nil {
+			return errors.New("init requires --password-stdin")
+		}
+		password, err := readPassword(input)
+		if err != nil {
+			return err
+		}
+		return initialize(ctx, *directory, password, output)
 	case "serve":
 		return serveMode(ctx, *directory, diagnostics, *maintenance)
 	case "doctor":
@@ -108,7 +120,10 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 	}
 }
 
-func initialize(ctx context.Context, directory string, output io.Writer) error {
+func initialize(ctx context.Context, directory, password string, output io.Writer) error {
+	if !store.ValidPassword(password) {
+		return errors.New("password must contain 16 to 512 characters on one line")
+	}
 	if err := security.CheckNoLinks(directory); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -152,11 +167,10 @@ func initialize(ctx context.Context, directory string, output io.Writer) error {
 		return errors.New("cannot initialize database; partial files were preserved")
 	}
 	defer state.Close()
-	credential := store.RandomToken()
-	if _, err = state.BootstrapAdmin(ctx, credential); err != nil {
-		return errors.New("cannot initialize operator")
+	if _, err = state.BootstrapAdmin(ctx, password); err != nil {
+		return errors.New("cannot initialize administrator")
 	}
-	_, err = fmt.Fprintln(output, "Exta initialized. Save this one-time operator credential securely:\n"+credential)
+	_, err = fmt.Fprintln(output, "Exta initialized. Sign in with your administrator password.")
 	return err
 }
 

@@ -1,5 +1,5 @@
 import { Button, Input } from "../../components/Controls";
-/** Operator credential exchange for an HttpOnly admin session. */
+/** Administrator password exchange for an HttpOnly admin session. */
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";

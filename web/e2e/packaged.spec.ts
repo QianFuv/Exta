@@ -58,12 +58,13 @@ test("standalone key-only administration and persistent appearance", async ({
   const root = path.resolve(import.meta.dirname, "../..");
   const directory = mkdtempSync(path.join(tmpdir(), "exta-browser-"));
   const state = path.join(directory, "state");
-  const initialized = execFileSync(binary, ["init", "--data-dir", state], {
+  const credential = "synthetic-browser-administrator-password";
+  execFileSync(binary, ["init", "--password-stdin", "--data-dir", state], {
+    input: credential + "\n",
     encoding: "utf8",
     windowsHide: true,
     timeout: 20_000,
   });
-  const credential = initialized.trim().split(/\r?\n/).at(-1)!;
   const environment = { ...process.env, EXTA_BROWSER_STATE: state };
   const go = process.env.EXTA_GO_BINARY ?? "go";
   execFileSync(go, ["test", "./tools/release", "-run", "^TestBrowserFixture$", "-count=1"], {
@@ -129,7 +130,7 @@ test("standalone key-only administration and persistent appearance", async ({
     await page.goto(`${origin}/app/`);
     await page.getByRole("button", { name: /English/ }).click();
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
-    await page.getByLabel("Operator credential").fill(credential);
+    await page.getByLabel("Administrator password").fill(credential);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
     const cookies = await context.cookies();

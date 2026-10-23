@@ -1,4 +1,4 @@
-/** Generated from api/openapi.yaml; SHA256 fa6a05aa04fb9777c597808445ac0425d3843fcbdc76074866e7a737a2616280. Do not edit. */
+/** Generated from api/openapi.yaml; SHA256 ffe9129cc3435499dea1750e1d96a1c3651cc30d75d739428c282c6e2aecf53d. Do not edit. */
 import createClient from "openapi-fetch";
 import type { ClientOptions } from "openapi-fetch";
 import type { paths } from "./types.gen";
@@ -11,4 +11,4 @@ export function createApiClient(options: Pick<ClientOptions, "baseUrl" | "fetch"
   return createClient<paths>({ baseUrl: "", ...options, credentials: "same-origin" });
 }
 
-export const CONTRACT_SHA256 = "fa6a05aa04fb9777c597808445ac0425d3843fcbdc76074866e7a737a2616280";
+export const CONTRACT_SHA256 = "ffe9129cc3435499dea1750e1d96a1c3651cc30d75d739428c282c6e2aecf53d";

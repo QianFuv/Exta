@@ -5716,7 +5716,7 @@
         "required": [
           "credential"
         ],
-        "description": "Login needs an exact allowed Origin and a local operator credential; no pre-session CSRF token exists. Rate-limited. A wrong credential returns 401 invalid_token; a missing or expired existing session returns 401 authentication_required."
+        "description": "Login needs an exact allowed Origin and the persistent administrator password; no pre-session CSRF token exists. Rate-limited. A wrong credential returns 401 invalid_token; a missing or expired existing session returns 401 authentication_required."
       },
       "Session": {
         "type": "object",

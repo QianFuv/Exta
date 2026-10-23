@@ -12,7 +12,7 @@ import (
 func TestServeRejectsWorldReadableMasterKey(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
-	if err := initialize(t.Context(), directory, &output); err != nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", &output); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(filepath.Join(directory, "master.key"), 0644); err != nil {
@@ -31,7 +31,7 @@ func TestInitRejectsExistingInsecureDirectory(t *testing.T) {
 	if err := os.Chmod(directory, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := initialize(t.Context(), directory, new(bytes.Buffer)); err == nil {
+	if err := initialize(t.Context(), directory, "synthetic-administrator-password", new(bytes.Buffer)); err == nil {
 		t.Fatal("insecure existing object rehabilitated in place")
 	}
 	entries, err := os.ReadDir(directory)

@@ -12,7 +12,7 @@ describe("admin session", () => {
   it("signs in without persisting the credential or CSRF token", async () => {
     mockDb.state.session = null;
     const { router, queryClient } = renderApp("/requests");
-    const field = await screen.findByLabelText("Operator credential");
+    const field = await screen.findByLabelText("Administrator password");
     expect(router.state.location.pathname).toBe("/login");
 
     await userEvent.type(field, "wrong-credential-value");
@@ -84,6 +84,6 @@ describe("admin session", () => {
     renderApp("/overview");
     expect(await screen.findByText("Session status is unavailable")).toBeInTheDocument();
     expect(screen.getByText("Storage is unavailable.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Operator credential")).toBeNull();
+    expect(screen.queryByLabelText("Administrator password")).toBeNull();
   });
 });
