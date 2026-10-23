@@ -182,6 +182,7 @@ export function KeySettingsDialog({
                 {t("keys.allocation")}
               </label>
               <NumericControl
+                emptyIsZero
                 id={`${formId}-allocation`}
                 minimum={0}
                 maximum={Number.MAX_SAFE_INTEGER}
@@ -205,6 +206,7 @@ export function KeySettingsDialog({
                 {t("keys.perOperation")}
               </label>
               <NumericControl
+                emptyIsZero
                 id={`${formId}-per-op`}
                 minimum={0}
                 maximum={Number.MAX_SAFE_INTEGER}
@@ -228,6 +230,7 @@ export function KeySettingsDialog({
                 {t("keys.activeJobs")}
               </label>
               <NumericControl
+                emptyIsZero
                 id={`${formId}-active`}
                 minimum={0}
                 maximum={2}
@@ -403,6 +406,7 @@ export function KeyCreateDialog({
               {t("keys.allocation")}
             </label>
             <NumericControl
+              emptyIsZero
               id={`${formId}-allocation`}
               minimum={0}
               maximum={Number.MAX_SAFE_INTEGER}
@@ -425,6 +429,7 @@ export function KeyCreateDialog({
               {t("keys.perOperation")}
             </label>
             <NumericControl
+              emptyIsZero
               id={`${formId}-reservation`}
               minimum={0}
               maximum={Number.MAX_SAFE_INTEGER}

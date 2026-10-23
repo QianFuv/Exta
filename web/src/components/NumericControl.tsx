@@ -15,6 +15,7 @@ export function NumericControl({
   invalid = false,
   describedBy,
   zeroLabel,
+  emptyIsZero = false,
 }: {
   id: string;
   value: string;
@@ -26,6 +27,7 @@ export function NumericControl({
   invalid?: boolean;
   describedBy?: string;
   zeroLabel?: string;
+  emptyIsZero?: boolean;
 }) {
   const { formatNumber, locale } = useI18n();
   const stops = [
@@ -35,7 +37,7 @@ export function NumericControl({
   const number = Number(value);
   const isInvalid =
     invalid ||
-    value.trim() === "" ||
+    (value.trim() === "" && !emptyIsZero) ||
     !Number.isSafeInteger(number) ||
     number < minimum ||
     number > maximum;

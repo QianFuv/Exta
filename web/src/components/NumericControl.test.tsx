@@ -22,6 +22,7 @@ function NumericFixture() {
         maximum={Number.MAX_SAFE_INTEGER}
         presets={[0, 10, 100]}
         zeroLabel="No local cap"
+        emptyIsZero
       />
       <output data-testid="draft">{value}</output>
     </I18nProvider>
@@ -52,6 +53,7 @@ it("synchronizes marks, keyboard and exact values beyond the visible slider", as
   await userEvent.keyboard("{ArrowRight}");
   expect(screen.getByTestId("draft")).toHaveTextContent("11");
   await userEvent.clear(number);
+  expect(number).toHaveAttribute("aria-invalid", "false");
   await userEvent.type(number, "2500000");
   await userEvent.tab();
   expect(screen.getByTestId("draft")).toHaveTextContent("2500000");
