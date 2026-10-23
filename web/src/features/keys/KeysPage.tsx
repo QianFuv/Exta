@@ -257,24 +257,6 @@ function AccountCard({
             {t(`verificationState.${account.verification_state}`)}
           </Badge>
         </div>
-        <div className="button-row account-actions">
-          <button
-            type="button"
-            className="button button-small"
-            disabled={!canWriteAccounts}
-            onClick={() => onDialog({ kind: "account-edit", account })}
-          >
-            {t("keys.editAccount")}
-          </button>
-          <button
-            type="button"
-            className="button button-small"
-            disabled={!canWriteKeys}
-            onClick={() => onDialog({ kind: "key-create", accountId: account.id })}
-          >
-            {t("keys.addKey")}
-          </button>
-        </div>
       </header>
       {account.billing_state === "blocked" ? (
         <Notice tone="danger" title={t("keys.accountExhausted")}>
@@ -291,6 +273,27 @@ function AccountCard({
         <dt>{t("common.version")}</dt>
         <dd>{account.version}</dd>
       </dl>
+      <div className="account-toolbar">
+        <strong>{t("keys.keyCount", { count: keys.length })}</strong>
+        <div className="button-row account-actions">
+          <button
+            type="button"
+            className="button button-small"
+            disabled={!canWriteAccounts}
+            onClick={() => onDialog({ kind: "account-edit", account })}
+          >
+            {t("keys.editAccount")}
+          </button>
+          <button
+            type="button"
+            className="button button-primary"
+            disabled={!canWriteKeys}
+            onClick={() => onDialog({ kind: "key-create", accountId: account.id })}
+          >
+            {t("keys.addKey")}
+          </button>
+        </div>
+      </div>
       {keys.length === 0 ? (
         <p className="muted">{t("keys.noKeysInAccount")}</p>
       ) : (
@@ -363,6 +366,16 @@ function KeyRow({
   const { t } = useI18n();
   const patch = useKeyPatch(providerKey);
   const isRetired = providerKey.retirement_state !== "active";
+  /** Close the disclosure before opening a dialog so focus returns to its visible trigger. */
+  const openSecondaryAction = (button: HTMLButtonElement, kind: "key-rotate" | "key-retire") => {
+    const disclosure = button.closest("details");
+    if (disclosure) {
+      disclosure.open = false;
+      disclosure.querySelector("summary")?.focus();
+    }
+    onDialog({ kind, key: providerKey });
+  };
+
   return (
     <tr>
       <td>
@@ -406,7 +419,7 @@ function KeyRow({
       </td>
       <td>{t(`retirement.${providerKey.retirement_state}`)}</td>
       <td>
-        <div className="button-row tight">
+        <div className="key-actions">
           <button
             type="button"
             className="button button-small"
@@ -415,22 +428,37 @@ function KeyRow({
           >
             {providerKey.enabled ? t("keys.disable") : t("keys.enable")}
           </button>
-          <button
-            type="button"
-            className="button button-small"
-            disabled={!canWriteKeys || isRetired}
-            onClick={() => onDialog({ kind: "key-rotate", key: providerKey })}
+          <details
+            className="key-secondary-actions"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+              }
+            }}
           >
-            {t("keys.rotate")}
-          </button>
-          <button
-            type="button"
-            className="button button-small button-danger"
-            disabled={!canWriteKeys || isRetired}
-            onClick={() => onDialog({ kind: "key-retire", key: providerKey })}
-          >
-            {t("keys.retire")}
-          </button>
+            <summary aria-label={t("keys.moreFor", { label: providerKey.label })}>
+              {t("keys.more")}
+            </summary>
+            <div className="key-secondary-list">
+              <button
+                type="button"
+                className="button button-small"
+                disabled={!canWriteKeys || isRetired}
+                onClick={(event) => openSecondaryAction(event.currentTarget, "key-rotate")}
+              >
+                {t("keys.rotate")}
+              </button>
+              <button
+                type="button"
+                className="button button-small button-danger"
+                disabled={!canWriteKeys || isRetired}
+                onClick={(event) => openSecondaryAction(event.currentTarget, "key-retire")}
+              >
+                {t("keys.retire")}
+              </button>
+            </div>
+          </details>
         </div>
         {patch.isError ? <InlineError error={patch.error} /> : null}
       </td>

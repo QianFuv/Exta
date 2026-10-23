@@ -34,6 +34,28 @@ const LIMIT_FIELDS: ReadonlyArray<{ name: EditableLimit; minimum: number; maximu
   { name: "max_polls", minimum: 1, maximum: 120 },
 ];
 
+const LIMIT_GROUPS: ReadonlyArray<{ title: MessageKey; fields: EditableLimit[] }> = [
+  {
+    title: "settings.traffic",
+    fields: ["synchronous_concurrency", "synchronous_waiting", "principal_requests_per_minute"],
+  },
+  {
+    title: "settings.research",
+    fields: ["research_queued", "research_active", "observation_seconds", "max_polls"],
+  },
+  { title: "settings.payload", fields: ["request_bytes", "response_bytes"] },
+];
+
+/** Keep displayed units explicit without converting the API's integer values. */
+function fieldUnit(name: string): MessageKey {
+  if (name.endsWith("_bytes")) return "settings.unit.bytes";
+  if (name.endsWith("_days")) return "settings.unit.days";
+  if (name.endsWith("_seconds")) return "settings.unit.seconds";
+  if (name === "principal_requests_per_minute") return "settings.unit.perMinute";
+  if (name === "max_polls") return "settings.unit.polls";
+  return name.includes("research") ? "settings.unit.jobs" : "settings.unit.requests";
+}
+
 const RETENTION_FIELDS: ReadonlyArray<{
   name: EditableRetention;
   minimum: number;
@@ -264,15 +286,20 @@ function LimitsForm({ settings }: { settings: Settings }) {
     return (
       <div className="field" key={name}>
         <label htmlFor={`${formId}-${name}`}>{t(`settings.field.${name}` as MessageKey)}</label>
-        <input
-          id={`${formId}-${name}`}
-          inputMode="numeric"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          disabled={!canWrite || save.isPending}
-          aria-invalid={!isFieldValid}
-          aria-describedby={`${formId}-${name}-range`}
-        />
+        <div className="input-with-unit">
+          <input
+            id={`${formId}-${name}`}
+            inputMode="numeric"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            disabled={!canWrite || save.isPending}
+            aria-invalid={!isFieldValid}
+            aria-describedby={`${formId}-${name}-unit ${formId}-${name}-range`}
+          />
+          <span id={`${formId}-${name}-unit`} className="input-unit">
+            {t(fieldUnit(name))}
+          </span>
+        </div>
         <p id={`${formId}-${name}-range`} className={isFieldValid ? "field-hint" : "field-error"}>
           {isFieldValid
             ? `${formatNumber(minimum)}–${formatNumber(maximum)}`
@@ -289,7 +316,7 @@ function LimitsForm({ settings }: { settings: Settings }) {
     >
       <PermissionHint permission="admin:settings:write" />
       <form
-        className="form"
+        className="form settings-form"
         onSubmit={(event) => {
           event.preventDefault();
           if (canWrite && isValid && !save.isPending) {
@@ -297,21 +324,25 @@ function LimitsForm({ settings }: { settings: Settings }) {
           }
         }}
       >
-        <fieldset className="fieldset">
-          <legend>{t("settings.limits")}</legend>
-          <div className="field-grid">
-            {LIMIT_FIELDS.map((field) =>
-              renderField(field.name, limits[field.name], field.minimum, field.maximum, (value) =>
-                setLimits((current) => ({ ...current, [field.name]: value })),
-              ),
-            )}
-            <div className="field">
-              <span className="field-label">{t("settings.field.principal_research_active")}</span>
-              <p className="readonly-value">1</p>
+        {LIMIT_GROUPS.map((group) => (
+          <fieldset className="fieldset settings-group" key={group.title}>
+            <legend>{t(group.title)}</legend>
+            <div className="field-grid">
+              {group.fields.map((name) => {
+                const field = LIMIT_FIELDS.find((entry) => entry.name === name)!;
+                return renderField(name, limits[name], field.minimum, field.maximum, (value) =>
+                  setLimits((current) => ({ ...current, [name]: value })),
+                );
+              })}
             </div>
-          </div>
-        </fieldset>
-        <fieldset className="fieldset">
+            {group.title === "settings.research" ? (
+              <p className="field-hint">
+                {t("settings.field.principal_research_active")}: 1 {t("settings.unit.jobs")}
+              </p>
+            ) : null}
+          </fieldset>
+        ))}
+        <fieldset className="fieldset settings-group">
           <legend>{t("settings.retention")}</legend>
           <div className="field-grid">
             {RETENTION_FIELDS.map((field) =>
@@ -325,13 +356,14 @@ function LimitsForm({ settings }: { settings: Settings }) {
             )}
             <div className="field">
               <span className="field-label">{t("settings.field.idempotency_days")}</span>
-              <p className="readonly-value">90</p>
+              <p className="readonly-value">90 {t("settings.unit.days")}</p>
             </div>
           </div>
           <p className="field-hint">{t("settings.retentionNote")}</p>
         </fieldset>
         <InlineError error={save.error} />
-        <div className="button-row">
+        <div className="settings-save-bar">
+          <span className="muted">{t("settings.saveAll")}</span>
           <button
             type="submit"
             className="button button-primary"

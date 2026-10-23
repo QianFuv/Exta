@@ -1,5 +1,5 @@
 /** Overview: no fabricated health; locked/no-key/stale and failure states are explicit. */
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { mockReadiness } from "../../mocks/fixtures";
@@ -8,6 +8,25 @@ import { callsTo, renderApp } from "../../test/renderApp";
 import { server } from "../../test/server";
 
 describe("overview", () => {
+  it("caps recent calls and offers one view-all link beside independently placed errors", async () => {
+    const record = mockDb.state.requests[0]!.request;
+    server.use(
+      http.get("*/v1/admin/requests", () =>
+        HttpResponse.json({
+          items: Array.from({ length: 8 }, (_, index) => ({ ...record, id: `request_${index}` })),
+          next_cursor: null,
+        }),
+      ),
+    );
+    renderApp("/overview");
+    const recent = await screen.findByRole("region", { name: "Recent calls" });
+    expect(within(recent).getAllByRole("row")).toHaveLength(6);
+    expect(screen.getAllByRole("link", { name: /View all calls/ })).toHaveLength(1);
+    const errors = screen.getByRole("heading", { name: "Recent errors" });
+    expect(recent.closest(".dashboard-columns > div")).not.toContainElement(errors);
+    expect(screen.getByRole("main").querySelectorAll('a[href="/requests"]')).toHaveLength(1);
+  });
+
   it("shows locked secret store, missing keys and stale usage", async () => {
     mockDb.state.settings = {
       ...mockDb.state.settings,

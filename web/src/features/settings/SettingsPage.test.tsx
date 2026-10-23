@@ -1,5 +1,5 @@
 /** Settings and audit: contract mismatch, versioned edits and permission gating. */
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ALL_PERMISSIONS, mockSession } from "../../mocks/fixtures";
@@ -7,6 +7,19 @@ import { mockDb } from "../../mocks/handlers";
 import { callsTo, renderApp } from "../../test/renderApp";
 
 describe("settings and audit", () => {
+  it("groups settings by purpose with explicit units and one save action", async () => {
+    renderApp("/settings");
+    const traffic = await screen.findByRole("group", { name: "Traffic and concurrency" });
+    expect(within(traffic).getAllByRole("textbox")).toHaveLength(3);
+    const research = screen.getByRole("group", { name: "Research capacity and observation" });
+    expect(within(research).getByLabelText("Max polls")).toHaveAccessibleDescription(/polls/);
+    const payload = screen.getByRole("group", { name: "Request and response size" });
+    expect(within(payload).getByLabelText("Max request bytes")).toHaveAccessibleDescription(
+      /bytes/,
+    );
+    expect(screen.getAllByRole("button", { name: "Save" })).toHaveLength(1);
+  });
+
   it("warns about an incompatible server contract", async () => {
     mockDb.state.settings = {
       ...mockDb.state.settings,

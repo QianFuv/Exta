@@ -1668,3 +1668,102 @@ input[type="radio"] {
     gap: 10px;
   }
 }
+
+.account-card .card-header {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+}
+.account-card .badge-group {
+  margin-left: 0;
+}
+.account-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+.account-toolbar .account-actions {
+  flex-wrap: wrap;
+}
+.key-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.key-secondary-actions summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 0;
+  white-space: nowrap;
+}
+.key-secondary-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding-top: 10px;
+}
+.settings-form {
+  max-width: 920px;
+}
+.settings-form .settings-group {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 24px 0 8px;
+}
+.settings-group legend {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 0 12px 0 0;
+}
+.settings-form .field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 36px;
+}
+.settings-form .field {
+  min-width: 0;
+}
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.input-with-unit input {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+}
+.input-unit {
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-size: 13px;
+}
+.settings-save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+@media (max-width: 720px) {
+  .settings-form .field-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .settings-save-bar {
+    align-items: flex-start;
+  }
+  .account-toolbar {
+    padding: 14px;
+  }
+}

@@ -32,6 +32,8 @@ describe("key pools", () => {
       "article",
     );
     if (!card) throw new Error("Missing account");
+    if (action === "rotate")
+      await userEvent.click(within(card).getAllByText("More", { selector: "summary" })[0]!);
     await userEvent.click(
       within(card).getAllByRole("button", { name: action === "create" ? "Add key" : "Rotate" })[0]!,
     );
@@ -53,6 +55,26 @@ describe("key pools", () => {
       ),
     ).not.toContain("synthetic-rejected-secret");
   });
+  it("keeps secondary actions behind a disclosure and requires retirement confirmation", async () => {
+    renderApp("/keys");
+    const row = (await screen.findByText("Exa primary")).closest("tr")!;
+    const summary = within(row).getByText("More", { selector: "summary" });
+    expect(within(row).getByRole("button", { name: "Retire" })).not.toBeVisible();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await userEvent.click(summary);
+      await userEvent.click(within(row).getByRole("button", { name: "Retire" }));
+      const dialog = screen.getByRole("dialog", { name: "Retire Exa primary" });
+      expect(callsTo("POST", "/v1/admin/keys/key_exa_1/retire")).toHaveLength(0);
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(summary).toHaveFocus();
+      expect(summary.closest("details")).not.toHaveAttribute("open");
+    }
+    await userEvent.click(summary);
+    await userEvent.keyboard("{Escape}");
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    expect(summary).toHaveFocus();
+  });
+
   it("separates providers, flags account exhaustion, invalid keys and unknown grouping", async () => {
     renderApp("/keys");
     expect(await screen.findByRole("heading", { name: "Exa main (fixture)" })).toBeInTheDocument();
@@ -112,6 +134,8 @@ describe("key pools", () => {
     );
     renderApp("/keys");
     await screen.findByText("Exa primary");
+    for (const summary of screen.getAllByText("More", { selector: "summary" }))
+      await userEvent.click(summary);
     for (const button of screen.getAllByRole("button", { name: "Rotate" })) {
       expect(button).toBeDisabled();
     }

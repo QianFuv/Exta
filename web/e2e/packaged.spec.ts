@@ -129,6 +129,17 @@ test("standalone four-area administration and persistent appearance", async ({
     });
     expect(denied.status()).toBe(403);
     await page.goto(`${origin}/app/keys`);
+    const moreActions = page.locator(".key-secondary-actions summary").first();
+    await expect(page.getByRole("button", { name: "Retire", exact: true })).not.toBeVisible();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await moreActions.focus();
+      await page.keyboard.press("Enter");
+      await page.getByRole("button", { name: "Retire", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(moreActions).toBeFocused();
+      await expect(page.getByRole("button", { name: "Retire", exact: true })).not.toBeVisible();
+    }
     await page.getByRole("button", { name: "Edit account", exact: true }).click();
     const accounts = await (await page.request.get(`${origin}/v1/admin/accounts`)).json();
     const account = accounts.items.find((entry: { id: string }) => entry.id === fixture.account);

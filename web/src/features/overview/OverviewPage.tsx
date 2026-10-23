@@ -40,15 +40,7 @@ export function OverviewPage() {
   const [params] = useSearchParams();
   return (
     <>
-      <PageHeader
-        title={t("overview.title")}
-        description={t("overview.description")}
-        actions={
-          <Link className="button" to="/requests">
-            {t("nav.requests")} →
-          </Link>
-        }
-      />
+      <PageHeader title={t("overview.title")} description={t("overview.description")} />
       <SectionNav
         label={t("overview.title")}
         items={[
@@ -65,9 +57,9 @@ export function OverviewPage() {
             <div className="dashboard-columns">
               <div>
                 <RecentCalls />
-                <ErrorsPanel />
               </div>
               <div>
+                <ErrorsPanel />
                 <KeysPanel />
                 <ReadinessPanel />
               </div>
@@ -232,13 +224,13 @@ function RecentCalls() {
   const api = useApi();
   const query = useQuery({
     queryKey: ["requests", "statistics"],
-    queryFn: () => call(api.GET("/v1/admin/requests", { params: { query: { limit: 8 } } })),
+    queryFn: () => call(api.GET("/v1/admin/requests", { params: { query: { limit: 5 } } })),
     refetchInterval: 30_000,
   });
   return (
     <Section
       title={t("overview.recentRequests")}
-      actions={<Link to="/requests">{t("nav.requests")} →</Link>}
+      actions={<Link to="/requests">{t("overview.allCalls")} →</Link>}
     >
       <QueryView query={query}>
         {(data) =>
@@ -261,7 +253,7 @@ function RecentCalls() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.items.map((record) => (
+                  {data.items.slice(0, 5).map((record) => (
                     <tr key={record.id}>
                       <td>
                         <Link to={`/requests/${encodeURIComponent(record.id)}`}>
@@ -307,21 +299,14 @@ function ErrorsPanel() {
     refetchInterval: 30_000,
   });
   return (
-    <Section
-      title={t("overview.recentErrors")}
-      actions={
-        <Link className="button button-small" to="/requests">
-          {t("nav.requests")}
-        </Link>
-      }
-    >
+    <Section title={t("overview.recentErrors")}>
       <QueryView query={failures}>
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState title={t("overview.noRecentErrors")} />
           ) : (
             <ul className="plain-list">
-              {data.items.map((record) => (
+              {data.items.slice(0, 5).map((record) => (
                 <li key={record.id}>
                   <Link to={`/requests/${encodeURIComponent(record.id)}`}>
                     <DateTime value={record.created_at} />
