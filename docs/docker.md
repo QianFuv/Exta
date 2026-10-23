@@ -2,13 +2,13 @@
 
 The image packages the exact accepted Linux executable; it does not rebuild application code. Its digest-pinned [Distroless static Debian 13 nonroot base](https://github.com/GoogleContainerTools/distroless) supplies trusted CA certificates without a shell or package manager. The image runs as UID/GID 65532 by default. No container or host deployment is performed by the release workflow.
 
-The authorized public registry destination is `ghcr.io/qianfuv/exta`. Tags `0.1.1` and `sha-<source-sha>` and the registry digest are recorded only after native Linux/race, Windows, browser and container gates pass. Confirm the published package is publicly readable before distributing its pull command. Dependency inventories and Go/frontend license notices are readable under `/usr/share/exta/` in the image.
+The authorized public registry destination is `ghcr.io/qianfuv/exta`. Tags `0.1.2` and `sha-<source-sha>` and the registry digest are recorded only after native Linux/race, Windows, browser and container gates pass. Confirm the published package is publicly readable before distributing its pull command. Dependency inventories and Go/frontend license notices are readable under `/usr/share/exta/` in the image.
 
 Build locally on an isolated Linux amd64 Docker host after release verification:
 
 ```sh
 docker build --platform linux/amd64 -f Dockerfile \
-  --build-arg SOURCE_SHA="$(git rev-parse HEAD)" --build-arg VERSION=0.1.1 \
+  --build-arg SOURCE_SHA="$(git rev-parse HEAD)" --build-arg VERSION=0.1.2 \
   -t exta:local artifacts/candidate
 ```
 
@@ -30,7 +30,7 @@ Save the one-time operator credential privately. Initialization does not contact
 
 ## HTTP behind NPM and Cloudflare
 
-The trusted-proxy mode described here is newer than v0.1.1. The published v0.1.1 image does not support it; do not overwrite that image or tag. Use a separately accepted build containing this change.
+The trusted-proxy mode described here is available starting with v0.1.2. The published v0.1.1 image does not support it; do not overwrite that image or tag.
 
 The supplied Compose file publishes no host port. Set `EXTA_PROXY_NETWORK` to a dedicated ordinary Docker bridge shared only by NPM and Exta. Keep NPM's existing management connection. Do not attach unrelated containers, use host networking, or mount the Docker socket into Exta. The bridge must permit Exta's outbound provider connections; `internal: true` would block that traffic. Host administrators remain trusted.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-10-24
+
+- Add explicit trusted reverse-proxy support for HTTP inside an isolated Docker network, with a fixed external HTTPS origin. Public TLS remains at the existing reverse proxy.
+- Require exact trusted socket-peer addresses and unambiguous proxy-supplied HTTPS/client-IP headers. Preserve Secure cookies, Host/Origin/CSRF checks and per-client login rate limits; direct-listener safety defaults remain unchanged.
+- Publish no host port in the supplied Compose configuration. Document NPM/Cloudflare termination without backend certificate copies or renewal synchronization.
+- Add HTTPS-to-HTTP protocol regressions and isolated HTTP container acceptance alongside the existing Windows/Linux native, browser and Linux race gates. No database schema change is introduced by this patch.
+
 ## 0.1.1 — 2026-10-23
 
 - Make upstream keys the direct management unit across management contracts, scheduling, local safety limits, usage and status. Remove the account-management layer. Unknown shared ownership remains explicitly unknown; unverified balances are never summed into independent available capacity.
