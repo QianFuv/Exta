@@ -4,7 +4,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { mockReadiness } from "../../mocks/fixtures";
 import { mockDb } from "../../mocks/handlers";
-import { renderApp } from "../../test/renderApp";
+import { callsTo, renderApp } from "../../test/renderApp";
 import { server } from "../../test/server";
 
 describe("overview", () => {
@@ -45,10 +45,10 @@ describe("overview", () => {
     expect(screen.queryByText("Ready")).toBeNull();
   });
 
-  it("lists research that needs attention", async () => {
+  it("shows stored calls without mounting research execution or polling", async () => {
     renderApp("/overview");
-    expect(await screen.findByText("job_unknown")).toBeInTheDocument();
-    expect(screen.getByText("job_expired")).toBeInTheDocument();
-    expect(screen.queryByText("job_done")).toBeNull();
+    expect(await screen.findByText("Recent calls")).toBeInTheDocument();
+    expect(callsTo("GET", "/v1/admin/research")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "Research" })).toBeNull();
   });
 });

@@ -227,6 +227,7 @@ function MintDialog({
   const queryClient = useQueryClient();
   const formId = useId();
   const [label, setLabel] = useState("");
+  const [hasSubmitted, setSubmitted] = useState(false);
   const [scopes, setScopes] = useState<ClientScope[]>(["read"]);
   const [openedAt] = useState(() => Date.now());
   const [expiresAt, setExpiresAt] = useState(() =>
@@ -259,10 +260,16 @@ function MintDialog({
     >
       <form
         className="form"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
+          setSubmitted(true);
           if (isValid && !mint.isPending) {
             mint.mutate();
+          } else {
+            const field =
+              label.trim() === "" ? "label" : scopes.length === 0 ? "scope-0" : "expires";
+            document.getElementById(`${formId}-${field}`)?.focus();
           }
         }}
       >
@@ -273,15 +280,29 @@ function MintDialog({
             value={label}
             onChange={(event) => setLabel(event.target.value)}
             maxLength={128}
+            required
+            aria-invalid={hasSubmitted && label.trim() === ""}
+            aria-describedby={
+              hasSubmitted && label.trim() === "" ? `${formId}-label-error` : undefined
+            }
             data-autofocus
           />
+          {hasSubmitted && label.trim() === "" ? (
+            <p className="field-error" id={`${formId}-label-error`}>
+              {t("tokens.labelRequired")}
+            </p>
+          ) : null}
         </div>
         <fieldset className="checkbox-group">
           <legend>{t("tokens.scopes")}</legend>
-          {SCOPES.map((scope) => (
+          {SCOPES.map((scope, index) => (
             <label key={scope} className="checkbox">
               <input
                 type="checkbox"
+                id={`${formId}-scope-${index}`}
+                aria-describedby={
+                  hasSubmitted && scopes.length === 0 ? `${formId}-scope-error` : undefined
+                }
                 checked={scopes.includes(scope)}
                 onChange={(event) =>
                   setScopes((current) =>
@@ -294,6 +315,11 @@ function MintDialog({
               <code>{scope}</code>
             </label>
           ))}
+          {hasSubmitted && scopes.length === 0 ? (
+            <p className="field-error" id={`${formId}-scope-error`}>
+              {t("tokens.scopeRequired")}
+            </p>
+          ) : null}
         </fieldset>
         <div className="field">
           <label htmlFor={`${formId}-expires`}>{t("tokens.expires")}</label>
@@ -303,7 +329,13 @@ function MintDialog({
             value={expiresAt}
             onChange={(event) => setExpiresAt(event.target.value)}
             aria-invalid={!isExpiryValid}
+            aria-describedby={!isExpiryValid ? `${formId}-expiry-error` : undefined}
           />
+          {!isExpiryValid ? (
+            <p className="field-error" id={`${formId}-expiry-error`}>
+              {t("tokens.expiryInvalid")}
+            </p>
+          ) : null}
         </div>
         <p className="field-hint">{t("tokens.noAdminScopes")}</p>
         <InlineError error={mint.error} />
@@ -311,11 +343,7 @@ function MintDialog({
           <button type="button" className="button" onClick={onClose} disabled={mint.isPending}>
             {t("common.cancel")}
           </button>
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={!isValid || mint.isPending}
-          >
+          <button type="submit" className="button button-primary" disabled={mint.isPending}>
             {mint.isPending ? t("common.working") : t("tokens.mint")}
           </button>
         </div>

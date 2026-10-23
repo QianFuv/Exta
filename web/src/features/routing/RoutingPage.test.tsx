@@ -28,7 +28,7 @@ describe("routing", () => {
     ["map", 165],
     ["crawl", 165],
   ])("bounds %s deadlines before dispatch", async (operation, limit) => {
-    renderApp("/routing");
+    renderApp("/settings?view=routing");
     await userEvent.click(
       within(await policyRow(String(operation))).getByRole("button", { name: "Edit" }),
     );
@@ -43,14 +43,14 @@ describe("routing", () => {
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
   });
   it("flags an enabled policy without targets", async () => {
-    renderApp("/routing");
+    renderApp("/settings?view=routing");
     expect(within(await policyRow("crawl")).getByText("No compatible route")).toHaveClass(
       "badge-danger",
     );
   });
 
   it("saves with expected_version equal to the current revision", async () => {
-    renderApp("/routing");
+    renderApp("/settings?view=routing");
     await userEvent.click(
       within(await policyRow("advanced_search")).getByRole("button", { name: "Edit" }),
     );
@@ -74,7 +74,7 @@ describe("routing", () => {
   });
 
   it("shows a stale revision conflict", async () => {
-    renderApp("/routing");
+    renderApp("/settings?view=routing");
     await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "Edit" }));
     const route = mockDb.state.routes.find((entry) => entry.capability === "search");
     if (route !== undefined) {
@@ -90,27 +90,6 @@ describe("routing", () => {
     expect(await screen.findByText("Route saved as revision 6.")).toBeInTheDocument();
     expect(callsTo("PUT", "/v1/admin/routes/search").at(-1)?.body).toMatchObject({
       expected_version: 5,
-    });
-  });
-
-  it("previews a provider-pinned request locally and reports no compatible route", async () => {
-    renderApp("/routing");
-    await policyRow("search");
-    await userEvent.selectOptions(screen.getByLabelText("Capability"), "advanced_search");
-    await userEvent.selectOptions(screen.getByLabelText("Profile"), "tavily_advanced");
-    await userEvent.type(screen.getByLabelText("Sample query or input"), "latest filings");
-    await userEvent.click(screen.getByRole("button", { name: "Preview" }));
-    expect(
-      await screen.findByText("Requests like this would be rejected before any provider call."),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/semantic downgrade refused/)).toBeInTheDocument();
-    expect(callsTo("POST", "/v1/admin/routes/preview")[0]?.body).toEqual({
-      operation: "advanced_search",
-      request: {
-        query: "latest filings",
-        profile: "tavily_advanced",
-        provider_options: { kind: "tavily_advanced" },
-      },
     });
   });
 });

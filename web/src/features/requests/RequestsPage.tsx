@@ -1,7 +1,9 @@
 /** Sanitized request history with time/operation/provider/status filters. */
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import { Dialog } from "../../components/Dialog";
+import { RequestDetail } from "./RequestDetailPage";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
@@ -83,6 +85,8 @@ function RequestsContent() {
   const { t } = useI18n();
   const api = useApi();
   const formId = useId();
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get("request");
   const [draft, setDraft] = useState<Filters>(EMPTY_FILTERS);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const createdAfter = toInstant(filters.createdAfter);
@@ -104,18 +108,36 @@ function RequestsContent() {
     ),
   );
 
+  const isInvalidRange =
+    draft.createdAfter !== "" &&
+    draft.createdBefore !== "" &&
+    draft.createdAfter >= draft.createdBefore;
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFilters(draft);
+    if (!isInvalidRange) setFilters(draft);
   };
 
   const isFiltered = Object.values(filters).some((value) => value !== "");
 
   return (
     <>
-      <Section title={t("requests.filters")}>
-        <form className="form filters" onSubmit={onSubmit}>
-          <div className="field-row">
+      <Section
+        title={t("requests.listTitle")}
+        description={t("requests.noRawContent")}
+        actions={
+          <button
+            type="button"
+            className="button button-small"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {t("common.refresh")}
+          </button>
+        }
+      >
+        <form className="form filters log-filters" onSubmit={onSubmit}>
+          <div className="filter-fields">
             <div className="field">
               <label htmlFor={`${formId}-operation`}>{t("requests.operation")}</label>
               <select
@@ -168,6 +190,8 @@ function RequestsContent() {
               <label htmlFor={`${formId}-after`}>{t("requests.createdAfter")}</label>
               <input
                 id={`${formId}-after`}
+                aria-invalid={isInvalidRange}
+                aria-describedby={isInvalidRange ? `${formId}-range-error` : undefined}
                 type="datetime-local"
                 value={draft.createdAfter}
                 onChange={(event) => setDraft({ ...draft, createdAfter: event.target.value })}
@@ -177,6 +201,8 @@ function RequestsContent() {
               <label htmlFor={`${formId}-before`}>{t("requests.createdBefore")}</label>
               <input
                 id={`${formId}-before`}
+                aria-invalid={isInvalidRange}
+                aria-describedby={isInvalidRange ? `${formId}-range-error` : undefined}
                 type="datetime-local"
                 value={draft.createdBefore}
                 onChange={(event) => setDraft({ ...draft, createdBefore: event.target.value })}
@@ -184,7 +210,7 @@ function RequestsContent() {
             </div>
           </div>
           <div className="button-row">
-            <button type="submit" className="button button-primary">
+            <button type="submit" className="button button-primary" disabled={isInvalidRange}>
               {t("common.apply")}
             </button>
             <button
@@ -198,9 +224,16 @@ function RequestsContent() {
               {t("common.reset")}
             </button>
           </div>
+          {isInvalidRange ? (
+            <p id={`${formId}-range-error`} className="field-error" role="alert">
+              {t("requests.dateRangeError")}
+            </p>
+          ) : null}
         </form>
-      </Section>
-      <Section title={t("requests.listTitle")} description={t("requests.noRawContent")}>
+        <div className="table-meta">
+          <span>{t("requests.count", { count: items.length })}</span>
+          <span>{t("requests.detailHint")}</span>
+        </div>
         {query.isPending ? (
           <LoadingState />
         ) : query.isError && items.length === 0 ? (
@@ -211,7 +244,12 @@ function RequestsContent() {
             description={t("requests.emptyDescription")}
           />
         ) : (
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label={t("requests.listTitle")}
+            tabIndex={0}
+          >
             <table className="table">
               <thead>
                 <tr>
@@ -234,6 +272,24 @@ function RequestsContent() {
         )}
         <LoadMore query={query} />
       </Section>
+      {selectedId !== null && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(selectedId) ? (
+        <Dialog
+          title={t("requests.detailTitle")}
+          description={selectedId}
+          variant="drawer"
+          size="large"
+          onClose={() => {
+            const next = new URLSearchParams(params);
+            next.delete("request");
+            setParams(next);
+          }}
+        >
+          <RequestDetail id={selectedId} />
+          <Link className="button" to={`/requests/${encodeURIComponent(selectedId)}`}>
+            {t("requests.openDetail")} ↗
+          </Link>
+        </Dialog>
+      ) : null}
     </>
   );
 }
@@ -249,11 +305,13 @@ function RequestRow({ record }: { record: Schemas["RequestRecord"] }) {
   return (
     <tr>
       <td>
-        <Link to={`/requests/${encodeURIComponent(record.id)}`}>
+        <Link to={`?request=${encodeURIComponent(record.id)}`}>
           <DateTime value={record.created_at} />
         </Link>
         <br />
-        <code className="muted">{record.id}</code>
+        <code className="muted table-id" title={record.id}>
+          {record.id}
+        </code>
       </td>
       <td>
         <code>{record.operation}</code>

@@ -1,5 +1,5 @@
 /** Requests: empty success vs unknown counts, partial failures and pre-routing rejection. */
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { mockDb } from "../../mocks/handlers";
@@ -21,6 +21,22 @@ async function rowFor(id: string) {
 }
 
 describe("requests", () => {
+  it("explains reversed date filters without fetching another list", async () => {
+    renderApp("/requests");
+    await screen.findByText("req_ok");
+    const before = callsTo("GET", "/v1/admin/requests").length;
+    fireEvent.change(screen.getByLabelText("Created after"), {
+      target: { value: "2026-10-23T12:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Created before"), {
+      target: { value: "2026-10-22T12:00" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Start time must be earlier than end time.",
+    );
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(callsTo("GET", "/v1/admin/requests")).toHaveLength(before);
+  });
   it("refreshes a progressing request using only local reads", async () => {
     const detail = mockDb.state.requests.find((entry) => entry.request.id === "req_ok");
     if (!detail) throw new Error("Missing request fixture");
@@ -88,5 +104,23 @@ describe("requests", () => {
     renderApp("/requests/req_missing");
     expect(await screen.findByText("Not found.")).toBeInTheDocument();
     expect(callsTo("GET", "/v1/admin/requests/req_missing")).toHaveLength(1);
+  });
+  it("opens details without losing list filters and restores keyboard focus on repeated close", async () => {
+    renderApp("/requests");
+    await screen.findByText("req_partial");
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "succeeded");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    for (let index = 0; index < 2; index++) {
+      const row = await rowFor("req_partial");
+      const opener = row.getByRole("link");
+      await userEvent.click(opener);
+      const dialog = await screen.findByRole("dialog", { name: "Request detail" });
+      expect(await within(dialog).findByText("Attempt 1")).toBeInTheDocument();
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(opener).toHaveFocus();
+      expect(screen.getByLabelText("Status")).toHaveValue("succeeded");
+    }
+    expect(mockDb.state.calls.filter((call) => call.method !== "GET")).toHaveLength(0);
   });
 });

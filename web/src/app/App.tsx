@@ -22,12 +22,6 @@ const OverviewPage = lazy(() =>
 const KeysPage = lazy(() =>
   import("../features/keys/KeysPage").then((module) => ({ default: module.KeysPage })),
 );
-const RoutingPage = lazy(() =>
-  import("../features/routing/RoutingPage").then((module) => ({ default: module.RoutingPage })),
-);
-const UsagePage = lazy(() =>
-  import("../features/usage/UsagePage").then((module) => ({ default: module.UsagePage })),
-);
 const RequestsPage = lazy(() =>
   import("../features/requests/RequestsPage").then((module) => ({ default: module.RequestsPage })),
 );
@@ -36,26 +30,9 @@ const RequestDetailPage = lazy(() =>
     default: module.RequestDetailPage,
   })),
 );
-const ResearchPage = lazy(() =>
-  import("../features/research/ResearchPage").then((module) => ({ default: module.ResearchPage })),
-);
-const ResearchDetailPage = lazy(() =>
-  import("../features/research/ResearchDetailPage").then((module) => ({
-    default: module.ResearchDetailPage,
-  })),
-);
-const ConnectionsPage = lazy(() =>
-  import("../features/connections/ConnectionsPage").then((module) => ({
-    default: module.ConnectionsPage,
-  })),
-);
 const SettingsPage = lazy(() =>
   import("../features/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })),
 );
-const AuditPage = lazy(() =>
-  import("../features/settings/AuditPage").then((module) => ({ default: module.AuditPage })),
-);
-
 /**
  * Wrap the application with API, query, language, session and notification providers.
  *
@@ -127,15 +104,9 @@ export const APP_ROUTES: RouteObject[] = [
           { index: true, element: <Navigate to="/overview" replace /> },
           { path: "/overview", element: <OverviewPage /> },
           { path: "/keys", element: <KeysPage /> },
-          { path: "/routing", element: <RoutingPage /> },
-          { path: "/usage", element: <UsagePage /> },
           { path: "/requests", element: <RequestsPage /> },
           { path: "/requests/:id", element: <RequestDetailPage /> },
-          { path: "/research", element: <ResearchPage /> },
-          { path: "/research/:id", element: <ResearchDetailPage /> },
-          { path: "/connections", element: <ConnectionsPage /> },
           { path: "/settings", element: <SettingsPage /> },
-          { path: "/audit", element: <AuditPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

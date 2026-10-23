@@ -22,7 +22,7 @@ describe("usage", () => {
     ).toBe(0);
   });
   it("labels unlimited, unknown, missing permission and ledger divergence distinctly", async () => {
-    renderApp("/usage");
+    renderApp("/overview?view=usage");
     expect(await screen.findByText("Unlimited")).toBeInTheDocument();
     expect(screen.getAllByText("Limit unknown").length).toBeGreaterThan(0);
     expect(screen.getByText(/lacks the service permission/)).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe("usage", () => {
         ),
       ),
     );
-    renderApp("/usage");
+    renderApp("/overview?view=usage");
     await userEvent.click(await screen.findByRole("button", { name: "Refresh all" }));
     expect(await screen.findByText(/Rate limited by Exta/)).toBeInTheDocument();
     expect(screen.getByText(/local_rate_limited, 45 s/)).toBeInTheDocument();

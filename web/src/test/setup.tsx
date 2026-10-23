@@ -13,6 +13,7 @@ beforeEach(() => {
   mockDb.state = createMockState();
   window.sessionStorage.clear();
   window.localStorage.clear();
+  document.documentElement.dataset.theme = "system";
 });
 
 afterEach(() => {

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,8 +143,44 @@ func TestBrowserFixture(t *testing.T) {
 	if _, err = state.DB.Exec("UPDATE runtime_gates SET blocked=1"); err != nil {
 		t.Fatal(err)
 	}
-	metadata := map[string]any{"owner": owner, "jobs": ids, "body": body, "key": "browser-fixture-queued", "account": account.Id}
+	requestId := seedBrowserRequests(t, state, owner, account.Id)
+	metadata := map[string]any{"owner": owner, "jobs": ids, "body": body, "key": "browser-fixture-queued", "account": account.Id, "request": requestId}
 	if err := os.WriteFile(filepath.Join(filepath.Dir(directory), "fixture.json"), []byte(store.JSON(metadata)), 0600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// seedBrowserRequests supplies sanitized local history without contacting a provider.
+func seedBrowserRequests(t *testing.T, state *store.Store, owner, accountId string) string {
+	t.Helper()
+	var credentialId string
+	if err := state.DB.QueryRow("SELECT id FROM credential_versions LIMIT 1").Scan(&credentialId); err != nil {
+		t.Fatal(err)
+	}
+	operations := []domain.Operation{"search", "fetch", "advanced_search", "search", "fetch", "search", "advanced_search", "search"}
+	for index, operation := range operations {
+		created := store.Stamp(time.Now().Add(-time.Duration(index) * 4 * time.Minute))
+		duration, count, failures, status := domain.Integer(236+index*147), domain.Integer(3+index), domain.Integer(0), domain.Integer(200)
+		partial, provider := false, domain.Provider("exa")
+		id := fmt.Sprintf("request_browser_%02d", index)
+		record := domain.RequestRecord{Id: id, Operation: operation, Status: "succeeded", SourceProvider: &provider, RouteRevision: 1, CreatedAt: created, CompletedAt: &created, DurationMs: &duration, ResultCount: &count, FailureCount: &failures, Partial: &partial, Usage: []domain.UsageAmount{}}
+		if index == 3 {
+			record.Status = "failed"
+			count, failures, status = 0, 1, 429
+			record.Error = &domain.ErrorDetail{Code: "upstream_rate_limited", Message: "Synthetic provider rate limit", RequestId: id, Retryable: true, Details: json.RawMessage(`{}`)}
+		}
+		attempt := domain.Attempt{Id: fmt.Sprintf("attempt_browser_%02d", index), AccountId: accountId, CredentialVersionId: credentialId, Provider: provider, AttemptNumber: 1, CreatedAt: created, DurationMs: duration, HttpStatus: &status, TransmissionState: "response_received"}
+		for schema, item := range map[string]any{"RequestRecord": record, "Attempt": attempt} {
+			if err := domain.ValidateJSON(schema, []byte(store.JSON(item))); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := state.StartRequest(t.Context(), owner, record); err != nil {
+			t.Fatal(err)
+		}
+		if err := state.StartAttempt(t.Context(), id, attempt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return "request_browser_00"
 }

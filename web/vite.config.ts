@@ -26,10 +26,44 @@ function mockWorkerPlugin(): Plugin {
   };
 }
 
+/** Emit a parser-blocking theme asset without weakening the production CSP. */
+function themeBootstrapPlugin(): Plugin {
+  let isBuild = false;
+  const source = readFileSync(new URL("./src/theme-init.js", import.meta.url), "utf8").replace(
+    /\r\n?/g,
+    "\n",
+  );
+  return {
+    name: "exta-theme-bootstrap",
+    configResolved(config) {
+      isBuild = config.command === "build";
+    },
+    buildStart() {
+      if (isBuild) this.emitFile({ type: "asset", fileName: "assets/theme-init.js", source });
+    },
+    transformIndexHtml: {
+      order: "post",
+      handler() {
+        return [
+          { tag: "script", attrs: { src: "./assets/theme-init.js" }, injectTo: "head-prepend" },
+        ];
+      },
+    },
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        if (request.url?.split("?")[0]?.endsWith("/assets/theme-init.js")) {
+          response.setHeader("Content-Type", "text/javascript");
+          response.end(source);
+        } else next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   base: "./",
   publicDir: false,
-  plugins: [react(), mockWorkerPlugin()],
+  plugins: [themeBootstrapPlugin(), react(), mockWorkerPlugin()],
   build: {
     manifest: true,
     assetsInlineLimit: 0,

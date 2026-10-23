@@ -3,7 +3,7 @@
  * errors. Each panel loads independently and shows its own failure; nothing is inferred
  * as healthy when data is missing.
  */
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
@@ -12,7 +12,8 @@ import type { MessageKey } from "../../lib/messages";
 import { EmptyState, Notice, QueryView } from "../../components/Feedback";
 import { PageHeader, RequirePermission, Section } from "../../components/Page";
 import { DateTime } from "../../components/Values";
-import { JobStateBadge, isPollingState } from "../research/jobStatus";
+import { UsageContent } from "../usage/UsagePage";
+import { SectionNav } from "../../components/SectionNav";
 import { RequestStatusBadges } from "../requests/requestStatus";
 import { ReadinessList } from "./ReadinessList";
 
@@ -21,12 +22,12 @@ const METRICS: ReadonlyArray<{
   label: MessageKey;
   isRisk: boolean;
 }> = [
-  { name: "queued_jobs", label: "overview.queuedJobs", isRisk: false },
-  { name: "active_slots_held", label: "overview.activeSlots", isRisk: false },
-  { name: "uncertain_jobs", label: "overview.uncertainJobs", isRisk: true },
   { name: "requests_last_minute", label: "overview.requestsPerMinute", isRisk: false },
   { name: "errors_last_minute", label: "overview.errorsPerMinute", isRisk: true },
   { name: "waiting_requests", label: "overview.waitingRequests", isRisk: false },
+  { name: "queued_jobs", label: "overview.queuedJobs", isRisk: false },
+  { name: "active_slots_held", label: "overview.activeSlots", isRisk: false },
+  { name: "uncertain_jobs", label: "overview.uncertainJobs", isRisk: true },
 ];
 
 /**
@@ -36,17 +37,43 @@ const METRICS: ReadonlyArray<{
  */
 export function OverviewPage() {
   const { t } = useI18n();
+  const [params] = useSearchParams();
   return (
     <>
-      <PageHeader title={t("overview.title")} description={t("overview.description")} />
+      <PageHeader
+        title={t("overview.title")}
+        description={t("overview.description")}
+        actions={
+          <Link className="button" to="/requests">
+            {t("nav.requests")} →
+          </Link>
+        }
+      />
+      <SectionNav
+        label={t("overview.title")}
+        items={[
+          { value: "summary", label: t("overview.activity") },
+          { value: "usage", label: t("nav.usage") },
+        ]}
+      />
       <RequirePermission permission="admin:read">
-        <div className="overview-grid">
-          <ReadinessPanel />
-          <MetricsPanel />
-          <KeysPanel />
-          <ResearchPanel />
-          <ErrorsPanel />
-        </div>
+        {params.get("view") === "usage" ? (
+          <UsageContent />
+        ) : (
+          <>
+            <MetricsPanel />
+            <div className="dashboard-columns">
+              <div>
+                <RecentCalls />
+                <ErrorsPanel />
+              </div>
+              <div>
+                <KeysPanel />
+                <ReadinessPanel />
+              </div>
+            </div>
+          </>
+        )}
       </RequirePermission>
     </>
   );
@@ -89,8 +116,9 @@ function MetricsPanel() {
   return (
     <Section
       title={t("overview.activity")}
+      description={t("overview.activityWindow")}
       actions={
-        <Link className="button button-small" to="/usage">
+        <Link className="button button-small" to="/overview?view=usage">
           {t("nav.usage")}
         </Link>
       }
@@ -198,58 +226,67 @@ function KeysPanel() {
   );
 }
 
-/**
- * Recent non-terminal or attention-needing research.
- *
- * @returns Section.
- */
-function ResearchPanel() {
-  const { t } = useI18n();
+/** Recent calls use stored metadata only; opening this view never dispatches a provider. */
+function RecentCalls() {
+  const { t, formatDuration } = useI18n();
   const api = useApi();
-  const jobs = useQuery({
-    queryKey: ["research", "overview"],
-    queryFn: () => call(api.GET("/v1/admin/research", { params: { query: { limit: 25 } } })),
+  const query = useQuery({
+    queryKey: ["requests", "statistics"],
+    queryFn: () => call(api.GET("/v1/admin/requests", { params: { query: { limit: 8 } } })),
     refetchInterval: 30_000,
   });
   return (
     <Section
-      title={t("overview.research")}
-      actions={
-        <Link className="button button-small" to="/research">
-          {t("nav.research")}
-        </Link>
-      }
+      title={t("overview.recentRequests")}
+      actions={<Link to="/requests">{t("nav.requests")} →</Link>}
     >
-      <QueryView query={jobs}>
-        {(data) => {
-          const attention = data.items.filter(
-            (job) =>
-              isPollingState(job.state) ||
-              job.state === "submission_unknown" ||
-              job.state === "observation_expired" ||
-              job.uncertainty,
-          );
-          if (attention.length === 0) {
-            return (
-              <EmptyState
-                title={t("overview.noActiveResearch")}
-                description={t("overview.recentWindow")}
-              />
-            );
-          }
-          return (
-            <ul className="plain-list">
-              {attention.map((job) => (
-                <li key={job.id}>
-                  <Link to={`/research/${encodeURIComponent(job.id)}`}>
-                    <code>{job.id}</code>
-                  </Link>{" "}
-                  <JobStateBadge job={job} />
-                </li>
-              ))}
-            </ul>
-          );
-        }}
+      <QueryView query={query}>
+        {(data) =>
+          data.items.length === 0 ? (
+            <EmptyState title={t("requests.emptyTitle")} />
+          ) : (
+            <div
+              className="table-wrap"
+              role="region"
+              aria-label={t("overview.recentRequests")}
+              tabIndex={0}
+            >
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t("common.created")}</th>
+                    <th>{t("requests.operation")}</th>
+                    <th>{t("common.state")}</th>
+                    <th>{t("requests.duration")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((record) => (
+                    <tr key={record.id}>
+                      <td>
+                        <Link to={`/requests/${encodeURIComponent(record.id)}`}>
+                          <DateTime value={record.created_at} />
+                        </Link>
+                      </td>
+                      <td>
+                        <code>{record.operation}</code>
+                        <small className="cell-secondary">
+                          {record.source_provider === null
+                            ? "—"
+                            : t(`provider.${record.source_provider}`)}
+                        </small>
+                      </td>
+                      <td>
+                        <RequestStatusBadges record={record} />
+                      </td>
+                      <td className="numeric">{formatDuration(record.duration_ms)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
       </QueryView>
     </Section>
   );

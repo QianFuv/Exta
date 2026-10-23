@@ -54,3 +54,16 @@ test("attributes Vite preload runtime and refuses nonproduction or unknown virtu
   requireProduction("production");
   requireProduction(undefined);
 });
+
+/** The early script remains external, blocking and inside the integrity namespace. */
+test("packages the prepaint theme bootstrap and only the four management destinations", () => {
+  const output=fixture();
+  output[0].source='<html><head><script src="./assets/theme-init.js"></script><link href="./assets/app.css" rel="stylesheet"><script type="module" src="./assets/main.js"></script></head></html>';
+  output.push({type:"asset",fileName:"assets/theme-init.js",source:'document.documentElement.dataset.theme="dark";'});
+  const result=packageOutput(output);
+  const index=result.get("index.html").toString();
+  assert.ok(index.indexOf("theme-init.js") < index.indexOf("app.css"));
+  assert.match(index, /<script src="[^"]+theme-init.js"><\/script>/);
+  const manifest=JSON.parse(result.get("manifest.json"));
+  assert.deepEqual(manifest.routes,["/app/","/app/login","/app/overview","/app/keys","/app/requests","/app/requests/:id","/app/settings"]);
+});

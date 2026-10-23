@@ -76,7 +76,7 @@ export function RequestDetailPage() {
  * @param props - Request ID.
  * @returns Detail sections.
  */
-function RequestDetail({ id }: { id: string }) {
+export function RequestDetail({ id }: { id: string }) {
   const { t, formatDuration } = useI18n();
   const api = useApi();
   const query = useQuery({
@@ -123,7 +123,7 @@ function RequestDetail({ id }: { id: string }) {
             <code>{request.error.code}</code>: {request.error.message}
           </Notice>
         )}
-        <dl className="details-grid">
+        <dl className="details-grid request-summary">
           <dt>{t("requests.operation")}</dt>
           <dd>
             <code>{request.operation}</code>

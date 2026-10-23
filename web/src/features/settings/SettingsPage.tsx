@@ -1,5 +1,11 @@
 /** Non-secret limits/retention editing plus build, schema and readiness diagnostics. */
 import { useId, useState } from "react";
+import { useSearchParams } from "react-router";
+import { SectionNav } from "../../components/SectionNav";
+import { RoutingPage } from "../routing/RoutingPage";
+import { ConnectionDetails } from "../connections/ConnectionsPage";
+import { BudgetSettings } from "./BudgetSettings";
+import { AuditPage } from "./AuditPage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiFailure, call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
@@ -45,12 +51,37 @@ const RETENTION_FIELDS: ReadonlyArray<{
  */
 export function SettingsPage() {
   const { t } = useI18n();
+  const [params] = useSearchParams();
+  const view = params.get("view") ?? "general";
   return (
     <>
       <PageHeader title={t("settings.title")} description={t("settings.description")} />
-      <RequirePermission permission="admin:read">
-        <SettingsContent />
-      </RequirePermission>
+      <SectionNav
+        label={t("settings.title")}
+        items={[
+          { value: "general", label: t("settings.general") },
+          { value: "routing", label: t("nav.routing") },
+          { value: "budgets", label: t("keys.budgetSettings") },
+          { value: "health", label: t("settings.health") },
+          { value: "connection", label: t("settings.access") },
+          { value: "audit", label: t("nav.audit") },
+        ]}
+      />
+      {view === "audit" ? (
+        <AuditPage embedded />
+      ) : (
+        <RequirePermission permission="admin:read">
+          {view === "budgets" ? (
+            <BudgetSettings />
+          ) : view === "routing" ? (
+            <RoutingPage embedded />
+          ) : view === "connection" ? (
+            <ConnectionDetails />
+          ) : (
+            <SettingsContent health={view === "health"} />
+          )}
+        </RequirePermission>
+      )}
     </>
   );
 }
@@ -60,7 +91,7 @@ export function SettingsPage() {
  *
  * @returns Sections.
  */
-function SettingsContent() {
+function SettingsContent({ health }: { health: boolean }) {
   const { t } = useI18n();
   const api = useApi();
   const settings = useQuery({
@@ -71,24 +102,32 @@ function SettingsContent() {
     <QueryView query={settings}>
       {(data) => (
         <>
-          <Section title={t("settings.diagnostics")}>
-            <BuildDiagnostics settings={data} />
-            <ReadinessList readiness={data.readiness} />
-          </Section>
-          <LimitsForm key={data.version} settings={data} />
-          <Section title={t("settings.protected")} description={t("settings.protectedDescription")}>
-            {data.protected_fields.length === 0 ? (
-              <p className="muted">—</p>
-            ) : (
-              <ul className="plain-list">
-                {data.protected_fields.map((field) => (
-                  <li key={field}>
-                    <code>{field}</code>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
+          {health ? (
+            <>
+              <Section title={t("settings.diagnostics")}>
+                <BuildDiagnostics settings={data} />
+                <ReadinessList readiness={data.readiness} />
+              </Section>
+              <Section
+                title={t("settings.protected")}
+                description={t("settings.protectedDescription")}
+              >
+                {data.protected_fields.length === 0 ? (
+                  <p className="muted">—</p>
+                ) : (
+                  <ul className="plain-list">
+                    {data.protected_fields.map((field) => (
+                      <li key={field}>
+                        <code>{field}</code>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            </>
+          ) : (
+            <LimitsForm key={data.version} settings={data} />
+          )}
         </>
       )}
     </QueryView>
@@ -234,8 +273,10 @@ function LimitsForm({ settings }: { settings: Settings }) {
           aria-invalid={!isFieldValid}
           aria-describedby={`${formId}-${name}-range`}
         />
-        <p id={`${formId}-${name}-range`} className="field-hint">
-          {formatNumber(minimum)}–{formatNumber(maximum)}
+        <p id={`${formId}-${name}-range`} className={isFieldValid ? "field-hint" : "field-error"}>
+          {isFieldValid
+            ? `${formatNumber(minimum)}–${formatNumber(maximum)}`
+            : t("settings.rangeError", { minimum, maximum })}
         </p>
       </div>
     );

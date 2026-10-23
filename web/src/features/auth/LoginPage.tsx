@@ -8,6 +8,7 @@ import { useI18n } from "../../lib/i18n";
 import { useSession } from "../../lib/session";
 import { InlineError, Notice } from "../../components/Feedback";
 import { LanguageSwitch } from "../../components/LanguageSwitch";
+import { ThemeSwitch } from "../../components/ThemeSwitch";
 import { BrandMark } from "../../components/BrandMark";
 import { MockModeBanner } from "../../components/Layout";
 
@@ -60,9 +61,10 @@ export function LoginPage() {
   return (
     <div className="login">
       <MockModeBanner />
-      <div className="login-language">
+      <header className="login-language">
+        <ThemeSwitch />
         <LanguageSwitch />
-      </div>
+      </header>
       <main className="login-card" id="main">
         <div className="login-brand">
           <BrandMark />

@@ -10,7 +10,7 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const WEB = path.join(ROOT, "web");
 const requireWeb = createRequire(path.join(WEB, "package.json"));
 const { parse, serialize } = await import(pathToFileURL(requireWeb.resolve("parse5")).href);
-const ROUTES = ["/app/", "/app/login", "/app/overview", "/app/keys", "/app/routing", "/app/usage", "/app/requests", "/app/requests/:id", "/app/research", "/app/research/:id", "/app/connections", "/app/settings", "/app/audit"];
+const ROUTES = ["/app/", "/app/login", "/app/overview", "/app/keys", "/app/requests", "/app/requests/:id", "/app/settings"];
 
 /** Hash exact payload bytes. */
 export function digest(bytes) { return createHash("sha256").update(bytes).digest("hex"); }

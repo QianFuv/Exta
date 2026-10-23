@@ -1,5 +1,8 @@
 /** Provider account and key pools, separated by provider, with versioned management actions. */
 import { useState } from "react";
+import { useSearchParams } from "react-router";
+import { SectionNav } from "../../components/SectionNav";
+import { TokensSection } from "../connections/TokensSection";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
@@ -60,12 +63,26 @@ const BILLING_TONE: Record<Account["billing_state"], Tone> = {
  */
 export function KeysPage() {
   const { t } = useI18n();
+  const [params] = useSearchParams();
   return (
     <>
       <PageHeader title={t("keys.title")} description={t("keys.description")} />
+      <SectionNav
+        label={t("keys.title")}
+        items={[
+          { value: "upstream", label: t("keys.upstream") },
+          { value: "access", label: t("keys.access") },
+        ]}
+      />
       <RequirePermission permission="admin:read">
-        <ProviderPool provider="exa" />
-        <ProviderPool provider="tavily" />
+        {params.get("view") === "access" ? (
+          <TokensSection />
+        ) : (
+          <>
+            <ProviderPool provider="exa" />
+            <ProviderPool provider="tavily" />
+          </>
+        )}
       </RequirePermission>
     </>
   );
@@ -82,6 +99,7 @@ function ProviderPool({ provider }: { provider: Provider }) {
   const api = useApi();
   const { can } = useSession();
   const [dialog, setDialog] = useState<OpenDialog>(null);
+  const [filter, setFilter] = useState("");
   const accounts = useCursorList(["accounts", provider], (cursor) =>
     call(
       api.GET("/v1/admin/accounts", {
@@ -100,6 +118,9 @@ function ProviderPool({ provider }: { provider: Provider }) {
   const canWriteAccounts = can("admin:accounts:write");
   const canWriteKeys = can("admin:keys:write");
   const accountIds = new Set(accounts.items.map((account) => account.id));
+  const filteredAccounts = accounts.items.filter((account) =>
+    `${account.label} ${account.id}`.toLowerCase().includes(filter.trim().toLowerCase()),
+  );
   const orphanKeys = keys.items.filter((key) => !accountIds.has(key.account_id));
   const isLoading = accounts.query.isPending || keys.query.isPending;
   const failed = accounts.query.isError ? accounts.query : keys.query.isError ? keys.query : null;
@@ -111,7 +132,7 @@ function ProviderPool({ provider }: { provider: Provider }) {
       actions={
         <button
           type="button"
-          className="button"
+          className="button button-primary"
           disabled={!canWriteAccounts}
           onClick={() => setDialog({ kind: "account-create" })}
         >
@@ -120,6 +141,20 @@ function ProviderPool({ provider }: { provider: Provider }) {
       }
     >
       <PermissionHint permission="admin:keys:write" />
+      <div className="table-toolbar">
+        <label className="search-field">
+          <span className="visually-hidden">
+            {t("keys.find")} · {t(`provider.${provider}`)}
+          </span>
+          <input
+            type="search"
+            value={filter}
+            placeholder={t("keys.findHint")}
+            onChange={(event) => setFilter(event.target.value)}
+          />
+        </label>
+        <span className="muted">{t("keys.accountCount", { count: accounts.items.length })}</span>
+      </div>
       {isLoading ? (
         <LoadingState />
       ) : failed !== null ? (
@@ -131,7 +166,8 @@ function ProviderPool({ provider }: { provider: Provider }) {
         />
       ) : (
         <div className="account-list">
-          {accounts.items.map((account) => (
+          {filteredAccounts.length === 0 ? <EmptyState title={t("keys.noMatches")} /> : null}
+          {filteredAccounts.map((account) => (
             <AccountCard
               key={account.id}
               account={account}
@@ -199,7 +235,7 @@ function AccountCard({
   const { t, formatNumber } = useI18n();
   const format = useUnitFormatter();
   return (
-    <article className="card">
+    <article className="card account-card">
       <header className="card-header">
         <div>
           <h3>{account.label}</h3>
@@ -221,13 +257,31 @@ function AccountCard({
             {t(`verificationState.${account.verification_state}`)}
           </Badge>
         </div>
+        <div className="button-row account-actions">
+          <button
+            type="button"
+            className="button button-small"
+            disabled={!canWriteAccounts}
+            onClick={() => onDialog({ kind: "account-edit", account })}
+          >
+            {t("keys.editAccount")}
+          </button>
+          <button
+            type="button"
+            className="button button-small"
+            disabled={!canWriteKeys}
+            onClick={() => onDialog({ kind: "key-create", accountId: account.id })}
+          >
+            {t("keys.addKey")}
+          </button>
+        </div>
       </header>
       {account.billing_state === "blocked" ? (
         <Notice tone="danger" title={t("keys.accountExhausted")}>
           {t("keys.accountExhaustedDetail")}
         </Notice>
       ) : null}
-      <dl className="details-grid compact">
+      <dl className="account-metrics">
         <dt>{t("keys.allocation")}</dt>
         <dd>{format(account.quota_policy.allocation, account.quota_policy.unit)}</dd>
         <dt>{t("keys.perOperation")}</dt>
@@ -237,24 +291,6 @@ function AccountCard({
         <dt>{t("common.version")}</dt>
         <dd>{account.version}</dd>
       </dl>
-      <div className="button-row">
-        <button
-          type="button"
-          className="button button-small"
-          disabled={!canWriteAccounts}
-          onClick={() => onDialog({ kind: "account-edit", account })}
-        >
-          {t("keys.editAccount")}
-        </button>
-        <button
-          type="button"
-          className="button button-small"
-          disabled={!canWriteKeys}
-          onClick={() => onDialog({ kind: "key-create", accountId: account.id })}
-        >
-          {t("keys.addKey")}
-        </button>
-      </div>
       {keys.length === 0 ? (
         <p className="muted">{t("keys.noKeysInAccount")}</p>
       ) : (
@@ -281,7 +317,7 @@ function KeyTable({
 }) {
   const { t } = useI18n();
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" role="region" aria-label={t("keys.upstream")} tabIndex={0}>
       <table className="table">
         <thead>
           <tr>
@@ -338,9 +374,10 @@ function KeyRow({
           >
             ••••{providerKey.last_four}
           </span>
-          <span className="muted mono" title={t("keys.fingerprint")}>
-            {providerKey.fingerprint}
-          </span>
+          <details className="key-fingerprint">
+            <summary>{t("keys.fingerprint")}</summary>
+            <code>{providerKey.fingerprint}</code>
+          </details>
           {providerKey.enabled ? null : <Badge tone="warning">{t("common.disabled")}</Badge>}
         </div>
         {providerKey.retained_credential_count > 0 ? (

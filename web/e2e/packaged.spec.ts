@@ -2,12 +2,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { spawn, execFileSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import net from "node:net";
-import { canonicalJson } from "../src/lib/researchDraft";
 
 /** Bridge the locked axe peer's newer Page type; axe uses APIs present in Playwright 1.63. */
 function audit(page: Page) {
@@ -16,7 +15,12 @@ function audit(page: Page) {
   }).analyze();
 }
 
-test("standalone management and durable Research recovery", async ({ page, context }, info) => {
+test("standalone four-area administration and persistent appearance", async ({
+  page,
+  context,
+}, info) => {
+  test.setTimeout(240_000);
+  page.setDefaultTimeout(15_000);
   const binary = process.env.EXTA_E2E_BINARY;
   if (!binary || !path.isAbsolute(binary))
     throw new Error("EXTA_E2E_BINARY must identify the native production executable");
@@ -43,6 +47,7 @@ test("standalone management and durable Research recovery", async ({ page, conte
     body: object;
     key: string;
     account: string;
+    request: string;
   };
   const socket = net.createServer();
   await new Promise<void>((resolve) => socket.listen(0, "127.0.0.1", resolve));
@@ -95,19 +100,22 @@ test("standalone management and durable Research recovery", async ({ page, conte
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
     await page.getByLabel("Operator credential").fill(credential);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
     const cookies = await context.cookies();
     expect(cookies.some((cookie) => cookie.httpOnly)).toBe(true);
     expect(await page.evaluate(() => document.cookie)).not.toContain("exta_session");
     for (const route of [
+      "overview",
       "keys",
-      "routing",
-      "usage",
+      "keys?view=access",
       "requests",
-      "research",
-      "connections",
       "settings",
-      "audit",
+      "settings?view=routing",
+      "settings?view=health",
+      "settings?view=budgets",
+      "settings?view=connection",
+      "settings?view=audit",
+      "overview?view=usage",
     ]) {
       const response = await page.goto(`${origin}/app/${route}`);
       expect(response?.status()).toBe(200);
@@ -148,7 +156,7 @@ test("standalone management and durable Research recovery", async ({ page, conte
     await expect(
       page.getByRole("heading", { name: "Reviewed fixture account", exact: true }),
     ).toBeVisible();
-    await page.goto(`${origin}/app/connections`);
+    await page.goto(`${origin}/app/keys?view=access`);
     await page.getByRole("button", { name: "Create token", exact: true }).click();
     await page
       .getByRole("dialog")
@@ -173,101 +181,93 @@ test("standalone management and durable Research recovery", async ({ page, conte
       expect(response.status()).toBe(404);
       expect(response.headers()["content-type"]).toContain("application/json");
     }
-    await page.evaluate(
-      (pending) =>
-        sessionStorage.setItem(
-          `exta.research.pendingSubmission.${pending.principalId}`,
-          JSON.stringify(pending),
-        ),
-      {
-        version: 2,
-        principalId: fixture.owner,
-        attemptId: randomUUID(),
-        hasUnresolvedAttempt: true,
-        idempotencyKey: fixture.key,
-        body: fixture.body,
-        fingerprint: canonicalJson(fixture.body),
-        state: "uncertain",
-        updatedAt: new Date().toISOString(),
-      },
-    );
-    await page.goto(`${origin}/app/research`);
-    let forwarded = false;
-    await page.route(`${origin}/v1/admin/research`, async (route) => {
-      if (route.request().method() !== "POST") return route.continue();
-      expect(route.request().headers()["idempotency-key"]).toBe(fixture.key);
-      const response = await route.fetch();
-      expect(response.status()).toBe(202);
-      expect((await response.json()).id).toBe(fixture.jobs.queued);
-      forwarded = true;
+    for (const theme of ["light", "dark"] as const) {
+      await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption(theme);
+      await page.emulateMedia({ colorScheme: theme === "light" ? "dark" : "light" });
+      for (const route of [
+        "overview",
+        "keys",
+        "keys?view=access",
+        "requests",
+        "settings",
+        "settings?view=routing",
+        "settings?view=budgets",
+        "settings?view=health",
+        "settings?view=connection",
+        "settings?view=audit",
+        "overview?view=usage",
+      ]) {
+        await page.goto(`${origin}/app/${route}`);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        expect(
+          await page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme),
+        ).toBe(theme);
+        expect.soft((await audit(page)).violations, `${theme}: ${route}`).toEqual([]);
+      }
+      await page.goto(`${origin}/app/requests`);
+      const opener = page.locator(`a[href$="?request=${fixture.request}"]`);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await opener.click();
+        const dialog = page.getByRole("dialog", { name: "Request detail" });
+        await expect(dialog.getByText("Attempt 1", { exact: true })).toBeVisible();
+        expect((await audit(page)).violations).toEqual([]);
+        await page.keyboard.press("Shift+Tab");
+        expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
+          true,
+        );
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Escape");
+        await expect(dialog).not.toBeVisible();
+        await expect(opener).toBeFocused();
+      }
+      await page.screenshot({ path: info.outputPath(`logs-${theme}.png`), fullPage: true });
+      await page.setViewportSize({ width: 390, height: 844 });
+      for (const route of ["overview", "keys", "requests", "settings"]) {
+        await page.goto(`${origin}/app/${route}`);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+      }
+      await page.screenshot({
+        path: info.outputPath(`settings-mobile-${theme}.png`),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 1440, height: 1000 });
+    }
+    await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption("system");
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(
+        await page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme),
+      ).toBe(scheme);
+    }
+    await page.getByRole("combobox", { name: "Appearance", exact: true }).selectOption("dark");
+    await page.route("**/*.js", async (route) => {
+      if (route.request().url().endsWith("/assets/theme-init.js")) return route.continue();
       await route.abort();
     });
-    await page.getByRole("button", { name: "Retry with same key", exact: true }).click();
-    await expect.poll(() => forwarded).toBe(true);
-    await expect
-      .poll(
-        async () =>
-          JSON.parse(
-            (await page.evaluate(
-              (owner) => sessionStorage.getItem(`exta.research.pendingSubmission.${owner}`),
-              fixture.owner,
-            ))!,
-          ).state,
-      )
-      .toBe("uncertain");
-    await page.unroute(`${origin}/v1/admin/research`);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    expect(await page.locator("#root").textContent()).toBe("");
+    await page.unroute("**/*.js");
     await page.reload();
-    await page.getByRole("button", { name: "Retry with same key", exact: true }).click();
-    await expect(page).toHaveURL(`${origin}/app/research/${fixture.jobs.queued}`);
-    await page.getByRole("button", { name: "Stop observing", exact: true }).click();
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Stop observing", exact: true })
-      .click();
-    await expect
-      .poll(
-        async () =>
-          (
-            await (
-              await page.request.get(`${origin}/v1/admin/research/${fixture.jobs.queued}`)
-            ).json()
-          ).job.state,
-      )
-      .toBe("cancelled");
-    const cancelled = await (
-      await page.request.get(`${origin}/v1/admin/research/${fixture.jobs.queued}`)
-    ).json();
-    expect(cancelled.job.active_slot_held).toBe(false);
-    expect(cancelled.job.budget_hold_state).toBe("released_unspent");
-    await page.goto(`${origin}/app/research/${fixture.jobs.unknown}`);
-    for (const action of ["Write off budget (risk)", "Override capacity release (risk)"]) {
-      await page.getByRole("button", { name: "Reconcile…", exact: true }).click();
-      const dialog = page.getByRole("dialog");
-      await dialog.getByRole("radio", { name: action, exact: true }).check();
-      await dialog
-        .getByLabel("Reason", { exact: true })
-        .fill("Synthetic offline acceptance evidence");
-      await dialog.getByLabel("Evidence reference", { exact: true }).fill("browser-fixture");
-      await dialog.getByRole("checkbox").check();
-      await dialog.getByRole("button", { name: "Record reconciliation", exact: true }).click();
-      await expect(dialog).not.toBeVisible();
-      const job = await (
-        await page.request.get(`${origin}/v1/admin/research/${fixture.jobs.unknown}`)
-      ).json();
-      expect(job.job.budget_hold_state).toBe("written_off");
-      expect(job.job.active_slot_held).toBe(action === "Write off budget (risk)");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    for (const route of [
+      "research",
+      "research/job_unknown",
+      "routing",
+      "usage",
+      "connections",
+      "audit",
+    ]) {
+      const response = await page.request.get(`${origin}/app/${route}`, {
+        headers: { Accept: "text/html" },
+      });
+      expect(response.status()).toBe(404);
+      expect(response.headers()["content-type"]).toContain("application/json");
     }
-    await page.goto(`${origin}/app/research/${fixture.jobs.report}`);
-    await expect(page.getByRole("heading", { name: "Synthetic report" })).toBeVisible();
-    await expect(page.getByRole("cell", { name: "Rendered", exact: true })).toBeVisible();
-    expect(await page.evaluate(() => "extaUnsafe" in window)).toBe(false);
-    await expect(page.locator('img[src*="invalid.example"], a[href^="javascript:"]')).toHaveCount(
-      0,
-    );
-    expect((await audit(page)).violations).toEqual([]);
-    await page.screenshot({ path: info.outputPath("report-desktop.png"), fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: info.outputPath("report-mobile.png"), fullPage: true });
     expect(
       await page.evaluate(() =>
         navigator.serviceWorker.getRegistrations().then((entries) => entries.length),
@@ -275,6 +275,7 @@ test("standalone management and durable Research recovery", async ({ page, conte
     ).toBe(0);
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
+    await page.locator(".session-menu summary").click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(401);

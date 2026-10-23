@@ -6,7 +6,6 @@ import { useI18n } from "../../lib/i18n";
 import { Badge, Notice, QueryView } from "../../components/Feedback";
 import { PageHeader, RequirePermission, Section } from "../../components/Page";
 import { CopyButton } from "../../components/Values";
-import { TokensSection } from "./TokensSection";
 
 /**
  * Connections page.
@@ -20,7 +19,6 @@ export function ConnectionsPage() {
       <PageHeader title={t("connections.title")} description={t("connections.description")} />
       <RequirePermission permission="admin:read">
         <ConnectionDetails />
-        <TokensSection />
       </RequirePermission>
     </>
   );
@@ -31,7 +29,7 @@ export function ConnectionsPage() {
  *
  * @returns Sections.
  */
-function ConnectionDetails() {
+export function ConnectionDetails() {
   const { t } = useI18n();
   const api = useApi();
   const info = useQuery({

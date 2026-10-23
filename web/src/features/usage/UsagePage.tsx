@@ -91,7 +91,7 @@ export function UsagePage() {
  *
  * @returns Sections.
  */
-function UsageContent() {
+export function UsageContent() {
   const { t } = useI18n();
   const api = useApi();
   const usage = useCursorList(["usage"], (cursor) =>

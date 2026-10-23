@@ -12,7 +12,7 @@ describe("settings and audit", () => {
       ...mockDb.state.settings,
       build: { ...mockDb.state.settings.build, contract_hash: "0".repeat(64) },
     };
-    renderApp("/settings");
+    renderApp("/settings?view=health");
     expect(await screen.findByText("Incompatible contract")).toBeInTheDocument();
     expect(screen.getByText("Mismatch")).toHaveClass("badge-danger");
   });
@@ -48,14 +48,16 @@ describe("settings and audit", () => {
     mockDb.state.session = mockSession(
       ALL_PERMISSIONS.filter((permission) => permission !== "admin:audit:read"),
     );
-    renderApp("/audit");
+    renderApp("/settings?view=audit");
     expect(await screen.findByText("Not available for this principal")).toBeInTheDocument();
     expect(callsTo("GET", "/v1/admin/audit")).toHaveLength(0);
   });
 
   it("lists redacted audit events", async () => {
-    renderApp("/audit");
+    mockDb.state.session = mockSession(["admin:audit:read"]);
+    renderApp("/settings?view=audit");
     expect(await screen.findByText("route.replace")).toBeInTheDocument();
     expect(screen.getByText("key.create")).toBeInTheDocument();
+    expect(callsTo("GET", "/v1/admin/settings")).toHaveLength(0);
   });
 });

@@ -1,4 +1,4 @@
-/** Route policies per capability, versioned replacement and local no-charge preview. */
+/** Route configuration with versioned replacement and capability constraints. */
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiFailure, call, useApi } from "../../lib/api";
@@ -48,15 +48,6 @@ const STATIC_TARGETS: Record<Operation, RouteTarget[]> = {
   ],
 };
 
-const OPERATIONS: readonly Operation[] = [
-  "search",
-  "advanced_search",
-  "fetch",
-  "map",
-  "crawl",
-  "research_create",
-];
-
 /**
  * Compare two route targets.
  *
@@ -86,14 +77,15 @@ function useCapabilities() {
  *
  * @returns Page element.
  */
-export function RoutingPage() {
+export function RoutingPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("routing.title")} description={t("routing.description")} />
+      {embedded ? null : (
+        <PageHeader title={t("routing.title")} description={t("routing.description")} />
+      )}
       <RequirePermission permission="admin:read">
         <RoutePolicies />
-        <RoutePreviewPanel />
       </RequirePermission>
     </>
   );
@@ -500,222 +492,5 @@ function RouteEditDialog({
         </div>
       </form>
     </Dialog>
-  );
-}
-
-type PreviewProfile = Schemas["Profile"];
-
-/**
- * Build a preview request for a sample input.
- *
- * @param operation - Operation.
- * @param sample - Query, URL or research input.
- * @param profile - Requested profile.
- * @returns Preview request body.
- */
-export function buildPreviewRequest(
-  operation: Operation,
-  sample: string,
-  profile: PreviewProfile,
-): Schemas["RoutePreviewRequest"] {
-  switch (operation) {
-    case "search":
-      return { operation, request: { query: sample } };
-    case "advanced_search":
-      if (profile === "exa_deep" || profile === "tavily_advanced") {
-        return {
-          operation,
-          request: { query: sample, profile, provider_options: { kind: profile } },
-        };
-      }
-      return { operation, request: { query: sample, profile: "common" } };
-    case "fetch":
-      return { operation, request: { urls: [sample] } };
-    case "map":
-      return { operation, request: { url: sample } };
-    case "crawl":
-      return { operation, request: { url: sample } };
-    case "research_create":
-      if (profile === "tavily_mini" || profile === "tavily_pro") {
-        return {
-          operation,
-          request: {
-            input: sample,
-            profile,
-            budget: {
-              mode: "estimated",
-              unit: "tavily_credit",
-              amount: profile === "tavily_pro" ? 250 : 110,
-              acknowledge_estimated_budget: true,
-            },
-          },
-        };
-      }
-      return {
-        operation,
-        request: {
-          input: sample,
-          profile: "exa_auto",
-          budget: { mode: "hard", unit: "micro_usd", amount: 1_000_000 },
-        },
-      };
-  }
-}
-
-const PREVIEW_PROFILES: Record<Operation, PreviewProfile[]> = {
-  search: ["common"],
-  advanced_search: ["common", "exa_deep", "tavily_advanced"],
-  fetch: ["common"],
-  map: ["common"],
-  crawl: ["common"],
-  research_create: ["exa_auto", "tavily_mini", "tavily_pro"],
-};
-
-/**
- * Local, no-charge semantic routing preview.
- *
- * @returns Section element.
- */
-function RoutePreviewPanel() {
-  const { t } = useI18n();
-  const api = useApi();
-  const { csrfToken } = useSession();
-  const formId = useId();
-  const [operation, setOperation] = useState<Operation>("search");
-  const [profile, setProfile] = useState<PreviewProfile>("common");
-  const [sample, setSample] = useState("");
-  const preview = useMutation({
-    mutationFn: (body: Schemas["RoutePreviewRequest"]) =>
-      call(
-        api.POST("/v1/admin/routes/preview", {
-          params: { header: { "X-Exta-CSRF": csrfToken } },
-          body,
-        }),
-      ),
-  });
-  const isUrl = operation === "fetch" || operation === "map" || operation === "crawl";
-  const result = preview.data;
-
-  return (
-    <Section title={t("routing.previewTitle")} description={t("routing.previewDescription")}>
-      <form
-        className="form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (sample.trim() !== "" && !preview.isPending) {
-            preview.mutate(buildPreviewRequest(operation, sample.trim(), profile));
-          }
-        }}
-      >
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor={`${formId}-operation`}>{t("routing.capability")}</label>
-            <select
-              id={`${formId}-operation`}
-              value={operation}
-              onChange={(event) => {
-                const next = event.target.value as Operation;
-                setOperation(next);
-                setProfile(PREVIEW_PROFILES[next][0] ?? "common");
-                preview.reset();
-              }}
-            >
-              {OPERATIONS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor={`${formId}-profile`}>{t("routing.profile")}</label>
-            <select
-              id={`${formId}-profile`}
-              value={profile}
-              onChange={(event) => setProfile(event.target.value as PreviewProfile)}
-            >
-              {PREVIEW_PROFILES[operation].map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field grow">
-            <label htmlFor={`${formId}-sample`}>
-              {isUrl ? t("routing.sampleUrl") : t("routing.sampleQuery")}
-            </label>
-            <input
-              id={`${formId}-sample`}
-              value={sample}
-              onChange={(event) => setSample(event.target.value)}
-              placeholder={isUrl ? "https://example.com/" : ""}
-            />
-          </div>
-        </div>
-        <div className="button-row">
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={sample.trim() === "" || preview.isPending}
-          >
-            {preview.isPending ? t("common.working") : t("routing.preview")}
-          </button>
-        </div>
-      </form>
-      <InlineError error={preview.error} />
-      {result === undefined ? null : (
-        <div className="preview-result" role="status" aria-live="polite">
-          <p>
-            {t("routing.revision")}: <RouteRevision revision={result.route_revision} />
-          </p>
-          {result.eligible.length === 0 ? (
-            <Notice tone="danger" title={t("routing.noCompatibleRoute")}>
-              {t("routing.noCompatibleRouteDetail")}
-            </Notice>
-          ) : (
-            <>
-              <h3>{t("routing.eligible")}</h3>
-              <ol className="target-list">
-                {result.eligible.map((target) => (
-                  <li key={`${target.provider}-${target.profile}`}>
-                    {t(`provider.${target.provider}`)} · <code>{target.profile}</code>
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-          {result.exclusions.length === 0 ? null : (
-            <>
-              <h3>{t("routing.exclusions")}</h3>
-              <ul className="plain-list">
-                {result.exclusions.map((exclusion, index) => (
-                  <li key={`${exclusion.provider}-${exclusion.field ?? ""}-${index}`}>
-                    <strong>{t(`provider.${exclusion.provider}`)}</strong>
-                    {exclusion.field === null ? null : (
-                      <>
-                        {" "}
-                        <code>{exclusion.field}</code>
-                      </>
-                    )}
-                    : {exclusion.reason}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          {result.warnings.length === 0 ? null : (
-            <Notice tone="warning" title={t("routing.warnings")}>
-              <ul className="plain-list">
-                {result.warnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
-            </Notice>
-          )}
-          <p className="muted">{t("routing.previewNoCharge")}</p>
-        </div>
-      )}
-    </Section>
   );
 }

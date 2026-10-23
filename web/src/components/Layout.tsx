@@ -1,5 +1,5 @@
 /** Authenticated application shell: brand, navigation, language and sign-out. */
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { call, useApi } from "../lib/api";
@@ -9,18 +9,19 @@ import { useSession } from "../lib/session";
 import { InlineError, LoadingState } from "./Feedback";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { BrandMark } from "./BrandMark";
+import { ThemeSwitch } from "./ThemeSwitch";
+import { NavigationIcon } from "./NavigationIcon";
 
-const NAVIGATION: ReadonlyArray<{ to: string; label: MessageKey }> = [
-  { to: "/overview", label: "nav.overview" },
-  { to: "/keys", label: "nav.keys" },
-  { to: "/routing", label: "nav.routing" },
-  { to: "/usage", label: "nav.usage" },
-  { to: "/requests", label: "nav.requests" },
-  { to: "/research", label: "nav.research" },
-  { to: "/connections", label: "nav.connections" },
-  { to: "/settings", label: "nav.settings" },
-  { to: "/audit", label: "nav.audit" },
-];
+const NAVIGATION = [
+  { to: "/overview", label: "nav.overview", icon: "overview" },
+  { to: "/keys", label: "nav.keys", icon: "keys" },
+  { to: "/requests", label: "nav.requests", icon: "requests" },
+  { to: "/settings", label: "nav.settings", icon: "settings" },
+] as const satisfies ReadonlyArray<{
+  to: string;
+  label: MessageKey;
+  icon: "overview" | "keys" | "requests" | "settings";
+}>;
 
 /**
  * Banner shown only in the build-time mock mode so fixture data is never mistaken for
@@ -51,7 +52,6 @@ export function Layout() {
   const { session, csrfToken, expire } = useSession();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
-  const [isNavOpen, setNavOpen] = useState(false);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -68,75 +68,76 @@ export function Layout() {
     onSuccess: () => expire("logged_out"),
   });
 
+  const current = NAVIGATION.find((item) => location.pathname.startsWith(item.to));
   return (
     <div className="shell">
       <a className="skip-link" href="#main">
         {t("common.skipToContent")}
       </a>
       <MockModeBanner />
-      <header className="topbar">
-        <button
-          type="button"
-          className="button button-ghost nav-toggle"
-          aria-expanded={isNavOpen}
-          aria-controls="primary-navigation"
-          onClick={() => setNavOpen((open) => !open)}
-        >
-          {t("nav.menu")}
-        </button>
+      <aside className="sidebar">
         <div className="brand">
           <BrandMark />
           <span className="brand-name">Exta</span>
-          <span className="brand-tagline">{t("brand.tagline")}</span>
+          <span className="brand-console">Console</span>
         </div>
-        <div className="topbar-actions">
-          <LanguageSwitch />
-          {session === null ? null : (
-            <span className="principal" title={t("session.principal")}>
-              <span className="visually-hidden">{t("session.principal")}: </span>
-              <code>{session.principal_id}</code>
-            </span>
-          )}
-          <button
-            type="button"
-            className="button button-ghost"
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-          >
-            {logout.isPending ? t("session.signingOut") : t("session.signOut")}
-          </button>
-        </div>
-      </header>
-      {logout.isError ? (
-        <div className="topbar-error">
-          <InlineError error={logout.error} />
-        </div>
-      ) : null}
-      <div className="body">
-        <nav
-          id="primary-navigation"
-          className={isNavOpen ? "sidebar sidebar-open" : "sidebar"}
-          aria-label={t("nav.primary")}
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && isNavOpen) {
-              setNavOpen(false);
-            }
-          }}
-        >
+        <p className="nav-caption">{t("nav.workspace")}</p>
+        <nav id="primary-navigation" aria-label={t("nav.primary")}>
           <ul>
             {NAVIGATION.map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
                   className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-                  onClick={() => setNavOpen(false)}
                 >
+                  <NavigationIcon name={item.icon} />
                   {t(item.label)}
                 </NavLink>
               </li>
             ))}
           </ul>
         </nav>
+        <div className="sidebar-note">
+          <span className="sidebar-dot" />
+          MCP / REST API<p>{t("overview.readOnly")}</p>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <span>Exta</span>
+            <span aria-hidden="true">/</span>
+            <strong>{current ? t(current.label) : t("nav.workspace")}</strong>
+          </div>
+          <div className="topbar-actions">
+            <ThemeSwitch />
+            <LanguageSwitch />
+            <details className="session-menu">
+              <summary>{t("nav.workspace")}</summary>
+              <div>
+                {session === null ? null : (
+                  <p className="principal">
+                    {t("session.principal")}
+                    <code>{session.principal_id}</code>
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => logout.mutate()}
+                  disabled={logout.isPending}
+                >
+                  {logout.isPending ? t("session.signingOut") : t("session.signOut")}
+                </button>
+              </div>
+            </details>
+          </div>
+        </header>
+        {logout.isError ? (
+          <div className="topbar-error">
+            <InlineError error={logout.error} />
+          </div>
+        ) : null}
         <main id="main" ref={mainRef} tabIndex={-1} className="content">
           <Suspense fallback={<LoadingState />}>
             <Outlet />

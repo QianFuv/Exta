@@ -7,6 +7,28 @@ import { useI18n } from "../lib/i18n";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Exclude hidden or explicitly unfocusable controls from the keyboard cycle. */
+function focusableControls(panel: HTMLElement | null) {
+  return Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter((element) => {
+    if (element.tabIndex < 0 || element.closest("[hidden], [inert]")) return false;
+    for (
+      let ancestor: HTMLElement | null = element;
+      ancestor !== null;
+      ancestor = ancestor.parentElement
+    ) {
+      const style = getComputedStyle(ancestor);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+      if (
+        ancestor.tagName === "DETAILS" &&
+        !ancestor.hasAttribute("open") &&
+        !element.closest("summary")
+      )
+        return false;
+    }
+    return true;
+  });
+}
+
 /**
  * Modal dialog. Focus moves into the dialog on open, Tab cycles inside it, Escape closes
  * it unless `isBusy`, and focus returns to the previously focused element on close.
@@ -21,6 +43,7 @@ export function Dialog({
   isBusy = false,
   children,
   size = "medium",
+  variant = "modal",
 }: {
   title: string;
   description?: string;
@@ -28,6 +51,7 @@ export function Dialog({
   isBusy?: boolean;
   children: ReactNode;
   size?: "medium" | "large";
+  variant?: "modal" | "drawer";
 }) {
   const { t } = useI18n();
   const titleId = useId();
@@ -42,11 +66,21 @@ export function Dialog({
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const panel = panelRef.current;
-    const first =
-      panel?.querySelector<HTMLElement>("[data-autofocus]") ??
-      panel?.querySelector<HTMLElement>(FOCUSABLE);
+    const background = Array.from(document.body.children).filter(
+      (element) => !element.contains(panel),
+    );
+    const inertBefore = background.map((element) => element.hasAttribute("inert"));
+    background.forEach((element) => element.setAttribute("inert", ""));
+    const overflowBefore = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const controls = focusableControls(panel);
+    const first = controls.find((element) => element.hasAttribute("data-autofocus")) ?? controls[0];
     (first ?? panel)?.focus();
     return () => {
+      background.forEach((element, index) => {
+        if (!inertBefore[index]) element.removeAttribute("inert");
+      });
+      document.body.style.overflow = overflowBefore;
       previous?.focus();
     };
   }, []);
@@ -62,7 +96,7 @@ export function Dialog({
     if (event.key !== "Tab" || panelRef.current === null) {
       return;
     }
-    const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const focusable = focusableControls(panelRef.current);
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (first === undefined || last === undefined) {
@@ -79,7 +113,7 @@ export function Dialog({
   };
 
   return createPortal(
-    <div className="dialog-backdrop">
+    <div className={`dialog-backdrop ${variant === "drawer" ? "drawer-backdrop" : ""}`}>
       <div
         ref={panelRef}
         className={`dialog dialog-${size}`}

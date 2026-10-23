@@ -11,7 +11,7 @@ import { server } from "../../test/server";
 describe("admin session", () => {
   it("signs in without persisting the credential or CSRF token", async () => {
     mockDb.state.session = null;
-    const { router, queryClient } = renderApp("/research");
+    const { router, queryClient } = renderApp("/requests");
     const field = await screen.findByLabelText("Operator credential");
     expect(router.state.location.pathname).toBe("/login");
 
@@ -30,8 +30,8 @@ describe("admin session", () => {
 
     await userEvent.type(field, mockDb.state.validCredential);
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("heading", { name: "Research", level: 1 })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/research");
+    expect(await screen.findByRole("heading", { name: "Call logs", level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/requests");
 
     const stored = allBrowserStorage();
     expect(stored).not.toContain(mockDb.state.validCredential);
@@ -40,11 +40,13 @@ describe("admin session", () => {
 
   it("returns to login with an explanation when the session expires mid-use", async () => {
     const { router } = renderApp("/overview");
-    expect(await screen.findByRole("heading", { name: "Overview", level: 1 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
+    ).toBeInTheDocument();
     mockDb.state.session = null;
     await userEvent.click(
       within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", {
-        name: "Usage",
+        name: "Keys",
       }),
     );
     expect(await screen.findByText(/Your session ended/)).toBeInTheDocument();
@@ -53,7 +55,8 @@ describe("admin session", () => {
 
   it("signs out with the CSRF header", async () => {
     renderApp("/overview");
-    await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    await userEvent.click(await screen.findByText("Management", { selector: "summary" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(await screen.findByText("You signed out.")).toBeInTheDocument();
     const calls = callsTo("DELETE", "/v1/admin/session");
     expect(calls).toHaveLength(1);

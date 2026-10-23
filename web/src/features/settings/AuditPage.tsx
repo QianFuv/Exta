@@ -13,11 +13,13 @@ import { DateTime, JsonBlock } from "../../components/Values";
  *
  * @returns Page element.
  */
-export function AuditPage() {
+export function AuditPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   return (
     <>
-      <PageHeader title={t("audit.title")} description={t("audit.description")} />
+      {embedded ? null : (
+        <PageHeader title={t("audit.title")} description={t("audit.description")} />
+      )}
       <RequirePermission permission="admin:audit:read">
         <AuditContent />
       </RequirePermission>
