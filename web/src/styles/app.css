@@ -1747,3 +1747,11 @@ h3 {
     padding: 14px;
   }
 }
+
+.usage-refresh-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}

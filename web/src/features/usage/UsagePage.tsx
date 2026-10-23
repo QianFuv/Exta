@@ -75,6 +75,22 @@ export function findDivergence(items: KeyUsage[]): Set<string> {
   return diverging;
 }
 
+/** Only successful upstream observations can establish the displayed refresh time. */
+export function lastSuccessfulObservation(items: KeyUsage[]): string | null {
+  return (
+    items
+      .filter(
+        (item) =>
+          item.source === "upstream" &&
+          item.freshness !== "unknown" &&
+          item.unavailable_reason === null &&
+          item.observed_at !== null,
+      )
+      .map((item) => item.observed_at!)
+      .sort((first, second) => Date.parse(second) - Date.parse(first))[0] ?? null
+  );
+}
+
 /**
  * Usage page.
  *
@@ -115,34 +131,27 @@ export function UsageContent() {
   if (usage.query.isError && usage.items.length === 0) {
     return <ErrorState error={usage.query.error} onRetry={() => void usage.query.refetch()} />;
   }
-  const overview = usage.query.data?.pages[0]?.overview;
+  const refreshedAt = lastSuccessfulObservation(usage.items);
   const diverging = findDivergence(usage.items);
 
   return (
     <>
-      <Section
-        title={t("usage.refreshTitle")}
-        description={t("usage.refreshDescription")}
-        actions={
-          <Button
-            type="button"
-            className="button"
-            onClick={() => refresh.mutation.mutate({})}
-            disabled={!refresh.canRefresh || refresh.mutation.isPending}
-          >
-            {refresh.mutation.isPending ? t("common.working") : t("usage.refreshAll")}
-          </Button>
-        }
-      >
+      <div className="usage-refresh-toolbar">
+        <Button
+          type="button"
+          onClick={() => refresh.mutation.mutate({})}
+          disabled={!refresh.canRefresh || refresh.mutation.isPending}
+          loading={refresh.mutation.isPending}
+        >
+          {t("usage.refreshAll")}
+        </Button>
+        <span className="muted">
+          {t("usage.lastRefresh")}:{" "}
+          {refreshedAt ? <DateTime value={refreshedAt} /> : t("usage.notRefreshed")}
+        </span>
         <PermissionHint permission="admin:usage:refresh" />
         <RefreshStatus mutation={refresh.mutation} />
-        <p className="field-hint">{t("usage.unitsNeverCombined")}</p>
-        {overview === undefined ? null : (
-          <p className="muted">
-            {t("usage.observedAt")}: <DateTime value={overview.observed_at} />
-          </p>
-        )}
-      </Section>
+      </div>
       {(["exa", "tavily"] as const).map((provider) => (
         <ProviderUsage
           key={provider}
@@ -196,21 +205,7 @@ function RefreshStatus({
 }: {
   mutation: { data: Schemas["UsageRefreshResult"] | undefined; error: unknown; isError: boolean };
 }) {
-  const { t } = useI18n();
-  if (mutation.isError) {
-    return <InlineError error={mutation.error} />;
-  }
-  if (mutation.data === undefined) {
-    return null;
-  }
-  return (
-    <p role="status">
-      {mutation.data.status === "coalesced" ? t("usage.coalesced") : t("usage.refreshed")}{" "}
-      <span className="muted">
-        {t("usage.nextRefresh")}: <DateTime value={mutation.data.next_refresh_at} />
-      </span>
-    </p>
-  );
+  return mutation.isError ? <InlineError error={mutation.error} /> : null;
 }
 
 /**
