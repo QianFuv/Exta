@@ -493,7 +493,7 @@ time {
   border: 1px solid var(--control-border);
   border-radius: var(--semi-border-radius-small);
 }
-.numeric-control > .semi-input-number:hover:not(:has(input:disabled)) {
+.numeric-control > .semi-input-number:hover:where(:not(:has(input:disabled))) {
   background: var(--semi-color-fill-1);
   border-color: var(--semi-color-text-1);
 }
