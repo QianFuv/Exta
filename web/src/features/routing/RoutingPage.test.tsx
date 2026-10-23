@@ -82,7 +82,11 @@ describe("routing", () => {
     const dialog = screen.getByRole("dialog", { name: "Edit route: advanced_search" });
     await selectOption(within(dialog).getByLabelText("Add target"), "Tavily · common");
     await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    expect(within(dialog).getByRole("button", { name: "Move exa/common up" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Move tavily/common down" })).toBeDisabled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Move tavily/common up" }));
+    expect(within(dialog).getByRole("button", { name: "Move tavily/common up" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Move exa/common down" })).toBeDisabled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Route saved as revision 3.")).toBeInTheDocument();
     expect(callsTo("PUT", "/v1/admin/routes/advanced_search")[0]?.body).toEqual({
@@ -95,6 +99,21 @@ describe("routing", () => {
       max_attempts: 2,
       deadline_seconds: 60,
       allow_duplicate_cost: false,
+    });
+  });
+
+  it("removes only the selected target and retains the remaining order", async () => {
+    renderApp("/settings?view=routing");
+    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "Edit" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit route: search" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove exa/common" }));
+    expect(within(dialog).queryByRole("button", { name: "Move exa/common up" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "Move tavily/common up" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Move tavily/common down" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Route saved as revision/)).toBeInTheDocument();
+    expect(callsTo("PUT", "/v1/admin/routes/search")[0]?.body).toMatchObject({
+      targets: [{ provider: "tavily", profile: "common" }],
     });
   });
 

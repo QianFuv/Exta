@@ -753,24 +753,36 @@ h3 {
 }
 
 .target-editor {
-  list-style: decimal;
+  list-style: none;
   margin: 0;
-  padding-left: 22px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.target-editor li > * {
-  vertical-align: middle;
+  gap: 12px;
 }
 
 .target-editor li {
-  display: list-item;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
-.target-editor li span:first-child {
-  margin-right: 10px;
+.target-name,
+.target-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.target-actions {
+  margin-left: auto;
+}
+
+.target-number {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .timeline {

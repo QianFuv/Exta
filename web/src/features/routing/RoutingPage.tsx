@@ -1,4 +1,6 @@
 import { NumericControl } from "../../components/NumericControl";
+import IconArrowUp from "@douyinfe/semi-icons/lib/es/icons/IconArrowUp";
+import IconArrowDown from "@douyinfe/semi-icons/lib/es/icons/IconArrowDown";
 import { DataTable } from "../../components/DataTable";
 import { Link } from "react-router";
 import { CheckboxField, Button, Select } from "../../components/Controls";
@@ -411,10 +413,13 @@ function RouteEditDialog({
             <ol className="target-editor">
               {targets.map((target, index) => (
                 <li key={`${target.provider}-${target.profile}`}>
-                  <span>
+                  <span className="target-name">
+                    <span className="target-number" aria-hidden>
+                      {index + 1}.
+                    </span>
                     {t(`provider.${target.provider}`)} · <span>{target.profile}</span>
                   </span>
-                  <span className="button-row tight">
+                  <span className="target-actions">
                     <Button
                       type="button"
                       className="button button-small"
@@ -424,7 +429,7 @@ function RouteEditDialog({
                         target: `${target.provider}/${target.profile}`,
                       })}
                     >
-                      ↑
+                      <IconArrowUp aria-hidden />
                     </Button>
                     <Button
                       type="button"
@@ -435,7 +440,7 @@ function RouteEditDialog({
                         target: `${target.provider}/${target.profile}`,
                       })}
                     >
-                      ↓
+                      <IconArrowDown aria-hidden />
                     </Button>
                     <Button
                       type="button"
