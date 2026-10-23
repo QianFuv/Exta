@@ -473,8 +473,17 @@ time {
   width: 100%;
   min-width: 0;
 }
+.field-row > .field:has(.numeric-control) {
+  flex-basis: 100%;
+}
 .numeric-control > .semi-slider {
   margin: 0 12px 22px;
+}
+.numeric-control .semi-slider-rail {
+  background-color: var(--semi-color-text-2);
+}
+.numeric-control .semi-slider-disabled .semi-slider-rail {
+  background-color: var(--semi-color-border);
 }
 .numeric-control > .semi-input-number {
   width: 100%;
@@ -482,12 +491,15 @@ time {
 .numeric-control .semi-slider-marks {
   font-size: 12px;
 }
+.numeric-control .semi-slider-mark {
+  white-space: nowrap;
+}
 .input-with-unit:has(.numeric-control) {
   flex-wrap: wrap;
 }
 @media (max-width: 640px) {
   .numeric-control {
-    grid-template-columns: minmax(90px, 1fr) 100px;
+    grid-template-columns: minmax(90px, 1fr) 80px;
     gap: 14px;
   }
 }

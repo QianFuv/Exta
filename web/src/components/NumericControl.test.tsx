@@ -42,6 +42,11 @@ it("synchronizes marks, keyboard and exact values beyond the visible slider", as
     toJSON: () => ({}),
   });
   render(<NumericFixture />);
+  expect(screen.getByText("0", { selector: ".semi-slider-mark" })).toBeVisible();
+  expect(screen.getByRole("slider", { name: "Limit" })).toHaveAttribute(
+    "aria-valuetext",
+    "No local cap",
+  );
   const number = screen.getByRole("spinbutton", { name: "Limit" });
   fireEvent.click(screen.getByText("10", { selector: ".semi-slider-mark" }), {
     clientX: 10,

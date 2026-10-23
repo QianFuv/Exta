@@ -31,6 +31,27 @@ async function expectDialogWithinViewport(page: Page) {
     .toBe(true);
 }
 
+/** Keep preset labels distinct so a compact numeric field remains readable. */
+async function expectNumericMarksReadable(page: Page) {
+  await expect
+    .poll(() =>
+      page
+        .getByRole("dialog")
+        .locator(".numeric-control")
+        .evaluateAll((controls) =>
+          controls.every((control) => {
+            const marks = Array.from(control.querySelectorAll(".semi-slider-mark")).map((mark) =>
+              mark.getBoundingClientRect(),
+            );
+            return marks.every(
+              (mark, index) => index === 0 || mark.left >= marks[index - 1]!.right - 1,
+            );
+          }),
+        ),
+    )
+    .toBe(true);
+}
+
 /** Choose an official Semi option by its visible accessible label. */
 async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
   const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
@@ -195,6 +216,10 @@ test("standalone key-only administration and persistent appearance", async ({
     await moreActions.click();
     await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
     const keyDialog = page.getByRole("dialog", { name: "Edit key & limits" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectDialogWithinViewport(page);
+    await expectNumericMarksReadable(page);
+    await page.setViewportSize({ width: 1440, height: 1000 });
     const capacity = keyDialog.getByRole("slider", { name: "Active research jobs", exact: true });
     await capacity.focus();
     await page.keyboard.press("Home");
@@ -578,6 +603,7 @@ test("standalone key-only administration and persistent appearance", async ({
         await page.getByRole("button", { name: "添加密钥", exact: true }).click();
         await page.getByRole("menuitem", { name: "添加密钥 · Exa", exact: true }).click();
         await expect(page.getByRole("dialog")).toBeVisible();
+        await expectNumericMarksReadable(page);
         await capture(`zh-key-dialog-${theme}`);
         await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
         const help = page.getByRole("button", { name: /关于/ }).first();

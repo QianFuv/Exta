@@ -47,11 +47,7 @@ export function NumericControl({
   const marks = Object.fromEntries(
     stops.map((stop) => [
       stop,
-      stop === 0 && zeroLabel
-        ? zeroLabel
-        : new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(
-            stop,
-          ),
+      new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(stop),
     ]),
   );
   return (
