@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.3 — 2026-10-24
+
+- Treat missing, null and zero key safety caps as no local cap; positive limits, shared reservations, upstream billing blocks and rate backoff remain enforced. Unknown upstream balance permits otherwise eligible calls and remains unknown. Existing zero caps now have this explicit unrestricted meaning.
+- Initialize new installations with an explicit reusable administrator password from standard input, stored using salted PBKDF2-HMAC-SHA256. Previously issued administrator credentials were already reusable and remain valid without reset or automatic rehashing. Keep API/MCP access keys separate. No production credential is changed by this release.
+- Correct Semi calendar selection for access-key expiry, preserve controlled clear/reselection, and recheck expiry at submission. Add UTC, Asia/Shanghai and DST-zone browser round trips against isolated backend state.
+- Pair settings, route and key numeric controls with common slider marks and exact inputs; preserve legal values beyond displayed slider presets and label zero-limit semantics. Align route targets and their move/remove actions.
+- Consolidate recent calls and errors on the left of Statistics with key-pool/readiness panels on the right. Add UTC call-count trends over 24 hours, 7 days or 30 days, counting each retained synchronous request or Research job once, never retries, fallback attempts or polling. Outcomes reflect current state in the original creation bucket; pre-admission rejections and deleted history are outside coverage.
+- Remove the independent Audit interface while preserving internal transactional evidence and existing history. Add exact request-ID filtering and provider filtering across failed fallback attempts without duplicate call rows.
+- Unify login and application language/appearance icon menus, remove redundant breadcrumbs and subtitles, and move selected explanations into accessible heading help. Apply restrained graphite/indigo light, dark and system themes. Keep units, errors, critical states and destructive confirmations visible.
+- Keep the initial database schema unchanged from 0.1.2. New password-verifier state requires this or a newer binary for login; old credentials are not rewritten. No automatic production deployment or password reset is performed.
+
 ## 0.1.2 — 2026-10-24
 
 - Add explicit trusted reverse-proxy support for HTTP inside an isolated Docker network, with a fixed external HTTPS origin. Public TLS remains at the existing reverse proxy.
