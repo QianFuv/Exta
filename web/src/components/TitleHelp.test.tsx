@@ -1,8 +1,12 @@
 /** Optional explanations remain available to pointer, keyboard and touch users. */
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { renderApp } from "../test/renderApp";
+
+beforeAll(async () => {
+  await import("../features/connections/AccessKeysPage");
+});
 
 describe("heading help", () => {
   it("opens on focus, hover or click and dismisses without moving focus", async () => {
