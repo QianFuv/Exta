@@ -15,6 +15,22 @@ function audit(page: Page) {
   }).analyze();
 }
 
+/** Keep a resized dialog and its form controls horizontally reachable without clipping. */
+async function expectDialogWithinViewport(page: Page) {
+  await expect
+    .poll(() =>
+      page.getByRole("dialog").evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return (
+          bounds.left >= 0 &&
+          bounds.right <= window.innerWidth &&
+          element.scrollWidth <= element.clientWidth + 1
+        );
+      }),
+    )
+    .toBe(true);
+}
+
 /** Choose an official Semi option by its visible accessible label. */
 async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
   const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
@@ -50,7 +66,7 @@ test("standalone key-only administration and persistent appearance", async ({
   context,
   browser,
 }, info) => {
-  test.setTimeout(240_000);
+  test.setTimeout(420_000);
   page.setDefaultTimeout(15_000);
   const binary = process.env.EXTA_E2E_BINARY;
   if (!binary || !path.isAbsolute(binary))
@@ -227,6 +243,59 @@ test("standalone key-only administration and persistent appearance", async ({
       page.getByRole("dialog").getByRole("spinbutton", { name: "Local safety limit", exact: true }),
     ).toHaveValue("2500000");
     await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.goto(`${origin}/app/settings`);
+    const concurrency = page.getByRole("spinbutton", {
+      name: "Synchronous concurrency",
+      exact: true,
+    });
+    const numeric = concurrency.locator("xpath=ancestor::div[contains(@class,'numeric-control')]");
+    await numeric.locator(".semi-slider-marks span").filter({ hasText: /^8$/ }).click();
+    await expect(concurrency).toHaveValue("8");
+    const handle = numeric.getByRole("slider");
+    const rail = await numeric.locator(".semi-slider-rail").boundingBox();
+    const thumb = await handle.boundingBox();
+    expect(rail).not.toBeNull();
+    expect(thumb).not.toBeNull();
+    await page.mouse.move(thumb!.x + thumb!.width / 2, thumb!.y + thumb!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rail!.x + rail!.width * 0.75, rail!.y + rail!.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await expect(concurrency).not.toHaveValue("8");
+    await concurrency.fill("7");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText(/Settings saved/)).toBeVisible();
+    await page.reload();
+    await expect(concurrency).toHaveValue("7");
+    const persistedSettings = await (await page.request.get(`${origin}/v1/admin/settings`)).json();
+    expect(persistedSettings.limits.synchronous_concurrency).toBe(7);
+    await page.goto(`${origin}/app/settings?view=routing`);
+    const routeRow = page
+      .getByRole("row")
+      .filter({ has: page.locator(".operation-name", { hasText: /^search$/ }) });
+    await routeRow.getByRole("button", { name: "Edit", exact: true }).click();
+    const routeDialog = page.getByRole("dialog", { name: "Edit route: search", exact: true });
+    if (await routeDialog.getByRole("combobox", { name: "Add target" }).isVisible()) {
+      await routeDialog.getByRole("combobox", { name: "Add target" }).click();
+      await page.getByRole("option", { name: "Tavily · common", exact: true }).click();
+      await routeDialog.getByRole("button", { name: "Add", exact: true }).click();
+    }
+    await expect(routeDialog.getByRole("button", { name: "Move exa/common up" })).toBeDisabled();
+    await expect(
+      routeDialog.getByRole("button", { name: "Move tavily/common down" }),
+    ).toBeDisabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectDialogWithinViewport(page);
+    await routeDialog.getByRole("button", { name: "Move tavily/common up" }).click();
+    await expect(routeDialog.locator(".target-name").first()).toContainText("Tavily");
+    await routeDialog.getByRole("button", { name: "Remove exa/common" }).click();
+    await expect(routeDialog.locator(".target-name")).toHaveCount(1);
+    await routeDialog.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(routeDialog).not.toBeVisible();
+    await routeRow.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(routeDialog.locator(".target-name")).toHaveCount(1);
+    await expect(routeDialog.locator(".target-name")).toContainText("Tavily");
+    await routeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.setViewportSize({ width: 1440, height: 1000 });
     const expiryEvidence: Array<{ timezone: string; expected: string; persisted: string }> = [];
     for (const [timezone, expected] of [
       ["UTC", "2028-06-20T10:30:00Z"],
@@ -337,6 +406,17 @@ test("standalone key-only administration and persistent appearance", async ({
         expect(fontFamilies, `${theme}: coherent typography on ${route}`).toHaveLength(1);
         expect(fontFamilies[0]).toContain("Segoe UI Variable Text");
         expect.soft((await audit(page)).violations, `${theme}: ${route}`).toEqual([]);
+        await page.screenshot({
+          path: info.outputPath(`desktop-${route.replace(/[?=]/g, "-")}-${theme}.png`),
+          fullPage: true,
+        });
+        if (route === "keys") {
+          const help = page.getByRole("button", { name: "About Upstream provider keys" });
+          await help.focus();
+          await expect(page.getByRole("tooltip")).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(page.getByRole("tooltip")).not.toBeVisible();
+        }
       }
       await page.goto(`${origin}/app/requests`);
       const dateField = page.getByLabel("Created after", { exact: true });
@@ -354,6 +434,8 @@ test("standalone key-only administration and persistent appearance", async ({
         const dialog = page.getByRole("dialog", { name: "Request detail" });
         await expect(dialog.getByText("Attempt 1", { exact: true })).toBeVisible();
         expect((await audit(page)).violations).toEqual([]);
+        if (attempt === 0)
+          await page.screenshot({ path: info.outputPath(`detail-${theme}.png`), fullPage: true });
         await page.keyboard.press("Shift+Tab");
         expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
           true,
@@ -394,6 +476,10 @@ test("standalone key-only administration and persistent appearance", async ({
           }
         }
         await expectActiveNavigationVisible(page, `${theme}: mobile navigation on ${route}`);
+        await page.screenshot({
+          path: info.outputPath(`mobile-${route}-${theme}.png`),
+          fullPage: true,
+        });
       }
       await page.screenshot({
         path: info.outputPath(`settings-mobile-${theme}.png`),
@@ -442,9 +528,148 @@ test("standalone key-only administration and persistent appearance", async ({
     ).toBe(0);
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
+    if (process.env.EXTA_CAPTURE_UI === "1") {
+      await page.getByRole("button", { name: "Language", exact: true }).click();
+      await page.getByRole("menuitem", { name: "简体中文", exact: true }).click();
+      const routes = [
+        "overview",
+        "overview?view=usage",
+        "keys",
+        "access-keys",
+        "requests",
+        "settings",
+        "settings?view=routing",
+        "settings?view=budgets",
+        "settings?view=health",
+        "settings?view=connection",
+      ];
+      /** Capture stable fixture pixels, masking any one-time secret surface defensively. */
+      async function capture(name: string, fullPage = true) {
+        await page.evaluate(() => document.fonts.ready);
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+            ),
+        );
+        await page.screenshot({
+          path: info.outputPath(`${name}.png`),
+          fullPage,
+          mask: [page.locator(".secret-value")],
+        });
+      }
+      for (const theme of ["light", "dark"] as const) {
+        await page.getByRole("button", { name: "外观", exact: true }).click();
+        await page
+          .getByRole("menuitem", { name: theme === "light" ? "浅色" : "深色", exact: true })
+          .click();
+        for (const route of routes) {
+          await page.goto(`${origin}/app/${route}`);
+          await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+          await expect(page.locator(".state-loading")).toHaveCount(0);
+          await capture(`zh-${route.replace(/[?=]/g, "-")}-${theme}`, route !== "settings");
+          if (route === "settings") {
+            await page.getByRole("button", { name: "保存", exact: true }).scrollIntoViewIfNeeded();
+            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+            await capture(`zh-settings-continued-${theme}`, false);
+          }
+        }
+        await page.goto(`${origin}/app/keys`);
+        await page.getByRole("button", { name: "添加密钥", exact: true }).click();
+        await page.getByRole("menuitem", { name: "添加密钥 · Exa", exact: true }).click();
+        await expect(page.getByRole("dialog")).toBeVisible();
+        await capture(`zh-key-dialog-${theme}`);
+        await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
+        const help = page.getByRole("button", { name: /关于/ }).first();
+        await page.mouse.move(0, 0);
+        await help.focus();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await capture(`zh-help-${theme}`);
+        await page.keyboard.press("Escape");
+        await page.goto(`${origin}/app/access-keys`);
+        await page.getByRole("button", { name: "创建访问密钥", exact: true }).click();
+        await capture(`zh-access-dialog-${theme}`);
+        await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
+        await page.goto(`${origin}/app/settings?view=routing`);
+        const row = page
+          .getByRole("row")
+          .filter({ has: page.locator(".operation-name", { hasText: /^advanced_search$/ }) });
+        await row.getByRole("button", { name: "编辑", exact: true }).click();
+        const target = page
+          .getByRole("dialog")
+          .getByRole("combobox", { name: "添加目标", exact: true });
+        if (await target.isVisible()) {
+          await target.click();
+          await page.getByRole("option", { name: "Tavily · common", exact: true }).click();
+          await page.getByRole("dialog").getByRole("button", { name: "添加", exact: true }).click();
+        }
+        await capture(`zh-route-dialog-${theme}`);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await expectDialogWithinViewport(page);
+        await capture(`zh-route-mobile-${theme}`);
+        await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
+        for (const route of [
+          "overview",
+          "overview?view=usage",
+          "keys",
+          "access-keys",
+          "requests",
+          "settings",
+        ]) {
+          await page.goto(`${origin}/app/${route}`);
+          await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+          await expect(page.locator(".state-loading")).toHaveCount(0);
+          await capture(`zh-mobile-${route.replace(/[?=]/g, "-")}-${theme}`, route !== "settings");
+        }
+        await page.getByRole("button", { name: "外观", exact: true }).click();
+        await expect(page.getByRole("menuitem", { name: "跟随系统", exact: true })).toBeVisible();
+        await capture(`zh-mobile-theme-menu-${theme}`, false);
+        await page.keyboard.press("Escape");
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await page.route("**/v1/admin/keys?*", async (route) =>
+          route.fulfill({ json: { items: [], next_cursor: null } }),
+        );
+        await page.goto(`${origin}/app/keys`);
+        await expect(page.locator(".state-empty")).toBeVisible();
+        await capture(`zh-keys-empty-${theme}`);
+        await page.unroute("**/v1/admin/keys?*");
+        await page.route("**/v1/admin/keys?*", async (route) =>
+          route.fulfill({
+            status: 503,
+            json: {
+              error: {
+                code: "storage_unavailable",
+                message: "Synthetic unavailable response",
+                request_id: "request_fixture_error",
+                retryable: true,
+                retry_after_ms: null,
+                details: {},
+              },
+            },
+          }),
+        );
+        await page.goto(`${origin}/app/keys`);
+        await expect(page.getByRole("button", { name: "重试", exact: true })).toBeVisible();
+        await capture(`zh-keys-error-${theme}`);
+        await page.unroute("**/v1/admin/keys?*");
+      }
+      await page.getByRole("button", { name: "语言", exact: true }).click();
+      await page.getByRole("menuitem", { name: "English", exact: true }).click();
+    }
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(401);
+    if (process.env.EXTA_CAPTURE_UI === "1") {
+      for (const theme of ["light", "dark"] as const) {
+        await chooseTheme(page, theme);
+        await page.screenshot({ path: info.outputPath(`login-${theme}.png`), fullPage: true });
+      }
+    }
+    await page.getByLabel("Administrator password").fill(credential);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+    expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(200);
+
     await info.attach("binary-identity", {
       body: JSON.stringify({
         sha256: createHash("sha256").update(readFileSync(binary)).digest("hex"),
