@@ -142,6 +142,10 @@ func TestConcurrentDuplicateKeyCreationHasOneWinner(t *testing.T) {
 				accepted.Add(1)
 			} else {
 				faultCode(t, err, "invalid_request")
+				fault, ok := err.(*store.Fault)
+				if !ok || fault.Details["reason"] != "duplicate_credential" {
+					t.Errorf("missing safe duplicate reason: %v", err)
+				}
 			}
 		})
 	}

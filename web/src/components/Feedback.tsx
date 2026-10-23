@@ -147,6 +147,12 @@ export function describeError(
     if (error.kind === "malformed" || error.code === null) {
       return t("error.malformed", { status: error.status });
     }
+    if (
+      error.code === "invalid_request" &&
+      error.detail?.details?.reason === "duplicate_credential"
+    ) {
+      return t("keys.duplicateCredential");
+    }
     return t(`error.${error.code}`);
   }
   return t("error.unexpected");

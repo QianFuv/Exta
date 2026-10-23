@@ -85,7 +85,7 @@ func (state *Store) AddKey(ctx context.Context, actor string, input domain.Upstr
 			return err
 		}
 		if count > 0 {
-			return Reject("invalid_request", 400, "Credential already exists")
+			return duplicateCredential()
 		}
 		credential := ID("credential")
 		if state.Vault == nil {
@@ -171,7 +171,7 @@ func (state *Store) changeKey(ctx context.Context, actor, id string, version dom
 				return err
 			}
 			if duplicates > 0 {
-				return Reject("invalid_request", 400, "Credential already exists")
+				return duplicateCredential()
 			}
 			if item.RetirementState != "active" {
 				return Reject("invalid_request", 400, "Retired key cannot rotate")
@@ -207,6 +207,13 @@ func (state *Store) changeKey(ctx context.Context, actor, id string, version dom
 		return AuditTx(ctx, tx, actor, action, id, map[string]any{"version": item.Version}, state.Now())
 	})
 	return item, err
+}
+
+// duplicateCredential identifies a rejected secret without exposing its value or hash.
+func duplicateCredential() *Fault {
+	fault := Reject("invalid_request", 400, "Credential already exists")
+	fault.Details["reason"] = "duplicate_credential"
+	return fault
 }
 
 func lastFour(secret string) string {

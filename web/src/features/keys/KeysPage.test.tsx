@@ -13,6 +13,38 @@ beforeAll(async () => {
 });
 
 describe("key pools", () => {
+  it("explains a backend duplicate rejection without exposing the submitted secret", async () => {
+    server.use(
+      http.post("*/v1/admin/keys", () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "invalid_request",
+              message: "Credential already exists",
+              request_id: "req_duplicate",
+              retryable: false,
+              retry_after_ms: null,
+              details: { reason: "duplicate_credential" },
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    renderApp("/keys");
+    await userEvent.click(await screen.findByRole("button", { name: "Add key" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Add key · Exa" }));
+    const dialog = screen.getByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText("Label"), "Duplicate fixture");
+    await userEvent.type(within(dialog).getByLabelText("Secret"), "synthetic-duplicate-secret");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add key", exact: true }));
+    expect(
+      await screen.findByText("This key already exists and cannot be added again."),
+    ).toBeVisible();
+    expect(within(dialog).getByLabelText("Secret")).toHaveValue("");
+    expect(allBrowserStorage()).not.toContain("synthetic-duplicate-secret");
+  });
+
   it("shows disabled state once and keeps the edit switch label independent of its value", async () => {
     mockDb.state.keys.find((entry) => entry.id === "key_exa_1")!.enabled = false;
     renderApp("/keys");

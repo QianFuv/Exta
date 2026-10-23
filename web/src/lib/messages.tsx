@@ -349,6 +349,7 @@ export const EN_MESSAGES = {
   "keys.unitCredits": "Tavily credits",
   "keys.noBudgetNoDispatch":
     "Blank or 0 means no local cap. A zero reservation uses the operation estimate. Unknown upstream balances do not block calls.",
+  "keys.duplicateCredential": "This key already exists and cannot be added again.",
   "keys.keyAdded": "Key added.",
   "keys.rotated": "Key rotated.",
   "keys.retiredState": "Retired",
@@ -1113,6 +1114,7 @@ export const ZH_MESSAGES: Record<MessageKey, string> = {
   "keys.unitCredits": "积分",
   "keys.noBudgetNoDispatch":
     "限额留空或为 0 表示本地不限；预留为 0 时按操作估算。上游余额未知不影响调用。",
+  "keys.duplicateCredential": "此密钥已存在，无法重复添加。",
   "keys.keyAdded": "密钥已添加。",
   "keys.rotated": "密钥已轮换。",
   "keys.retiredState": "已退役",
