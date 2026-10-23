@@ -72,13 +72,13 @@ func (state *Store) Login(ctx context.Context, credential, address string) (doma
 			return nil
 		}
 		var count int
-		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM principals").Scan(&count); err != nil {
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM principals WHERE credential_hash IS NOT NULL").Scan(&count); err != nil {
 			return err
 		}
 		if count != 1 {
 			return nil
 		}
-		return tx.QueryRowContext(ctx, "SELECT id,credential_hash FROM principals").Scan(&principal, &verifier)
+		return tx.QueryRowContext(ctx, "SELECT id,credential_hash FROM principals WHERE credential_hash IS NOT NULL").Scan(&principal, &verifier)
 	})
 	if err != nil {
 		return result, "", err
