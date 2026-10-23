@@ -24,9 +24,7 @@ export function PreferencesMenu() {
   function select(action: () => void) {
     const selected = open;
     setOpen(null);
-    document
-      .querySelector<HTMLButtonElement>(`button[data-preference="${selected}"]`)
-      ?.focus();
+    document.querySelector<HTMLButtonElement>(`button[data-preference="${selected}"]`)?.focus();
     action();
   }
   /** Persist presentation only; unavailable storage does not prevent a session choice. */
