@@ -302,12 +302,12 @@ function MintDialog({
   const [label, setLabel] = useState("");
   const [hasSubmitted, setSubmitted] = useState(false);
   const [scopes, setScopes] = useState<ClientScope[]>(["read"]);
-  const [openedAt] = useState(() => Date.now());
+  const [checkedAt, setCheckedAt] = useState(() => Date.now());
   const [expiresAt, setExpiresAt] = useState(() =>
-    toLocalInput(new Date(openedAt + 30 * 24 * 3600 * 1000)),
+    toLocalInput(new Date(checkedAt + 30 * 24 * 3600 * 1000)),
   );
   const expiresDate = new Date(expiresAt);
-  const isExpiryValid = !Number.isNaN(expiresDate.getTime()) && expiresDate.getTime() > openedAt;
+  const isExpiryValid = !Number.isNaN(expiresDate.getTime()) && expiresDate.getTime() > checkedAt;
   const isValid =
     label.trim().length >= 1 && label.length <= 128 && scopes.length >= 1 && isExpiryValid;
   const mint = useMutation({
@@ -337,7 +337,9 @@ function MintDialog({
         onSubmit={(event) => {
           event.preventDefault();
           setSubmitted(true);
-          if (isValid && !mint.isPending) {
+          const now = Date.now();
+          setCheckedAt(now);
+          if (isValid && expiresDate.getTime() > now && !mint.isPending) {
             mint.mutate();
           } else {
             const field =

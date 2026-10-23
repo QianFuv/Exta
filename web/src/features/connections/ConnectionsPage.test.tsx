@@ -8,6 +8,27 @@ import { allBrowserStorage, callsTo, renderApp } from "../../test/renderApp";
 const ONE_TIME_VALUE = "exta_fixture_one_time_value_0001";
 
 describe("connections and tokens", () => {
+  it("rechecks expiry at submission after a dialog has remained open", async () => {
+    renderApp("/access-keys");
+    await userEvent.click(await screen.findByRole("button", { name: "Create access key" }));
+    const dialog = within(screen.getByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText("Label"), "Expiry boundary");
+    const future = Date.now() + 60_000;
+    const local = new Date(future - new Date(future).getTimezoneOffset() * 60_000)
+      .toISOString()
+      .slice(0, 16)
+      .replace("T", " ");
+    await userEvent.clear(dialog.getByLabelText("Expires"));
+    await userEvent.type(dialog.getByLabelText("Expires"), local);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(future + 60_000);
+    try {
+      await userEvent.click(dialog.getByRole("button", { name: "Create access key" }));
+      expect(dialog.getByText("Choose a future expiry time.")).toBeInTheDocument();
+      expect(callsTo("POST", "/v1/admin/tokens")).toHaveLength(0);
+    } finally {
+      clock.mockRestore();
+    }
+  });
   it("explains blocked capabilities and labels access scopes without hiding protocol codes", async () => {
     const capability = mockDb.state.connectionInfo.capabilities.capabilities[0];
     if (!capability) throw new Error("Missing capability fixture");

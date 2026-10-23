@@ -49,6 +49,7 @@ async function expectActiveNavigationVisible(page: Page, description: string) {
 test("standalone key-only administration and persistent appearance", async ({
   page,
   context,
+  browser,
 }, info) => {
   test.setTimeout(240_000);
   page.setDefaultTimeout(15_000);
@@ -213,26 +214,81 @@ test("standalone key-only administration and persistent appearance", async ({
     await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(page.getByText("Reviewed fixture key", { exact: true })).toBeVisible();
-    await page.goto(`${origin}/app/access-keys`);
-    await page.getByRole("button", { name: "Create access key", exact: true }).click();
-    await page
-      .getByRole("dialog")
-      .getByLabel("Label", { exact: true })
-      .fill("Browser acceptance token");
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Create access key", exact: true })
-      .click();
-    await page.getByRole("button", { name: "I have copied it", exact: true }).click();
-    await page
-      .getByRole("row")
-      .filter({ hasText: "Browser acceptance token" })
-      .getByRole("button", { name: "Revoke", exact: true })
-      .click();
-    await page.getByRole("dialog").getByRole("button", { name: "Revoke", exact: true }).click();
-    await expect(
-      page.getByRole("row").filter({ hasText: "Browser acceptance token" }),
-    ).toContainText("Revoked");
+    const expiryEvidence: Array<{ timezone: string; expected: string; persisted: string }> = [];
+    for (const [timezone, expected] of [
+      ["UTC", "2028-06-20T10:30:00Z"],
+      ["Asia/Shanghai", "2028-06-20T02:30:00Z"],
+      ["America/New_York", "2028-06-20T14:30:00Z"],
+    ] as const) {
+      const zoneContext = await browser.newContext({
+        storageState: await context.storageState(),
+        timezoneId: timezone,
+      });
+      try {
+        const zonePage = await zoneContext.newPage();
+        await zonePage.goto(`${origin}/app/access-keys`);
+        await zonePage.getByRole("button", { name: "Create access key", exact: true }).click();
+        const dialog = zonePage.getByRole("dialog", { name: "Create access key" });
+        await dialog.getByLabel("Label", { exact: true }).fill(`Expiry fixture ${timezone}`);
+        const expiry = dialog.getByLabel("Expires", { exact: true });
+        let posts = 0;
+        zonePage.on("request", (request) => {
+          if (request.method() === "POST" && request.url().endsWith("/v1/admin/tokens")) posts += 1;
+        });
+        for (const invalid of ["", "2020-01-01 10:30"]) {
+          await expiry.fill(invalid);
+          await dialog.getByRole("button", { name: "Create access key", exact: true }).click();
+          await expect(dialog.getByText("Choose a future expiry time.")).toBeVisible();
+          expect(posts).toBe(0);
+        }
+        await expiry.fill("2028-06-15 10:30");
+        await expiry.press("ArrowDown");
+        await zonePage.getByRole("gridcell", { name: "2028-06-20", exact: true }).click();
+        await expect(expiry).toHaveValue("2028-06-20 10:30");
+        await expiry.press("Escape");
+        await expiry.press("ArrowDown");
+        await expect(
+          zonePage.getByRole("gridcell", { name: "2028-06-20", exact: true }),
+        ).toHaveAttribute("aria-selected", "true");
+        await expiry.press("Escape");
+        const sent = zonePage.waitForRequest(
+          (request) => request.method() === "POST" && request.url().endsWith("/v1/admin/tokens"),
+        );
+        await dialog.getByRole("button", { name: "Create access key", exact: true }).click();
+        expect(new Date((await sent).postDataJSON().expires_at).toISOString()).toBe(
+          new Date(expected).toISOString(),
+        );
+        await zonePage.getByRole("button", { name: "I have copied it", exact: true }).click();
+        expect(posts).toBe(1);
+        const stored = (
+          await (await zonePage.request.get(`${origin}/v1/admin/tokens`)).json()
+        ).items.find((item: { label: string }) => item.label === `Expiry fixture ${timezone}`);
+        expect(new Date(stored.expires_at).toISOString()).toBe(new Date(expected).toISOString());
+        expiryEvidence.push({ timezone, expected, persisted: stored.expires_at });
+        const revoked = await zonePage.request.post(
+          `${origin}/v1/admin/tokens/${stored.id}/revoke`,
+          {
+            data: { expected_version: stored.version },
+            headers: { Origin: origin, "X-Exta-CSRF": session.csrf_token },
+          },
+        );
+        expect(revoked.status()).toBe(200);
+        await zonePage.getByRole("button", { name: "Create access key", exact: true }).click();
+        await expect(
+          zonePage.getByRole("dialog").getByLabel("Expires", { exact: true }),
+        ).not.toHaveValue("2028-06-20 10:30");
+        await zonePage
+          .getByRole("dialog")
+          .getByRole("button", { name: "Cancel", exact: true })
+          .click();
+      } finally {
+        await zoneContext.close();
+      }
+    }
+    await info.attach("expiry-roundtrip", {
+      body: JSON.stringify(expiryEvidence),
+      contentType: "application/json",
+    });
     for (const route of ["/assets/missing.js", "/v1/missing"]) {
       const response = await page.request.get(origin + route);
       expect(response.status()).toBe(404);

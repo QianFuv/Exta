@@ -256,10 +256,12 @@ function DateInput({ onChange, value, ...props }: InputProps) {
         open={isOpen}
         onOpenChange={setOpen}
         className="exta-date-picker"
-        {...(parsed && !Number.isNaN(parsed.getTime()) ? { value: parsed } : {})}
+        value={parsed && !Number.isNaN(parsed.getTime()) ? parsed : ""}
+        onChangeWithDateFirst={true}
         disabled={props.disabled ?? false}
-        onChange={(_formatted, date) => {
-          if (!(date instanceof Date)) return onChange?.({ target: { value: "", checked: false } });
+        onChange={(date) => {
+          if (!(date instanceof Date) || Number.isNaN(date.getTime()))
+            return onChange?.({ target: { value: "", checked: false } });
           const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
           onChange?.({ target: { value: local.toISOString().slice(0, 16), checked: false } });
         }}
