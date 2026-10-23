@@ -1,4 +1,6 @@
 import { keyRestriction } from "../keys/KeyStatus";
+import { useState } from "react";
+import { Button } from "../../components/Controls";
 import { DiagnosticReason } from "../../components/DiagnosticReason";
 import { DataTable } from "../../components/DataTable";
 /**
@@ -62,7 +64,6 @@ export function OverviewPage() {
                 <RecentCalls />
               </div>
               <div>
-                <ErrorsPanel />
                 <KeysPanel />
                 <ReadinessPanel />
               </div>
@@ -210,21 +211,47 @@ function KeysPanel() {
 /** Recent calls use stored metadata only; opening this view never dispatches a provider. */
 function RecentCalls() {
   const { t, formatDuration } = useI18n();
+  const [failedOnly, setFailedOnly] = useState(false);
   const api = useApi();
   const query = useQuery({
-    queryKey: ["requests", "statistics"],
-    queryFn: () => call(api.GET("/v1/admin/requests", { params: { query: { limit: 5 } } })),
+    queryKey: ["requests", "statistics", failedOnly],
+    queryFn: () =>
+      call(
+        api.GET("/v1/admin/requests", {
+          params: { query: { limit: 5, ...(failedOnly ? { status: "failed" as const } : {}) } },
+        }),
+      ),
     refetchInterval: 30_000,
   });
   return (
     <Section
       title={t("overview.recentRequests")}
-      actions={<Link to="/requests">{t("overview.allCalls")} →</Link>}
+      actions={
+        <Link to="/requests">
+          {t("overview.allCalls")} →
+        </Link>
+      }
     >
+      <div className="activity-filters" role="group" aria-label={t("overview.recentRequests")}>
+        <Button
+          aria-pressed={!failedOnly}
+          className={!failedOnly ? "button-primary" : ""}
+          onClick={() => setFailedOnly(false)}
+        >
+          {t("common.all")}
+        </Button>
+        <Button
+          aria-pressed={failedOnly}
+          className={failedOnly ? "button-primary" : ""}
+          onClick={() => setFailedOnly(true)}
+        >
+          {t("overview.recentErrors")}
+        </Button>
+      </div>
       <QueryView query={query}>
         {(data) =>
           data.items.length === 0 ? (
-            <EmptyState title={t("requests.emptyTitle")} />
+            <EmptyState title={t(failedOnly ? "overview.noRecentErrors" : "requests.emptyTitle")} />
           ) : (
             <div
               className="table-wrap"
@@ -285,6 +312,11 @@ function RecentCalls() {
                       return (
                         <>
                           <RequestStatusBadges record={record} />
+                          {record.error ? (
+                            <small className="cell-secondary">
+                              <DiagnosticReason reason={record.error.code} />
+                            </small>
+                          ) : null}
                         </>
                       );
                     },
@@ -299,46 +331,6 @@ function RecentCalls() {
                 ]}
               />
             </div>
-          )
-        }
-      </QueryView>
-    </Section>
-  );
-}
-
-/**
- * Recent failed requests.
- *
- * @returns Section.
- */
-function ErrorsPanel() {
-  const { t } = useI18n();
-  const api = useApi();
-  const failures = useQuery({
-    queryKey: ["requests", "overview-failed"],
-    queryFn: () =>
-      call(api.GET("/v1/admin/requests", { params: { query: { status: "failed", limit: 5 } } })),
-    refetchInterval: 30_000,
-  });
-  return (
-    <Section title={t("overview.recentErrors")}>
-      <QueryView query={failures}>
-        {(data) =>
-          data.items.length === 0 ? (
-            <EmptyState title={t("overview.noRecentErrors")} />
-          ) : (
-            <ul className="plain-list">
-              {data.items.slice(0, 5).map((record) => (
-                <li key={record.id}>
-                  <Link to={`/requests/${encodeURIComponent(record.id)}`}>
-                    <DateTime value={record.created_at} />
-                  </Link>{" "}
-                  <span className="operation-name">{record.operation}</span>{" "}
-                  <RequestStatusBadges record={record} />{" "}
-                  {record.error === null ? null : <DiagnosticReason reason={record.error.code} />}
-                </li>
-              ))}
-            </ul>
           )
         }
       </QueryView>

@@ -785,6 +785,12 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
+.activity-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .timeline {
   list-style: none;
   margin: 0;
