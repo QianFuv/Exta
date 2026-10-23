@@ -8,7 +8,6 @@ import type { HttpResponseResolver } from "msw";
 import type { Schemas } from "../lib/api";
 import { canonicalJson } from "../lib/researchDraft";
 import {
-  mockAudit,
   mockConnectionInfo,
   mockJob,
   mockJobDetails,
@@ -42,7 +41,6 @@ export interface MockState {
   connectionInfo: Schemas["ConnectionInfo"];
   settings: Schemas["Settings"];
   tokens: Schemas["ClientToken"][];
-  audit: Schemas["AuditEvent"][];
   idempotency: Map<string, { fingerprint: string; jobId: string }>;
   calls: RecordedCall[];
   nextId: number;
@@ -66,7 +64,6 @@ export function createMockState(options: { signedIn?: boolean } = {}): MockState
     connectionInfo: mockConnectionInfo(),
     settings: mockSettings(),
     tokens: mockTokens(),
-    audit: mockAudit(),
     idempotency: new Map(),
     calls: [],
     nextId: 1,
@@ -416,6 +413,8 @@ export const handlers = [
         .filter(
           (record) =>
             (!url.searchParams.get("status") || record.status === url.searchParams.get("status")) &&
+            (!url.searchParams.get("request_id") ||
+              record.id === url.searchParams.get("request_id")) &&
             (!url.searchParams.get("operation") ||
               record.operation === url.searchParams.get("operation")) &&
             (!url.searchParams.get("provider") ||
@@ -649,12 +648,6 @@ export const handlers = [
   http.get(
     "*/v1/admin/connection-info",
     guarded("admin:read", false, () => HttpResponse.json(mockDb.state.connectionInfo)),
-  ),
-  http.get(
-    "*/v1/admin/audit",
-    guarded("admin:audit:read", false, ({ request }) =>
-      HttpResponse.json(page(mockDb.state.audit, request)),
-    ),
   ),
 ];
 

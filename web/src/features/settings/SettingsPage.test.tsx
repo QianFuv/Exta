@@ -1,12 +1,15 @@
-/** Settings and audit: contract mismatch, versioned edits and permission gating. */
+/** Settings: contract mismatch, versioned edits and permission gating. */
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
-import { ALL_PERMISSIONS, mockSession } from "../../mocks/fixtures";
+import { beforeAll, describe, expect, it } from "vitest";
 import { mockDb } from "../../mocks/handlers";
 import { callsTo, renderApp } from "../../test/renderApp";
 
-describe("settings and audit", () => {
+beforeAll(async () => {
+  await import("./SettingsPage");
+});
+
+describe("settings", () => {
   it("groups settings by purpose with explicit units and one save action", async () => {
     renderApp("/settings");
     const traffic = await screen.findByRole("group", { name: "Traffic and concurrency" });
@@ -59,20 +62,18 @@ describe("settings and audit", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
-  it("shows audit as locked without admin:audit:read and makes no request", async () => {
-    mockDb.state.session = mockSession(
-      ALL_PERMISSIONS.filter((permission) => permission !== "admin:audit:read"),
-    );
+  it("does not expose or fetch a standalone audit view and preserves internal retention", async () => {
+    mockDb.state.settings.retention.audit_days = 61;
     renderApp("/settings?view=audit");
-    expect(await screen.findByText("Not available for this principal")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("group", { name: "Traffic and concurrency" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Audit" })).toBeNull();
     expect(callsTo("GET", "/v1/admin/audit")).toHaveLength(0);
-  });
-
-  it("lists redacted audit events", async () => {
-    mockDb.state.session = mockSession(["admin:audit:read"]);
-    renderApp("/settings?view=audit");
-    expect(await screen.findByText("Update route")).toBeInTheDocument();
-    expect(screen.getByText("Add upstream key")).toBeInTheDocument();
-    expect(callsTo("GET", "/v1/admin/settings")).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+    expect(callsTo("PATCH", "/v1/admin/settings")[0]?.body).toMatchObject({
+      retention: { audit_days: 61 },
+    });
   });
 });

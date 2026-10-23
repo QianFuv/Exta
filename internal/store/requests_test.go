@@ -10,6 +10,34 @@ import (
 	"exta/internal/store"
 )
 
+func TestFailedCallFiltersIncludeFallbackAttemptsWithoutDuplicatingCalls(t *testing.T) {
+	state, principal := openStore(t)
+	item := domain.RequestRecord{Id: store.ID("request"), Operation: "search", Status: "failed", CreatedAt: store.Stamp(state.Now()), RouteRevision: 1, Usage: []domain.UsageAmount{}}
+	if err := state.StartRequest(t.Context(), principal, item); err != nil {
+		t.Fatal(err)
+	}
+	for index, provider := range []domain.Provider{"exa", "exa", "tavily"} {
+		attempt := domain.Attempt{Id: store.ID("attempt"), AttemptNumber: domain.Integer(index + 1), Provider: provider, CreatedAt: item.CreatedAt, DurationMs: 120, TransmissionState: "response_received"}
+		if err := state.StartAttempt(t.Context(), item.Id, attempt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, provider := range []string{"exa", "tavily"} {
+		list, err := state.Requests(t.Context(), store.RequestFilter{Id: item.Id, Provider: provider, Status: "failed", Limit: 1})
+		if err != nil || len(list.Items) != 1 || list.NextCursor != nil || list.Items[0].SourceProvider == nil || *list.Items[0].SourceProvider != "tavily" {
+			t.Fatalf("failed provider filter %s: %+v %v", provider, list, err)
+		}
+	}
+	detail, err := state.Request(t.Context(), principal, item.Id)
+	if err != nil || len(detail.Attempts) != 3 || detail.Request.SourceProvider == nil || *detail.Request.SourceProvider != "tavily" {
+		t.Fatalf("lost attempt linkage: %+v %v", detail, err)
+	}
+	list, err := state.Requests(t.Context(), store.RequestFilter{Id: "request_missing", Limit: 1})
+	if err != nil || len(list.Items) != 0 {
+		t.Fatalf("ID filter ignored: %+v %v", list, err)
+	}
+}
+
 func TestRequestHistoryOwnershipPaginationAndNoRawContent(t *testing.T) {
 	state, principal := openStore(t)
 	addAccount(t, state, principal, 100)

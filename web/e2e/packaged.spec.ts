@@ -147,7 +147,6 @@ test("standalone key-only administration and persistent appearance", async ({
       "settings?view=health",
       "settings?view=budgets",
       "settings?view=connection",
-      "settings?view=audit",
       "overview?view=usage",
     ]) {
       const response = await page.goto(`${origin}/app/${route}`);
@@ -321,7 +320,6 @@ test("standalone key-only administration and persistent appearance", async ({
         "settings?view=budgets",
         "settings?view=health",
         "settings?view=connection",
-        "settings?view=audit",
         "overview?view=usage",
       ]) {
         await page.goto(`${origin}/app/${route}`);

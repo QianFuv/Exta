@@ -737,25 +737,3 @@ export function mockTokens(): Schemas["ClientToken"][] {
     },
   ];
 }
-
-/** Synthetic audit events. */
-export function mockAudit(): Schemas["AuditEvent"][] {
-  return [
-    {
-      id: "aud_2",
-      action: "route.replace",
-      actor_principal_id: "principal_operator",
-      entity_id: "advanced_search",
-      created_at: T1,
-      changes: { revision: { from: 1, to: 2 } },
-    },
-    {
-      id: "aud_1",
-      action: "key.create",
-      actor_principal_id: "principal_operator",
-      entity_id: "key_exa_1",
-      created_at: T0,
-      changes: { label: "Exa primary" },
-    },
-  ];
-}

@@ -7,7 +7,6 @@ import { SectionNav } from "../../components/SectionNav";
 import { RoutingPage } from "../routing/RoutingPage";
 import { ConnectionDetails } from "../connections/ConnectionsPage";
 import { BudgetSettings } from "./BudgetSettings";
-import { AuditPage } from "./AuditPage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiFailure, call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
@@ -22,7 +21,7 @@ import { ReadinessList } from "../overview/ReadinessList";
 
 type Settings = Schemas["Settings"];
 type EditableLimit = Exclude<keyof Schemas["Limits"], "principal_research_active">;
-type EditableRetention = Exclude<keyof Schemas["Retention"], "idempotency_days">;
+type EditableRetention = Exclude<keyof Schemas["Retention"], "idempotency_days" | "audit_days">;
 
 const LIMIT_FIELDS: ReadonlyArray<{ name: EditableLimit; minimum: number; maximum: number }> = [
   { name: "synchronous_concurrency", minimum: 1, maximum: 16 },
@@ -65,7 +64,6 @@ const RETENTION_FIELDS: ReadonlyArray<{
 }> = [
   { name: "request_days", minimum: 1, maximum: 30 },
   { name: "research_content_days", minimum: 1, maximum: 30 },
-  { name: "audit_days", minimum: 1, maximum: 90 },
 ];
 
 /**
@@ -88,24 +86,19 @@ export function SettingsPage() {
           { value: "budgets", label: t("keys.budgetSettings") },
           { value: "health", label: t("settings.health") },
           { value: "connection", label: t("settings.access") },
-          { value: "audit", label: t("nav.audit") },
         ]}
       />
-      {view === "audit" ? (
-        <AuditPage embedded />
-      ) : (
-        <RequirePermission permission="admin:read">
-          {view === "budgets" ? (
-            <BudgetSettings />
-          ) : view === "routing" ? (
-            <RoutingPage embedded />
-          ) : view === "connection" ? (
-            <ConnectionDetails />
-          ) : (
-            <SettingsContent health={view === "health"} />
-          )}
-        </RequirePermission>
-      )}
+      <RequirePermission permission="admin:read">
+        {view === "budgets" ? (
+          <BudgetSettings />
+        ) : view === "routing" ? (
+          <RoutingPage embedded />
+        ) : view === "connection" ? (
+          <ConnectionDetails />
+        ) : (
+          <SettingsContent health={view === "health"} />
+        )}
+      </RequirePermission>
     </>
   );
 }
@@ -272,7 +265,7 @@ function LimitsForm({ settings }: { settings: Settings }) {
             retention: {
               request_days: Number(retention.request_days),
               research_content_days: Number(retention.research_content_days),
-              audit_days: Number(retention.audit_days),
+              audit_days: settings.retention.audit_days,
               idempotency_days: 90,
             },
           },

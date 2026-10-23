@@ -19,6 +19,7 @@ import { DateTime } from "../../components/Values";
 import { RequestStatusBadges, ResultSummary } from "./requestStatus";
 
 type Filters = {
+  requestId: string;
   operation: Schemas["Operation"] | "";
   provider: Schemas["Provider"] | "";
   status: Schemas["RequestStatus"] | "";
@@ -27,6 +28,7 @@ type Filters = {
 };
 
 const EMPTY_FILTERS: Filters = {
+  requestId: "",
   operation: "",
   provider: "",
   status: "",
@@ -103,6 +105,7 @@ function RequestsContent() {
           query: {
             ...(cursor === undefined ? {} : { cursor }),
             ...(filters.operation === "" ? {} : { operation: filters.operation }),
+            ...(filters.requestId === "" ? {} : { request_id: filters.requestId }),
             ...(filters.provider === "" ? {} : { provider: filters.provider }),
             ...(filters.status === "" ? {} : { status: filters.status }),
             ...(createdAfter === undefined ? {} : { created_after: createdAfter }),
@@ -145,6 +148,17 @@ function RequestsContent() {
       >
         <form className="form filters log-filters" onSubmit={onSubmit}>
           <div className="filter-fields">
+            <div className="field">
+              <label id={`${formId}-request-id-label`} htmlFor={`${formId}-request-id`}>
+                {t("error.requestId")}
+              </label>
+              <Input
+                id={`${formId}-request-id`}
+                maxLength={128}
+                value={draft.requestId}
+                onChange={(event) => setDraft({ ...draft, requestId: event.target.value })}
+              />
+            </div>
             <div className="field">
               <label id={`${formId}-operation` + "-label"} htmlFor={`${formId}-operation`}>
                 {t("requests.operation")}

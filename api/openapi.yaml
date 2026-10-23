@@ -2919,6 +2919,15 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "request_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
           }
         ],
         "responses": {
@@ -8063,8 +8072,7 @@
       "/app/research",
       "/app/research/:id",
       "/app/connections",
-      "/app/settings",
-      "/app/audit"
+      "/app/settings"
     ],
     "defaults": {
       "research_profile": "exa_auto",

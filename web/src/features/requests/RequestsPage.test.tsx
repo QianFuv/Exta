@@ -26,6 +26,14 @@ async function rowFor(id: string) {
 }
 
 describe("requests", () => {
+  it("finds a logical call by request ID without showing unrelated calls", async () => {
+    renderApp("/requests");
+    await screen.findByText("req_ok");
+    await userEvent.type(screen.getByRole("textbox", { name: "Request ID" }), "req_unknown");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(screen.queryByText("req_ok")).toBeNull());
+    expect(screen.getByText("req_unknown")).toBeInTheDocument();
+  });
   it("refuses malformed typed dates without issuing a filtered request", async () => {
     renderApp("/requests");
     await screen.findByText("req_ok");

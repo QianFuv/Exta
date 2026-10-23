@@ -92,7 +92,10 @@ func Register(mux *http.ServeMux, auth *security.Auth, core *service.Service, us
 			return nil, err
 		}
 		query := request.URL.Query()
-		filter := store.RequestFilter{Limit: limit, Cursor: query.Get("cursor"), Operation: query.Get("operation"), Provider: query.Get("provider"), Status: query.Get("status")}
+		filter := store.RequestFilter{Limit: limit, Cursor: query.Get("cursor"), Id: query.Get("request_id"), Operation: query.Get("operation"), Provider: query.Get("provider"), Status: query.Get("status")}
+		if len(filter.Id) > 128 {
+			return nil, store.Reject("invalid_request", 400, "Request ID exceeds the allowed length")
+		}
 		for _, pair := range [][2]string{{"Operation", filter.Operation}, {"Provider", filter.Provider}, {"RequestStatus", filter.Status}} {
 			if pair[1] != "" {
 				if err = domain.ValidateJSON(pair[0], []byte(store.JSON(pair[1]))); err != nil {

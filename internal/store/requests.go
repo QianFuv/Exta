@@ -12,8 +12,8 @@ import (
 
 // RequestFilter bounds metadata queries without retaining search input or content.
 type RequestFilter struct {
-	PrincipalId, Operation, Provider, Status, From, To, Cursor string
-	Limit                                                      int
+	PrincipalId, Id, Operation, Provider, Status, From, To, Cursor string
+	Limit                                                          int
 }
 
 // StartRequest records admission provenance before any provider transmission.
@@ -82,13 +82,17 @@ func (state *Store) Requests(ctx context.Context, filter RequestFilter) (domain.
 	if filter.Limit < 1 || filter.Limit > 100 {
 		return result, Reject("invalid_request", 400, "Invalid pagination limit")
 	}
-	query := "SELECT data,created_at || '/' || id FROM requests WHERE 1=1"
+	query := "SELECT json_set(data,'$.source_provider',coalesce(json_extract(data,'$.source_provider'),(SELECT json_extract(attempts.data,'$.provider') FROM attempts WHERE parent_id=requests.id ORDER BY attempt_number DESC LIMIT 1))),created_at || '/' || id FROM requests WHERE 1=1"
 	arguments := []any{}
-	for _, field := range [][3]string{{"principal_id", filter.PrincipalId, "="}, {"json_extract(data,'$.operation')", filter.Operation, "="}, {"json_extract(data,'$.source_provider')", filter.Provider, "="}, {"json_extract(data,'$.status')", filter.Status, "="}, {"created_at", filter.From, ">="}, {"created_at", filter.To, "<="}, {"created_at || '/' || id", boundary, "<"}} {
+	for _, field := range [][3]string{{"principal_id", filter.PrincipalId, "="}, {"id", filter.Id, "="}, {"json_extract(data,'$.operation')", filter.Operation, "="}, {"json_extract(data,'$.status')", filter.Status, "="}, {"created_at", filter.From, ">="}, {"created_at", filter.To, "<="}, {"created_at || '/' || id", boundary, "<"}} {
 		if field[1] != "" {
 			query += " AND " + field[0] + field[2] + "?"
 			arguments = append(arguments, field[1])
 		}
+	}
+	if filter.Provider != "" {
+		query += " AND (json_extract(data,'$.source_provider')=? OR EXISTS(SELECT 1 FROM attempts WHERE parent_id=requests.id AND json_extract(attempts.data,'$.provider')=?))"
+		arguments = append(arguments, filter.Provider, filter.Provider)
 	}
 	query += " ORDER BY created_at DESC,id DESC LIMIT ?"
 	arguments = append(arguments, filter.Limit+1)
@@ -150,6 +154,10 @@ func (state *Store) Request(ctx context.Context, principal, id string) (domain.R
 			return result, err
 		}
 		result.Attempts = append(result.Attempts, item)
+	}
+	if result.Request.SourceProvider == nil && len(result.Attempts) > 0 {
+		provider := result.Attempts[len(result.Attempts)-1].Provider
+		result.Request.SourceProvider = &provider
 	}
 	return result, rows.Err()
 }
