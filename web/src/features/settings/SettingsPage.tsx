@@ -1,4 +1,5 @@
-import { Button, Input } from "../../components/Controls";
+import { NumericControl } from "../../components/NumericControl";
+import { Button } from "../../components/Controls";
 /** Non-secret limits/retention editing plus build, schema and readiness diagnostics. */
 import { useId, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -302,14 +303,16 @@ function LimitsForm({ settings }: { settings: Settings }) {
           {t(`settings.field.${name}` as MessageKey)}
         </label>
         <div className="input-with-unit">
-          <Input
+          <NumericControl
             id={`${formId}-${name}`}
-            inputMode="numeric"
+            minimum={minimum}
+            maximum={maximum}
+            presets={numericPresets(name, maximum)}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={onChange}
             disabled={!canWrite || save.isPending}
-            aria-invalid={!isFieldValid}
-            aria-describedby={`${formId}-${name}-unit ${formId}-${name}-range`}
+            invalid={!isFieldValid}
+            describedBy={`${formId}-${name}-unit ${formId}-${name}-range`}
           />
           <span id={`${formId}-${name}-unit`} className="input-unit">
             {t(
@@ -400,4 +403,14 @@ function LimitsForm({ settings }: { settings: Settings }) {
       </form>
     </Section>
   );
+}
+
+/** Common workload presets preserve every integer in the backend's legal range. */
+function numericPresets(name: string, maximum: number): number[] {
+  if (name.endsWith("_bytes")) return [1024, maximum / 4, maximum / 2, maximum];
+  if (name.endsWith("_days")) return [1, 7, 14, maximum];
+  if (name.endsWith("_seconds")) return [60, 900, 1800, maximum];
+  if (maximum <= 3) return [0, 1, 2, maximum];
+  if (maximum <= 16) return [1, 4, 8, maximum];
+  return [1, Math.round(maximum / 4), Math.round(maximum / 2), maximum];
 }

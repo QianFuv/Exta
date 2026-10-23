@@ -1,4 +1,5 @@
-import { SwitchField, Button, Input, Select } from "../../components/Controls";
+import { NumericControl } from "../../components/NumericControl";
+import { SwitchField, Button, Input } from "../../components/Controls";
 /**
  * Key mutation dialogs. Secrets are write-only: they live in a password field
  * of a dialog that unmounts on close, are cleared after every attempt and are never
@@ -180,13 +181,16 @@ export function KeySettingsDialog({
               <label id={`${formId}-allocation` + "-label"} htmlFor={`${formId}-allocation`}>
                 {t("keys.allocation")}
               </label>
-              <Input
+              <NumericControl
                 id={`${formId}-allocation`}
-                inputMode="numeric"
+                minimum={0}
+                maximum={Number.MAX_SAFE_INTEGER}
+                presets={unit === "micro_usd" ? [0, 250000, 500000, 1000000] : [0, 250, 500, 1000]}
+                zeroLabel={t("keys.unlimited")}
                 value={allocation}
-                onChange={(event) => setAllocation(event.target.value)}
-                aria-invalid={Number.isNaN(allocationValue)}
-                aria-describedby={`${formId}-allocation-preview`}
+                onChange={setAllocation}
+                invalid={Number.isNaN(allocationValue)}
+                describedBy={`${formId}-allocation-preview`}
               />
               <p id={`${formId}-allocation-preview`} className="field-hint">
                 {Number.isNaN(allocationValue)
@@ -200,13 +204,16 @@ export function KeySettingsDialog({
               <label id={`${formId}-per-op` + "-label"} htmlFor={`${formId}-per-op`}>
                 {t("keys.perOperation")}
               </label>
-              <Input
+              <NumericControl
                 id={`${formId}-per-op`}
-                inputMode="numeric"
+                minimum={0}
+                maximum={Number.MAX_SAFE_INTEGER}
+                presets={unit === "micro_usd" ? [0, 250000, 500000, 1000000] : [0, 250, 500, 1000]}
+                zeroLabel={t("keys.automaticReservation")}
                 value={perOperation}
-                onChange={(event) => setPerOperation(event.target.value)}
-                aria-invalid={Number.isNaN(perOperationValue)}
-                aria-describedby={`${formId}-per-op-preview`}
+                onChange={setPerOperation}
+                invalid={Number.isNaN(perOperationValue)}
+                describedBy={`${formId}-per-op-preview`}
               />
               <p id={`${formId}-per-op-preview`} className="field-hint">
                 {Number.isNaN(perOperationValue)
@@ -220,15 +227,15 @@ export function KeySettingsDialog({
               <label id={`${formId}-active` + "-label"} htmlFor={`${formId}-active`}>
                 {t("keys.activeJobs")}
               </label>
-              <Select
+              <NumericControl
                 id={`${formId}-active`}
+                minimum={0}
+                maximum={2}
+                presets={[0, 1, 2]}
+                zeroLabel={t("keys.unlimited")}
                 value={activeJobs}
-                onChange={(event) => setActiveJobs(event.target.value)}
-              >
-                <option value="0">{t("keys.unlimited")}</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-              </Select>
+                onChange={setActiveJobs}
+              />
             </div>
           </div>
           <p className="field-hint">{t("keys.noBudgetNoDispatch")}</p>
@@ -395,13 +402,15 @@ export function KeyCreateDialog({
             <label id={`${formId}-allocation-label`} htmlFor={`${formId}-allocation`}>
               {t("keys.allocation")}
             </label>
-            <Input
+            <NumericControl
               id={`${formId}-allocation`}
-              type="number"
-              min={0}
+              minimum={0}
+              maximum={Number.MAX_SAFE_INTEGER}
+              presets={provider === "exa" ? [0, 250000, 500000, 1000000] : [0, 250, 500, 1000]}
+              zeroLabel={t("keys.unlimited")}
               value={allocation}
-              onChange={(event) => setAllocation(event.target.value)}
-              aria-describedby={`${formId}-allocation-preview`}
+              onChange={setAllocation}
+              describedBy={`${formId}-allocation-preview`}
             />
             <p id={`${formId}-allocation-preview`} className="field-hint">
               {Number.isSafeInteger(parseInteger(allocation))
@@ -415,13 +424,15 @@ export function KeyCreateDialog({
             <label id={`${formId}-reservation-label`} htmlFor={`${formId}-reservation`}>
               {t("keys.perOperation")}
             </label>
-            <Input
+            <NumericControl
               id={`${formId}-reservation`}
-              type="number"
-              min={0}
+              minimum={0}
+              maximum={Number.MAX_SAFE_INTEGER}
+              presets={provider === "exa" ? [0, 250000, 500000, 1000000] : [0, 250, 500, 1000]}
+              zeroLabel={t("keys.automaticReservation")}
               value={perOperation}
-              onChange={(event) => setPerOperation(event.target.value)}
-              aria-describedby={`${formId}-reservation-preview`}
+              onChange={setPerOperation}
+              describedBy={`${formId}-reservation-preview`}
             />
             <p id={`${formId}-reservation-preview`} className="field-hint">
               {Number.isSafeInteger(parseInteger(perOperation))

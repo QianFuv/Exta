@@ -464,3 +464,30 @@ time {
     white-space: nowrap;
   }
 }
+
+.numeric-control {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 120px;
+  align-items: start;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+}
+.numeric-control > .semi-slider {
+  margin: 0 12px 22px;
+}
+.numeric-control > .semi-input-number {
+  width: 100%;
+}
+.numeric-control .semi-slider-marks {
+  font-size: 12px;
+}
+.input-with-unit:has(.numeric-control) {
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .numeric-control {
+    grid-template-columns: minmax(90px, 1fr) 100px;
+    gap: 14px;
+  }
+}

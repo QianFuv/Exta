@@ -56,7 +56,7 @@ describe("routing", () => {
       within(await policyRow(String(operation))).getByRole("button", { name: "Edit" }),
     );
     const dialog = screen.getByRole("dialog");
-    const field = within(dialog).getByLabelText("Deadline (seconds)");
+    const field = within(dialog).getByRole("spinbutton", { name: "Deadline (seconds)" });
     await userEvent.clear(field);
     await userEvent.type(field, String(Number(limit) + 1));
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();

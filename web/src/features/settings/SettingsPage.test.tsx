@@ -12,11 +12,13 @@ describe("settings and audit", () => {
     const traffic = await screen.findByRole("group", { name: "Traffic and concurrency" });
     expect(within(traffic).getAllByRole("spinbutton")).toHaveLength(3);
     const research = screen.getByRole("group", { name: "Research capacity and observation" });
-    expect(within(research).getByLabelText("Max polls")).toHaveAccessibleDescription(/polls/);
+    expect(
+      within(research).getByRole("spinbutton", { name: "Max polls" }),
+    ).toHaveAccessibleDescription(/polls/);
     const payload = screen.getByRole("group", { name: "Request and response size" });
-    expect(within(payload).getByLabelText("Max request bytes")).toHaveAccessibleDescription(
-      /bytes/,
-    );
+    expect(
+      within(payload).getByRole("spinbutton", { name: "Max request bytes" }),
+    ).toHaveAccessibleDescription(/bytes/);
     expect(screen.getAllByRole("button", { name: "Save" })).toHaveLength(1);
   });
 
@@ -32,7 +34,7 @@ describe("settings and audit", () => {
 
   it("saves limits with the settings version and constant fields", async () => {
     renderApp("/settings");
-    const field = await screen.findByLabelText("Max polls");
+    const field = await screen.findByRole("spinbutton", { name: "Max polls" });
     await userEvent.clear(field);
     await userEvent.type(field, "90");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -50,7 +52,7 @@ describe("settings and audit", () => {
 
   it("blocks out-of-range values before sending", async () => {
     renderApp("/settings");
-    const field = await screen.findByLabelText("Research content days");
+    const field = await screen.findByRole("spinbutton", { name: "Research content days" });
     await userEvent.clear(field);
     await userEvent.type(field, "31");
     expect(field).toHaveAttribute("aria-invalid", "true");

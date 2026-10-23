@@ -180,11 +180,13 @@ test("standalone key-only administration and persistent appearance", async ({
     await moreActions.click();
     await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
     const keyDialog = page.getByRole("dialog", { name: "Edit key & limits" });
-    const grouping = keyDialog.getByRole("combobox");
-    await grouping.click();
-    await expect(page.getByRole("option", { name: "1", exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(grouping).toHaveAttribute("aria-expanded", "false");
+    const capacity = keyDialog.getByRole("slider", { name: "Active research jobs", exact: true });
+    await capacity.focus();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("ArrowRight");
+    await expect(
+      keyDialog.getByRole("spinbutton", { name: "Active research jobs", exact: true }),
+    ).toHaveValue("1");
     await expect(keyDialog).toBeVisible();
     expect((await audit(page)).violations).toEqual([]);
     const keys = await (await page.request.get(`${origin}/v1/admin/keys`)).json();
@@ -211,9 +213,21 @@ test("standalone key-only administration and persistent appearance", async ({
       .getByRole("dialog")
       .getByLabel("Label", { exact: true })
       .fill("Reviewed fixture key");
+    const capInput = page
+      .getByRole("dialog")
+      .getByRole("spinbutton", { name: "Local safety limit", exact: true });
+    await capInput.fill("2500000");
     await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(page.getByText("Reviewed fixture key", { exact: true })).toBeVisible();
+    await page
+      .getByRole("button", { name: "More actions for Reviewed fixture key", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
+    await expect(
+      page.getByRole("dialog").getByRole("spinbutton", { name: "Local safety limit", exact: true }),
+    ).toHaveValue("2500000");
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
     const expiryEvidence: Array<{ timezone: string; expected: string; persisted: string }> = [];
     for (const [timezone, expected] of [
       ["UTC", "2028-06-20T10:30:00Z"],

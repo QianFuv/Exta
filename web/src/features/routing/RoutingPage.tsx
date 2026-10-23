@@ -1,6 +1,7 @@
+import { NumericControl } from "../../components/NumericControl";
 import { DataTable } from "../../components/DataTable";
 import { Link } from "react-router";
-import { CheckboxField, Button, Input, Select } from "../../components/Controls";
+import { CheckboxField, Button, Select } from "../../components/Controls";
 /** Route configuration with versioned replacement and capability constraints. */
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -500,12 +501,14 @@ function RouteEditDialog({
             <label id={`${formId}-attempts` + "-label"} htmlFor={`${formId}-attempts`}>
               {t("routing.maxAttempts")}
             </label>
-            <Input
+            <NumericControl
               id={`${formId}-attempts`}
-              inputMode="numeric"
+              minimum={1}
+              maximum={3}
+              presets={[1, 2, 3]}
               value={maxAttempts}
-              onChange={(event) => setMaxAttempts(event.target.value)}
-              aria-describedby={`${formId}-attempts-hint`}
+              onChange={setMaxAttempts}
+              describedBy={`${formId}-attempts-hint`}
             />
             <p id={`${formId}-attempts-hint`} className="field-hint">
               1–3
@@ -515,12 +518,20 @@ function RouteEditDialog({
             <label id={`${formId}-deadline` + "-label"} htmlFor={`${formId}-deadline`}>
               {t("routing.deadline")}
             </label>
-            <Input
+            <NumericControl
               id={`${formId}-deadline`}
-              inputMode="numeric"
+              minimum={1}
+              maximum={maxDeadline}
+              presets={
+                maxDeadline <= 30
+                  ? [1, 10, 20, maxDeadline]
+                  : maxDeadline <= 60
+                    ? [1, 15, 30, maxDeadline]
+                    : [1, 60, 120, maxDeadline]
+              }
               value={deadline}
-              onChange={(event) => setDeadline(event.target.value)}
-              aria-describedby={`${formId}-deadline-hint`}
+              onChange={setDeadline}
+              describedBy={`${formId}-deadline-hint`}
             />
             <p id={`${formId}-deadline-hint`} className="field-hint">
               1–{maxDeadline} s
