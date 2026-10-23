@@ -174,7 +174,7 @@ export function Dialog({
       closable={false}
       closeOnEsc={false}
       footer={null}
-      width={size === "large" ? 760 : 560}
+      width={`min(${size === "large" ? 760 : 560}px, calc(100vw - 32px))`}
       className="exta-modal"
     >
       {content}
