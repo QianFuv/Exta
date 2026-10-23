@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-v0.1.0
+  group: release-v0.1.1
   cancel-in-progress: false
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
     if: github.repository == 'QianFuv/Exta' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/verify.yml
     with:
-      version: 0.1.0
+      version: 0.1.1
   publish:
     needs: verify
     runs-on: ubuntu-latest
@@ -35,7 +35,7 @@ jobs:
           SOURCE_SHA: ${{ github.sha }}
         run: |
           test "$(jq -r .head release-manifest.json)" = "$SOURCE_SHA"
-          test "$(jq -r .version release-manifest.json)" = 0.1.0
+          test "$(jq -r .version release-manifest.json)" = 0.1.1
           test "$(jq -r '.artifacts | map(.target) | sort | join(",")' release-manifest.json)" = linux/amd64,windows/amd64
           sha256sum --check SHA256SUMS
           sha256sum --check container-SHA256SUMS
@@ -52,4 +52,4 @@ jobs:
           trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
           python ../tools/release/publish.py .
           digest="$(cat container-digest.txt)"
-          printf '## Exta release\n\nSource: `%s`\n\nContainer: `%s`\n\n[GitHub v0.1.0](https://github.com/QianFuv/Exta/releases/tag/v0.1.0)\n' "$SOURCE_SHA" "$digest" >> "$GITHUB_STEP_SUMMARY"
+          printf '## Exta release\n\nSource: `%s`\n\nContainer: `%s`\n\n[GitHub v0.1.1](https://github.com/QianFuv/Exta/releases/tag/v0.1.1)\n' "$SOURCE_SHA" "$digest" >> "$GITHUB_STEP_SUMMARY"

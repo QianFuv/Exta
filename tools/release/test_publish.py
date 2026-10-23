@@ -15,14 +15,26 @@ class PublicationSafetyTests(unittest.TestCase):
 
     def test_tag_peels_annotations_and_rejects_other_source(self):
         """A pre-existing tag must identify the accepted commit, including annotations."""
-        ref = [{"ref": "refs/tags/v0.1.0", "object": {"type": "tag", "sha": "annotation"}}]
+        ref = [{"ref": "refs/tags/v0.1.1", "object": {"type": "tag", "sha": "annotation"}}]
         with patch.object(publish, "api", side_effect=[ref, {"object": {"type": "commit", "sha": "accepted"}}]):
             self.assertTrue(publish.verify_tag("accepted"))
         with patch.object(publish, "api", return_value=[{
-            "ref": "refs/tags/v0.1.0", "object": {"type": "commit", "sha": "other"},
+            "ref": "refs/tags/v0.1.1", "object": {"type": "commit", "sha": "other"},
         }]):
             with self.assertRaisesRegex(RuntimeError, "conflicts"):
                 publish.verify_tag("accepted")
+
+    def test_wrong_release_version_is_rejected_before_external_operations(self):
+        """The corrected release must never publish the superseded 0.1.2 version."""
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory)
+            (candidate / "release-manifest.json").write_text(json.dumps({
+                "head": "accepted", "version": "0.1.2", "artifacts": [],
+            }))
+            with patch.object(publish, "command") as external:
+                with self.assertRaisesRegex(RuntimeError, "source/version mismatch"):
+                    publish.publish(candidate, "accepted")
+                external.assert_not_called()
 
     def test_registry_absence_does_not_include_authentication_failure(self):
         """Only an explicit missing manifest permits a first push."""
@@ -59,7 +71,7 @@ class PublicationSafetyTests(unittest.TestCase):
             for name in names:
                 (candidate / name).write_bytes(name.encode())
             (candidate / "release-manifest.json").write_text(json.dumps({
-                "head": "accepted", "version": "0.1.0",
+                "head": "accepted", "version": "0.1.1",
                 "artifacts": [{"target": "windows/amd64"}, {"target": "linux/amd64"}],
             }))
             names += ["release-manifest.json", "container-digest.txt"]
