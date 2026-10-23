@@ -103,7 +103,7 @@ func run(arguments []string) error {
 			}
 		} else {
 			actual, readErr := os.ReadFile(path)
-			if readErr != nil || !bytes.Equal(actual, content) {
+			if readErr != nil || !bytes.Equal(canonicalText(actual), canonicalText(content)) {
 				return fmt.Errorf("generated artifact drift: %s; run contract generate", path)
 			}
 		}
@@ -536,8 +536,13 @@ func jsonBytes(value any) []byte {
 }
 
 func digest(content []byte) string {
-	hash := sha256.Sum256(content)
+	hash := sha256.Sum256(canonicalText(content))
 	return hex.EncodeToString(hash[:])
+}
+
+// canonicalText makes generated text and its identity independent of checkout line endings.
+func canonicalText(content []byte) []byte {
+	return bytes.ReplaceAll(bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n")), []byte("\r"), []byte("\n"))
 }
 
 func sortedKeys[Value any](values map[string]Value) []string {

@@ -4184,5 +4184,5 @@
   },
   "$id": "https://exta.invalid/contract",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-contract-sha256": "91b6572d02e510dcabc063324c1afb7aeaff44446b910ae174ea0155a3f7eb11"
+  "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9"
 }

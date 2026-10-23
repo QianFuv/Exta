@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"strings"
@@ -8,6 +9,17 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
+
+func TestContractIdentityIgnoresCheckoutLineEndings(t *testing.T) {
+	unix := []byte("{\n  \"version\": 1\n}\n")
+	windows := bytes.ReplaceAll(unix, []byte("\n"), []byte("\r\n"))
+	if digest(unix) != digest(windows) {
+		t.Fatal("equivalent Windows and Linux checkouts have different contract identities")
+	}
+	if digest(unix) == digest([]byte("{\n  \"version\": 2\n}\n")) {
+		t.Fatal("substantive contract changes must change identity")
+	}
+}
 
 func loadTestContract(t *testing.T) document {
 	t.Helper()
