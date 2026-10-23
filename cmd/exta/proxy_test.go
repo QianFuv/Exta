@@ -186,7 +186,9 @@ func TestHTTPSProxyToHTTPBackendPreservesSecurityAndProtocols(t *testing.T) {
 }
 
 func TestProxyLoginLimitsUseVerifiedClientWithoutForwardingBypass(t *testing.T) {
-	_, handler, credential := proxyFixture(t, "https://exta.example", "172.30.0.2")
+	state, handler, credential := proxyFixture(t, "https://exta.example", "172.30.0.2")
+	now := time.Date(2026, 10, 24, 0, 0, 0, 0, time.UTC)
+	state.Now = func() time.Time { return now }
 	login := func(peer, client, forwarded string) int {
 		request := httptest.NewRequest("POST", "http://exta.example/v1/admin/session", strings.NewReader(store.JSON(map[string]string{"credential": credential})))
 		request.RemoteAddr = peer
@@ -215,5 +217,9 @@ func TestProxyLoginLimitsUseVerifiedClientWithoutForwardingBypass(t *testing.T) 
 	}
 	if login("172.30.0.2:1234", "::ffff:198.51.100.1", "198.51.100.99") != 429 {
 		t.Fatal("mapped IP spelling bypassed rate limit")
+	}
+	now = now.Add(time.Minute)
+	if login("172.30.0.2:1234", "198.51.100.1", "198.51.100.99") != 200 {
+		t.Fatal("new minute did not restore the verified client allowance")
 	}
 }
