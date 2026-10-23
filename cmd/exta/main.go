@@ -34,6 +34,7 @@ type config struct {
 	DevelopmentOrigins []string                 `json:"development_origins,omitempty"`
 	TlsCertFile        string                   `json:"tls_cert_file,omitempty"`
 	TlsKeyFile         string                   `json:"tls_key_file,omitempty"`
+	TrustedProxy       *security.ProxyConfig    `json:"trusted_proxy,omitempty"`
 	ExaUsage           []service.ExaUsageConfig `json:"exa_usage,omitempty"`
 }
 
@@ -202,11 +203,20 @@ func loadConfig(directory string) (config, error) {
 	if (result.TlsCertFile == "") != (result.TlsKeyFile == "") {
 		return result, errors.New("both TLS certificate and key are required")
 	}
-	if !ip.IsLoopback() && (origin.Scheme != "https" || result.TlsCertFile == "") {
-		return result, errors.New("nonloopback binding requires explicit HTTPS, TLS files and trusted Origin")
-	}
-	if (origin.Scheme == "https") != (result.TlsCertFile != "") {
-		return result, errors.New("origin scheme must match the listener TLS configuration")
+	if result.TrustedProxy != nil {
+		if _, err := security.NewProxyPolicy(result.TrustedProxy); err != nil {
+			return result, err
+		}
+		if origin.Scheme != "https" || result.TlsCertFile != "" || len(result.DevelopmentOrigins) != 0 {
+			return result, errors.New("trusted_proxy requires a fixed HTTPS origin, HTTP listener and no development origins")
+		}
+	} else {
+		if !ip.IsLoopback() && (origin.Scheme != "https" || result.TlsCertFile == "") {
+			return result, errors.New("nonloopback binding requires explicit HTTPS, TLS files or an explicit trusted_proxy configuration")
+		}
+		if (origin.Scheme == "https") != (result.TlsCertFile != "") {
+			return result, errors.New("origin scheme must match the listener TLS configuration")
+		}
 	}
 	if err := service.ValidateExaUsage(result.ExaUsage); err != nil {
 		return result, err

@@ -16,7 +16,7 @@ The build context is the verified candidate directory, which contains `exta-linu
 
 ## Persistent state and Compose
 
-Use a new private host directory owned by the UID that will run Exta. Never point these initialization commands at existing user data. Set `EXTA_IMAGE` to the verified image digest when one is published, or `exta:local` for local acceptance:
+Use a new private host directory owned by the UID that will run Exta. Never point these initialization commands at existing user data. Before using Compose, provision the dedicated proxy network described below and set `EXTA_PROXY_NETWORK` to its name. Set `EXTA_IMAGE` to the verified image digest when one is published, or `exta:local` for local acceptance:
 
 ```sh
 export EXTA_IMAGE=exta:local
@@ -28,18 +28,52 @@ docker compose run --rm --no-deps exta init --data-dir /var/lib/exta/state
 
 Save the one-time operator credential privately. Initialization does not contact providers. The bind mount retains the SQLite database/WAL, master key, configuration and idempotency/recovery evidence across container replacement. Back up the database and separately protect its master-key recovery output using the [operational commands](operations.md); copying a live SQLite main file is not a backup.
 
-The default configuration binds container loopback only. For the supplied bridge-network Compose file, explicitly install your TLS certificate and private key under `exta-data/tls`, owned by the same UID, with private directories and files. Set `exta-data/state/config.json` to:
+## HTTP behind NPM and Cloudflare
+
+The trusted-proxy mode described here is newer than v0.1.1. The published v0.1.1 image does not support it; do not overwrite that image or tag. Use a separately accepted build containing this change.
+
+The supplied Compose file publishes no host port. Set `EXTA_PROXY_NETWORK` to a dedicated ordinary Docker bridge shared only by NPM and Exta. Keep NPM's existing management connection. Do not attach unrelated containers, use host networking, or mount the Docker socket into Exta. The bridge must permit Exta's outbound provider connections; `internal: true` would block that traffic. Host administrators remain trusted.
+
+Pin NPM's address on this dedicated network and persist its membership in its existing deployment definition. Inspect existing subnets before allocating anything. The address below is illustrative, not an instruction to reuse an occupied subnet. Exta accepts only explicitly listed private or loopback IPs, not container names, subnet ranges or a forwarding header's claimed proxy address.
+
+Keep the public route as preferred Cloudflare ingress -> Full (strict) HTTPS -> NPM -> private HTTP -> Exta. Cloudflare's edge certificate and NPM's origin certificate continue using their existing management mechanisms. Exta receives no certificate/private-key copy and needs no certificate synchronization or renewal task.
+
+The default initialization still binds loopback only. Explicitly set `exta-data/state/config.json` for the proxy deployment:
 
 ```json
 {
   "listen": "0.0.0.0:8789",
-  "origin": "https://localhost:8789",
-  "tls_cert_file": "/var/lib/exta/tls/cert.pem",
-  "tls_key_file": "/var/lib/exta/tls/key.pem"
+  "origin": "https://exta.qianfuv.fun",
+  "trusted_proxy": {
+    "ips": ["172.30.0.2"]
+  }
 }
 ```
 
-Use a certificate trusted by your browser and matching the configured origin. Keep the configuration mode 0600. The sample publishes only host loopback; adapting it for remote access requires an explicit trusted HTTPS origin and appropriate networking. Exta does not infer trust from proxy headers or disable its nonloopback TLS/Origin checks.
+Keep configuration mode 0600. Proxy mode requires a fixed HTTPS origin, no local TLS files and no development origins. Every request, including health checks, must come from a listed socket peer with exactly one `X-Forwarded-Proto: https` and one valid `X-Real-IP`. Missing, duplicate or malformed values fail closed. Proxy IP changes require an explicit configuration update; they never broaden trust automatically.
+
+NPM forwards to `http://exta:8789` and preserves the external Host, original Origin, cookies, Authorization and CSRF headers. It must overwrite the protocol and client-address headers, not pass user-provided claims. Keep NPM's `trust_forwarded_proto` disabled: its connection from Cloudflare is already TLS. Its real-IP module must trust only the existing Cloudflare source ranges before deriving `$remote_addr` from `CF-Connecting-IP`, with the existing Cloudflare-only origin firewall retained.
+
+The effective NPM proxy location must contain the equivalent of:
+
+```nginx
+proxy_pass http://exta:8789;
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header Forwarded "";
+proxy_set_header X-Forwarded-Host "";
+proxy_set_header X-Forwarded-For "";
+proxy_buffering off;
+proxy_cache off;
+proxy_read_timeout 180s;
+```
+
+These are effective-location requirements, not a block to append blindly to NPM's server-level Advanced field: NPM already generates headers inside its locations. Inspect the generated configuration and avoid duplicate `X-Forwarded-Proto`/`X-Real-IP` fields. Never synthesize Origin when it is absent. Retain NPM's HTTP-to-HTTPS redirect and ACME challenge handling.
+
+Exta uses its configured HTTPS origin for Secure/HttpOnly/SameSite session cookies and public REST/MCP URLs. Host/Origin/CSRF and bearer authorization remain enforced. Other forwarding claims are removed before application dispatch. Only the validated client IP from the trusted peer supplies the login rate-limit address; the original socket peer stays available for the trust check. Health probes must go through NPM rather than bypass the peer boundary.
+
+Without `trusted_proxy`, existing direct-listener behavior is unchanged: clear HTTP is loopback-only and a nonloopback listener requires explicit TLS files plus a trusted HTTPS origin. Do not disable those defaults to deploy behind a proxy.
 
 ```sh
 docker compose run --rm --no-deps exta doctor --data-dir /var/lib/exta/state

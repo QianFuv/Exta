@@ -6,8 +6,7 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    ports:
-      - "127.0.0.1:8789:8789"
+    networks: [proxy]
     volumes:
       - type: bind
         source: ./exta-data
@@ -16,3 +15,7 @@ services:
           create_host_path: false
     stop_grace_period: 45s
     restart: unless-stopped
+networks:
+  proxy:
+    external: true
+    name: ${EXTA_PROXY_NETWORK:?Use the dedicated bridge shared only with the reverse proxy}

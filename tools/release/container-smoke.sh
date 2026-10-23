@@ -79,3 +79,4 @@ test "$(docker inspect --format '{{.State.ExitCode}}' "$container")" = 0
 test "$key_before" = "$(sha256sum "$temporary/data/state/master.key" | cut -d ' ' -f 1)"
 printf 'PASS: exact Linux binary, nonroot runtime, TLS UI, exclusive lock, graceful stop and persistent restart; no provider configured.\n' > "$evidence/result.txt"
 sha256sum "$candidate/exta-linux-amd64" > "$evidence/binary.sha256"
+bash "$(dirname "$0")/proxy-container-smoke.sh" "$image" "$evidence"

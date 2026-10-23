@@ -30,6 +30,10 @@ func managementHandler(state *store.Store, auth *security.Auth, configuration co
 }
 
 func managementHandlerWithCore(state *store.Store, auth *security.Auth, configuration config, core *service.Service) (http.Handler, error) {
+	proxy, err := security.NewProxyPolicy(configuration.TrustedProxy)
+	if err != nil {
+		return nil, err
+	}
 	assets, err := webassets.Embedded()
 	if err != nil {
 		return nil, err
@@ -78,8 +82,7 @@ func managementHandlerWithCore(state *store.Store, auth *security.Auth, configur
 			security.WriteError(writer, request, err)
 			return
 		}
-		address, _, _ := net.SplitHostPort(request.RemoteAddr)
-		session, token, err := state.Login(request.Context(), input.Credential, address)
+		session, token, err := state.Login(request.Context(), input.Credential, security.ClientAddress(request))
 		if err != nil {
 			security.WriteError(writer, request, err)
 			return
@@ -198,7 +201,7 @@ func managementHandlerWithCore(state *store.Store, auth *security.Auth, configur
 		}
 		assets.ServeHTTP(writer, request)
 	})
-	return auth.Guard(webassets.GuardPaths(mux)), nil
+	return auth.Guard(proxy.Wrap(webassets.GuardPaths(mux))), nil
 }
 
 func body[T any](state *store.Store, writer http.ResponseWriter, request *http.Request, schema string) (T, error) {
@@ -268,7 +271,7 @@ func readiness(state *store.Store, configuration config) domain.Readiness {
 	host, _, _ := net.SplitHostPort(configuration.Listen)
 	if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
 		result.BindScope = "nonloopback"
-		result.NonloopbackSafetyConfigured = configuration.TlsCertFile != "" && configuration.TlsKeyFile != ""
+		result.NonloopbackSafetyConfigured = configuration.TrustedProxy != nil || (configuration.TlsCertFile != "" && configuration.TlsKeyFile != "")
 	}
 	if state.Vault != nil {
 		result.SecretStore = "unlocked"
