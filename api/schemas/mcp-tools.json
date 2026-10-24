@@ -690,7 +690,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "advanced_search",
     "x-permission": "execute"
   },
@@ -1015,7 +1015,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "capabilities",
     "x-permission": "read"
   },
@@ -1587,7 +1587,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "crawl",
     "x-permission": "execute"
   },
@@ -2097,7 +2097,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "fetch",
     "x-permission": "execute"
   },
@@ -2654,7 +2654,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "map",
     "x-permission": "execute"
   },
@@ -3276,7 +3276,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "researchCancel",
     "x-permission": "research:cancel"
   },
@@ -4088,7 +4088,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "researchCreate",
     "x-permission": "research:create"
   },
@@ -4811,7 +4811,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "researchGet",
     "x-permission": "research:read"
   },
@@ -5471,7 +5471,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "researchList",
     "x-permission": "research:read"
   },
@@ -6091,7 +6091,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "researchResumeObservation",
     "x-permission": "research:observe"
   },
@@ -6619,7 +6619,7 @@
       ],
       "type": "object"
     },
-    "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9",
+    "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73",
     "x-operation-id": "search",
     "x-permission": "execute"
   }

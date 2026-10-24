@@ -5796,7 +5796,7 @@
         "properties": {
           "credential": {
             "type": "string",
-            "minLength": 16,
+            "minLength": 8,
             "maxLength": 512,
             "writeOnly": true
           }

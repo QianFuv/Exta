@@ -55,10 +55,10 @@ func proxyFixture(t *testing.T, origin, peer string) (*store.Store, http.Handler
 	t.Helper()
 	directory := filepath.Join(t.TempDir(), "state")
 	var output bytes.Buffer
-	if err := initialize(t.Context(), directory, "synthetic-administrator-password", &output); err != nil {
+	if err := initialize(t.Context(), directory, "proxy123", &output); err != nil {
 		t.Fatal(err)
 	}
-	credential := "synthetic-administrator-password"
+	credential := "proxy123"
 	configuration := config{Listen: "0.0.0.0:8789", Origin: origin, TrustedProxy: &security.ProxyConfig{IPs: []string{peer}}}
 	data, err := json.Marshal(configuration)
 	if err != nil {

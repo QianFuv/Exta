@@ -2,13 +2,13 @@
 
 The image packages the exact accepted Linux executable; it does not rebuild application code. Its digest-pinned [Distroless static Debian 13 nonroot base](https://github.com/GoogleContainerTools/distroless) supplies trusted CA certificates without a shell or package manager. The image runs as UID/GID 65532 by default. No container or host deployment is performed by the release workflow.
 
-The authorized public registry destination is `ghcr.io/qianfuv/exta`. Tags `0.1.3` and `sha-<source-sha>` and the registry digest are recorded only after native Linux/race, Windows, browser and container gates pass. Confirm the published package is publicly readable before distributing its pull command. Dependency inventories and Go/frontend license notices are readable under `/usr/share/exta/` in the image.
+The authorized public registry destination is `ghcr.io/qianfuv/exta`. Tags `0.1.4` and `sha-<source-sha>` and the registry digest are recorded only after native Linux/race, Windows, browser and container gates pass. Confirm the published package is publicly readable before distributing its pull command. Dependency inventories and Go/frontend license notices are readable under `/usr/share/exta/` in the image.
 
 Build locally on an isolated Linux amd64 Docker host after release verification:
 
 ```sh
 docker build --platform linux/amd64 -f Dockerfile \
-  --build-arg SOURCE_SHA="$(git rev-parse HEAD)" --build-arg VERSION=0.1.3 \
+  --build-arg SOURCE_SHA="$(git rev-parse HEAD)" --build-arg VERSION=0.1.4 \
   -t exta:local artifacts/candidate
 ```
 
@@ -26,7 +26,7 @@ mkdir -m 700 exta-data
 docker compose run --rm -T --no-deps exta init --password-stdin --data-dir /var/lib/exta/state < /private/path/admin-password.txt
 ```
 
-Supply your own 16–512-character administrator password from a private file or secret manager. Do not type it in command arguments or commit it. Initialization prints no password. The same password can be used repeatedly; existing administrator credentials remain valid without reset. Initialization does not contact providers. The bind mount retains the SQLite database/WAL, master key, configuration and idempotency/recovery evidence across container replacement. Back up the database and separately protect its master-key recovery output using the [operational commands](operations.md); copying a live SQLite main file is not a backup.
+Supply your own 8–512-character administrator password from a private file or secret manager. Do not type it in command arguments or commit it. Initialization prints no password. The same password can be used repeatedly; existing administrator credentials remain valid without reset. Initialization does not contact providers. The bind mount retains the SQLite database/WAL, master key, configuration and idempotency/recovery evidence across container replacement. Back up the database and separately protect its master-key recovery output using the [operational commands](operations.md); copying a live SQLite main file is not a backup.
 
 ## HTTP behind NPM and Cloudflare
 

@@ -1,5 +1,5 @@
 /** Session lifecycle: memory-only credentials, expiry, logout and lookup failures. */
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
@@ -9,6 +9,30 @@ import { allBrowserStorage, callsTo, renderApp } from "../../test/renderApp";
 import { server } from "../../test/server";
 
 describe("admin session", () => {
+  it("counts administrator password Unicode characters without truncating exact input", async () => {
+    mockDb.state.session = null;
+    renderApp("/login");
+    const field = await screen.findByLabelText("Administrator password");
+    const submit = screen.getByRole("button", { name: "Sign in" });
+    for (const character of ["a", "界", "🔐"]) {
+      for (const length of [7, 8, 10, 512, 513]) {
+        const password = character.repeat(length);
+        fireEvent.change(field, { target: { value: password } });
+        expect(field).toHaveValue(password);
+        if (length >= 8 && length <= 512) expect(submit).toBeEnabled();
+        else expect(submit).toBeDisabled();
+      }
+    }
+    expect(callsTo("POST", "/v1/admin/session")).toHaveLength(0);
+    mockDb.state.validCredential = "🔐".repeat(8);
+    fireEvent.change(field, { target: { value: mockDb.state.validCredential } });
+    await userEvent.click(submit);
+    expect(
+      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
+    ).toBeInTheDocument();
+    expect(callsTo("POST", "/v1/admin/session")).toHaveLength(1);
+  });
+
   it("signs in without persisting the credential or CSRF token", async () => {
     mockDb.state.session = null;
     const { router, queryClient } = renderApp("/requests");

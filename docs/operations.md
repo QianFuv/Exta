@@ -23,6 +23,6 @@ Production builds embed the management UI and support Windows/Linux x64. Browser
 
 ## Administrator password
 
-Initialize new state with `exta init --password-stdin --data-dir <new-private-directory>`, piping one UTF-8 password of 16–512 characters from protected input. A terminal newline is optional; spaces are significant. Direct terminal stdin does not hide typing. Initialization never prints the password.
+Initialize new state with `exta init --password-stdin --data-dir <new-private-directory>`, piping one UTF-8 password of 8–512 characters from protected input. A terminal newline is optional; spaces are significant. Direct terminal stdin does not hide typing. Initialization never prints the password.
 
 The password is persistent; logging in or out does not consume it. New state stores a salted PBKDF2-HMAC-SHA256 verifier (600,000 iterations). Existing random administrator credentials and their stored verifiers remain unchanged and reusable. An older binary cannot authenticate a newly initialized password verifier. No automatic reset, conversion or production credential change occurs. Client API/MCP access keys remain separate; the encryption master key is not a login password.

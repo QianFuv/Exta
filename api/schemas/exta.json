@@ -3631,7 +3631,7 @@
       "properties": {
         "credential": {
           "maxLength": 512,
-          "minLength": 16,
+          "minLength": 8,
           "type": "string",
           "writeOnly": true
         }
@@ -4184,5 +4184,5 @@
   },
   "$id": "https://exta.invalid/contract",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-contract-sha256": "df7ad045a47e7e22ce929a680aae2c5fee67a43eec8803c196bfcf80407bbfb9"
+  "x-contract-sha256": "b5511d5a4eccfa52b90b9230c567a71a1b5add4e6642c36f885ae843aba51d73"
 }

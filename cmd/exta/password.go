@@ -19,7 +19,7 @@ func readPassword(input io.Reader) (string, error) {
 		password = strings.TrimSuffix(password, "\r")
 	}
 	if !store.ValidPassword(password) {
-		return "", errors.New("password must contain 16 to 512 characters on one line")
+		return "", errors.New("password must contain 8 to 512 characters on one line")
 	}
 	return password, nil
 }

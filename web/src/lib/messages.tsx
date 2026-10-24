@@ -142,7 +142,7 @@ export const EN_MESSAGES = {
   "login.subtitle": "Sign in with your administrator password.",
   "login.credential": "Administrator password",
   "login.credentialHint":
-    "Use the same password each time. Previously issued administrator credentials remain valid.",
+    "8–512 characters. Use the same password each time; existing credentials remain valid.",
   "login.signIn": "Sign in",
   "login.signingIn": "Signing in…",
   "login.expired": "Your session ended. Sign in again to continue.",
@@ -907,7 +907,7 @@ export const ZH_MESSAGES: Record<MessageKey, string> = {
   "session.unavailable": "无法获取会话状态",
   "login.subtitle": "使用管理员密码登录。",
   "login.credential": "管理员密码",
-  "login.credentialHint": "使用同一个长期密码登录；此前生成的管理员凭据仍然有效。",
+  "login.credentialHint": "8–512 个字符，使用同一个长期密码登录；原有凭据仍然有效。",
   "login.signIn": "登录",
   "login.signingIn": "正在登录…",
   "login.expired": "会话已结束，请重新登录。",

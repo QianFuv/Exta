@@ -11,7 +11,7 @@ import tempfile
 
 REPOSITORY = "QianFuv/Exta"
 IMAGE = "ghcr.io/qianfuv/exta"
-TAG = "v0.1.3"
+TAG = "v0.1.4"
 
 
 def command(*args):
@@ -130,14 +130,14 @@ def publish(candidate, source):
     """Resume only matching drafts/tags, then publish after complete readback."""
     candidate = candidate.resolve()
     manifest = json.loads((candidate / "release-manifest.json").read_text())
-    if manifest["head"] != source or manifest["version"] != "0.1.3":
+    if manifest["head"] != source or manifest["version"] != "0.1.4":
         raise RuntimeError("Candidate source/version mismatch")
     if sorted(item["target"] for item in manifest["artifacts"]) != ["linux/amd64", "windows/amd64"]:
         raise RuntimeError("Candidate target mismatch")
     has_tag = verify_tag(source)
     local = f"exta-candidate:{source}"
     config = command("docker", "image", "inspect", local, "--format", "{{.Id}}").strip()
-    references = [f"{IMAGE}:sha-{source}", f"{IMAGE}:0.1.3"]
+    references = [f"{IMAGE}:sha-{source}", f"{IMAGE}:0.1.4"]
     known = {reference: remote_image(reference, config) for reference in references}
     present = {value for value in known.values() if value}
     if len(present) > 1:
@@ -173,13 +173,13 @@ def publish(candidate, source):
             (Path(__file__).resolve().parents[2] / "CHANGELOG.md").read_text(encoding="utf-8")
             + f"\nSource: {source}\n\n"
             f"Windows/Linux native, Linux race, production browser and container gates passed in Actions run {os.environ['GITHUB_RUN_ID']}.\n\n"
-            f"Container: `{IMAGE}@{digest}`\nTags: `0.1.3`, `sha-{source}`.\n\n"
+            f"Container: `{IMAGE}@{digest}`\nTags: `0.1.4`, `sha-{source}`.\n\n"
             "See docs/docker.md for persistent state and TLS. No server is deployed. "
             "No application license is assigned; dependency notices accompany the artifacts.\n",
             encoding="utf-8",
         )
         command("gh", "release", "create", TAG, "--repo", REPOSITORY, "--verify-tag",
-                "--draft", "--title", "Exta v0.1.3", "--notes-file", str(notes))
+                "--draft", "--title", "Exta v0.1.4", "--notes-file", str(notes))
         release = release_state()
     missing = verify_assets(release, assets)
     for item in release["assets"]:

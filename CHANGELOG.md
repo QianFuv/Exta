@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 — 2026-10-24
+
+- Accept administrator passwords containing 8–512 Unicode characters consistently in initialization, standard input, login contracts and the management interface. Count characters rather than UTF-8 bytes or UTF-16 code units.
+- Preserve salted PBKDF2 verifiers, login rate limits, CSRF and secure sessions; API/MCP access-key rules and existing passwords remain unchanged.
+- Cover 7/8/10/512/513-character boundaries, including non-ASCII and supplementary Unicode characters. No database schema change or automatic credential reset is performed.
+
 ## 0.1.3 — 2026-10-24
 
 - Treat missing, null and zero key safety caps as no local cap; positive limits, shared reservations, upstream billing blocks and rate backoff remain enforced. Unknown upstream balance permits otherwise eligible calls and remains unknown. Existing zero caps now have this explicit unrestricted meaning.

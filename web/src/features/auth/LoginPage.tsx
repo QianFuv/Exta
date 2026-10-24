@@ -26,6 +26,9 @@ export function LoginPage() {
   const { status, establish, signedOutReason } = useSession();
   const [credential, setCredential] = useState("");
   const fieldId = useId();
+  const characterCount = Array.from(credential).length;
+  const isValidPassword =
+    characterCount >= 8 && characterCount <= 512 && !/[\r\n]/.test(credential);
   const from = (location.state as { from?: unknown } | null)?.from;
   const target =
     typeof from === "string" && from.startsWith("/") && !from.startsWith("/login")
@@ -52,7 +55,7 @@ export function LoginPage() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (credential.length === 0 || login.isPending) {
+    if (!isValidPassword || login.isPending) {
       return;
     }
     login.mutate({ secret: credential });
@@ -97,7 +100,7 @@ export function LoginPage() {
           <Button
             type="submit"
             className="button button-primary"
-            disabled={login.isPending || credential.length === 0}
+            disabled={login.isPending || !isValidPassword}
             loading={login.isPending}
           >
             {login.isPending ? t("login.signingIn") : t("login.signIn")}

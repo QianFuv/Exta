@@ -34,7 +34,7 @@ func RandomToken() string {
 // BootstrapAdmin creates the single administrator from an explicit persistent password.
 func (state *Store) BootstrapAdmin(ctx context.Context, credential string) (string, error) {
 	if !ValidPassword(credential) {
-		return "", Reject("invalid_request", 400, "Password must contain 16 to 512 characters on one line")
+		return "", Reject("invalid_request", 400, "Password must contain 8 to 512 characters on one line")
 	}
 	verifier, err := hashPassword(credential)
 	if err != nil {

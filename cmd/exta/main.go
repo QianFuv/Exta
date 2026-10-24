@@ -122,7 +122,7 @@ func runWithInput(ctx context.Context, args []string, input io.Reader, output, d
 
 func initialize(ctx context.Context, directory, password string, output io.Writer) error {
 	if !store.ValidPassword(password) {
-		return errors.New("password must contain 16 to 512 characters on one line")
+		return errors.New("password must contain 8 to 512 characters on one line")
 	}
 	if err := security.CheckNoLinks(directory); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err

@@ -16,7 +16,7 @@ const passwordIterations = 600000
 // ValidPassword matches the login contract without trimming significant spaces.
 func ValidPassword(password string) bool {
 	length := utf8.RuneCountInString(password)
-	return utf8.ValidString(password) && length >= 16 && length <= 512 && !strings.ContainsAny(password, "\r\n")
+	return utf8.ValidString(password) && length >= 8 && length <= 512 && !strings.ContainsAny(password, "\r\n")
 }
 
 func hashPassword(password string) (string, error) {
