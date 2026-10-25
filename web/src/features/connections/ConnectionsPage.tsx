@@ -94,7 +94,9 @@ export function ConnectionDetails() {
                       label={t("connections.copyExample", { title: example.title })}
                     />
                   </figcaption>
-                  <pre className="code-block">{example.command}</pre>
+                  <pre className="code-block" tabIndex={0} role="region" aria-label={example.title}>
+                    {example.command}
+                  </pre>
                 </figure>
               ))
             )}

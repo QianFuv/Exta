@@ -106,7 +106,7 @@ export function Layout() {
         {t("common.skipToContent")}
       </a>
       <MockModeBanner />
-      <SemiLayout className="shell-frame" hasSider>
+      <SemiLayout className="shell-frame" hasSider tagName="div">
         <SemiLayout.Sider className="shell-sider">
           <Link className="brand" to="/" aria-label={`Exta · ${t("nav.home")}`}>
             <BrandMark />
@@ -143,7 +143,7 @@ export function Layout() {
             </Link>
           </div>
         </SemiLayout.Sider>
-        <SemiLayout className="shell-main">
+        <SemiLayout className="shell-main" tagName="div">
           <SemiLayout.Header className="topbar">
             <Link className="topbar-brand" to="/" aria-label={`Exta · ${t("nav.home")}`}>
               <BrandMark size={26} />
