@@ -168,13 +168,12 @@ time,
   }
 }
 
+/* Entrance motion never changes opacity, so text contrast is final on every frame. */
 @keyframes exta-rise {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
@@ -190,22 +189,18 @@ time,
 
 @keyframes exta-pop {
   from {
-    opacity: 0;
     transform: translateY(10px) scale(0.985);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
 
 @keyframes exta-slide-in {
   from {
-    opacity: 0.4;
     transform: translateX(24px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
