@@ -1,4 +1,4 @@
-import { KeyStatus } from "./KeyStatus";
+import { KeyStatus, keyRestriction } from "./KeyStatus";
 /** Direct upstream-key administration with no parent-account workflow. */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -89,6 +89,8 @@ function KeyInventory() {
     `${key.label} ${key.id} ${key.last_four}`.toLowerCase().includes(filter.trim().toLowerCase()),
   );
   const canWrite = can("admin:keys:write");
+  const inactive = items.filter((key) => !key.enabled || key.retirement_state !== "active").length;
+  const configured = items.filter((key) => keyRestriction(key) === null).length;
   return (
     <Section
       title={t("keys.inventory")}
@@ -106,6 +108,26 @@ function KeyInventory() {
       }
     >
       <PermissionHint permission="admin:keys:write" />
+      {items.length === 0 ? null : (
+        <ul className="inventory-summary" aria-label={t("keys.summary.label")}>
+          <li>
+            <strong>{items.length}</strong>
+            <span>{t("keys.summary.total")}</span>
+          </li>
+          <li>
+            <strong>{configured}</strong>
+            <span>{t("keys.summary.configured")}</span>
+          </li>
+          <li className={items.length - configured - inactive > 0 ? "is-warning" : undefined}>
+            <strong>{items.length - configured - inactive}</strong>
+            <span>{t("keys.summary.restricted")}</span>
+          </li>
+          <li>
+            <strong>{inactive}</strong>
+            <span>{t("keys.summary.inactive")}</span>
+          </li>
+        </ul>
+      )}
       <div className="inventory-toolbar">
         <Input
           aria-label={t("keys.find")}

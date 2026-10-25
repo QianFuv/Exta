@@ -17,6 +17,8 @@ import { LoadMore } from "../../components/LoadMore";
 import { PageHeader, RequirePermission, Section } from "../../components/Page";
 import { DateTime } from "../../components/Values";
 import { RequestStatusBadges, ResultSummary } from "./requestStatus";
+import { useMediaQuery } from "../../lib/useMediaQuery";
+import IconFilter from "@douyinfe/semi-icons/lib/es/icons/IconFilter";
 
 type Filters = {
   requestId: string;
@@ -129,6 +131,10 @@ function RequestsContent() {
   };
 
   const isFiltered = Object.values(filters).some((value) => value !== "");
+  const activeFilterCount = Object.values(filters).filter((value) => value !== "").length;
+  const isPhone = useMediaQuery("(max-width: 760px)");
+  const [isFiltersOpen, setFiltersOpen] = useState(false);
+  const isCollapsed = isPhone && !isFiltersOpen;
 
   return (
     <>
@@ -145,8 +151,29 @@ function RequestsContent() {
           </Button>
         }
       >
-        <form className="form filters log-filters" onSubmit={onSubmit}>
-          <div className="filter-fields">
+        <form
+          className="form filters log-filters"
+          onSubmit={onSubmit}
+          data-collapsed={isCollapsed}
+          aria-label={t("requests.filters")}
+        >
+          <Button
+            type="button"
+            className="button filters-toggle"
+            aria-expanded={!isCollapsed}
+            aria-controls={`${formId}-filter-fields`}
+            onClick={() => setFiltersOpen(!isFiltersOpen)}
+          >
+            <IconFilter aria-hidden />
+            {isCollapsed ? t("requests.showFilters") : t("requests.hideFilters")}
+            {activeFilterCount > 0 ? (
+              <span className="muted">
+                {" · "}
+                {t("requests.activeFilters", { count: activeFilterCount })}
+              </span>
+            ) : null}
+          </Button>
+          <div className="filter-fields" id={`${formId}-filter-fields`}>
             <div className="field">
               <label id={`${formId}-request-id-label`} htmlFor={`${formId}-request-id`}>
                 {t("error.requestId")}

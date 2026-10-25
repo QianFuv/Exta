@@ -48,6 +48,7 @@ export function CallTrend() {
 /** Render an accessible SVG with identical count data available as a semantic table. */
 function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
   const { t, locale, formatNumber } = useI18n();
+  const [hovered, setHovered] = useState<number | null>(null);
   const series = ["total", "succeeded", "failed"] as const;
   const totals = data.buckets.reduce(
     (sum, bucket) => ({
@@ -86,8 +87,16 @@ function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
           </li>
         ))}
       </ul>
-      <div className="trend-chart">
+      <div className="trend-chart" onPointerLeave={() => setHovered(null)}>
         <svg
+          onPointerMove={(event) => {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            if (bounds.width === 0 || data.buckets.length === 0) return;
+            const position = ((event.clientX - bounds.left) / bounds.width) * 860;
+            const ratio = (position - 60) / 760;
+            const index = Math.round(ratio * Math.max(1, data.buckets.length - 1));
+            setHovered(Math.max(0, Math.min(data.buckets.length - 1, index)));
+          }}
           viewBox="0 0 860 290"
           role="img"
           aria-label={`${t("trends.title")}: ${time(data.from)} – ${time(data.to)}, UTC; ${t("trends.total")}: ${totals.total}`}
@@ -142,10 +151,54 @@ function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
                 .join(" ")}
             />
           ))}
+          {hovered !== null && data.buckets[hovered] ? (
+            <g aria-hidden="true">
+              <line
+                className="trend-crosshair"
+                x1={x(hovered)}
+                x2={x(hovered)}
+                y1={y(maximum)}
+                y2={y(0)}
+              />
+              {series.map((name) => (
+                <circle
+                  key={name}
+                  className={`trend-dot trend-${name}`}
+                  cx={x(hovered)}
+                  cy={y(data.buckets[hovered]![name])}
+                  r="4.5"
+                />
+              ))}
+            </g>
+          ) : null}
         </svg>
+        {hovered !== null && data.buckets[hovered] ? (
+          <div
+            className="trend-tooltip"
+            aria-hidden="true"
+            style={
+              hovered > data.buckets.length / 2
+                ? { right: `${100 - (x(hovered) / 860) * 100 + 1.5}%` }
+                : { left: `${(x(hovered) / 860) * 100 + 1.5}%` }
+            }
+          >
+            <p className="trend-tooltip-time">{time(data.buckets[hovered]!.start)} UTC</p>
+            <dl>
+              {series.map((name) => (
+                <div key={name} className={`trend-${name}`}>
+                  <dt>
+                    <span aria-hidden className="trend-swatch" />
+                    {t(`trends.${name}`)}
+                  </dt>
+                  <dd>{formatNumber(data.buckets[hovered]![name])}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : null}
         {totals.total === 0 ? <EmptyState title={t("trends.empty")} /> : null}
       </div>
-      <p className="muted">
+      <p className="trend-summary">
         {t("trends.pending")}: {formatNumber(totals.pending)} · {t("trends.uncertain")}:{" "}
         {formatNumber(totals.uncertain)} · {t("trends.cancelled")}: {formatNumber(totals.cancelled)}
       </p>

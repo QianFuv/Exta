@@ -46,13 +46,13 @@ export function ConnectionDetails() {
           <Section title={t("connections.endpoints")}>
             <dl className="details-grid">
               <dt>{t("connections.restBase")}</dt>
-              <dd>
-                <code>{data.rest_base_url}</code>{" "}
+              <dd className="endpoint-value">
+                <code>{data.rest_base_url}</code>
                 <CopyButton text={data.rest_base_url} label={t("connections.copyRest")} />
               </dd>
               <dt>{t("connections.mcpUrl")}</dt>
-              <dd>
-                <code>{data.mcp_url}</code>{" "}
+              <dd className="endpoint-value">
+                <code>{data.mcp_url}</code>
                 <CopyButton text={data.mcp_url} label={t("connections.copyMcp")} />
               </dd>
               <dt>{t("connections.authentication")}</dt>

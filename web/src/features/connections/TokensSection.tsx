@@ -118,6 +118,18 @@ export function TokensSection() {
       }
     >
       <PermissionHint permission="admin:tokens:write" />
+      {items.length === 0 ? null : (
+        <ul className="inventory-summary" aria-label={t("tokens.title")}>
+          <li>
+            <strong>{items.length}</strong>
+            <span>{t("tokens.summary.total")}</span>
+          </li>
+          <li>
+            <strong>{activeCount}</strong>
+            <span>{t("tokens.summary.active")}</span>
+          </li>
+        </ul>
+      )}
       {revealed === null ? null : (
         <div className="token-reveal" role="region" aria-label={t("tokens.revealRegion")}>
           <Notice tone="warning" title={t("tokens.revealTitle", { label: revealed.label })}>
@@ -166,9 +178,9 @@ export function TokensSection() {
                   <p className="cell-secondary">
                     {t("tokens.expires")}: <DateTime value={token.expires_at} />
                   </p>
-                  <p className="scope-summary">
+                  <div className="scope-summary">
                     <ScopeBadges scopes={token.scopes} />
-                  </p>
+                  </div>
                   {token.revoked_at ? null : (
                     <Button
                       className="button button-danger button-ghost"

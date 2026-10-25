@@ -102,7 +102,7 @@ function ReadinessPanel() {
  * @returns Section.
  */
 function MetricsPanel() {
-  const { t, formatNumber } = useI18n();
+  const { t, formatNumber, formatDateTime } = useI18n();
   const api = useApi();
   const usage = useQuery({
     queryKey: ["usage", "overview"],
@@ -110,7 +110,7 @@ function MetricsPanel() {
     refetchInterval: 30_000,
   });
   return (
-    <section className="section metrics-section" aria-label={t("overview.activity")}>
+    <section className="metrics-section" aria-label={t("overview.activity")}>
       <QueryView query={usage}>
         {(data) => {
           return (
@@ -129,6 +129,9 @@ function MetricsPanel() {
                   );
                 })}
               </ul>
+              <p className="metrics-observed">
+                {t("overview.observedAt", { time: formatDateTime(data.overview.observed_at) })}
+              </p>
             </>
           );
         }}
@@ -176,20 +179,33 @@ function KeysPanel() {
             };
           });
           return (
-            <ul className="plain-list">
-              {counts.map((entry) => (
-                <li key={entry.provider}>
-                  <strong>{t(`provider.${entry.provider}`)}</strong>:{" "}
-                  {t("overview.keyCounts", { usable: entry.usable, total: entry.total })}
-                  {entry.total > 0 && entry.usable === 0 ? (
-                    <span className="inline-warning"> · {t("overview.noUsableKeys")}</span>
-                  ) : null}
-                </li>
-              ))}
-              {data.next_cursor === null ? null : (
-                <li className="muted">{t("overview.moreKeys")}</li>
-              )}
-            </ul>
+            <>
+              <ul className="key-pool">
+                {counts.map((entry) => (
+                  <li key={entry.provider} className="key-pool-row">
+                    <div className="key-pool-head">
+                      <strong>{t(`provider.${entry.provider}`)}</strong>
+                      <span className="key-pool-count">
+                        {t("overview.keyCounts", { usable: entry.usable, total: entry.total })}
+                      </span>
+                    </div>
+                    <span className="key-pool-bar" aria-hidden="true">
+                      <span
+                        style={{
+                          width: `${entry.total === 0 ? 0 : (entry.usable / entry.total) * 100}%`,
+                        }}
+                      />
+                    </span>
+                    {entry.total > 0 && entry.usable === 0 ? (
+                      <span className="inline-warning">{t("overview.noUsableKeys")}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <p className="key-pool-note">
+                {data.next_cursor === null ? t("overview.keyPoolHint") : t("overview.moreKeys")}
+              </p>
+            </>
           );
         }}
       </QueryView>
