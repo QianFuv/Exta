@@ -68,9 +68,20 @@ export async function sourceFiles() {
   return result;
 }
 
-/** Rewrite only parsed HTML resource attributes, retaining query strings and fragments. */
-export function rewriteIndex(html, names, prefix) {
+/**
+ * Rewrite parsed resource attributes and optionally expose a declared notice asset.
+ * @param {string} html - Built HTML without inline executable content.
+ * @param {Set<string>} names - Declared output paths.
+ * @param {string} prefix - Verified immutable asset namespace.
+ * @param {string} [noticeName] - Font notice asset to link from the document head.
+ * @returns {string} Rewritten document with same-origin resource references.
+ */
+export function rewriteIndex(html, names, prefix, noticeName) {
   const document = parse(html);
+  if (noticeName) {
+    const head = document.childNodes.find((node) => node.tagName === "html").childNodes.find((node) => node.tagName === "head");
+    head.childNodes.push({ nodeName: "link", tagName: "link", namespaceURI: "http://www.w3.org/1999/xhtml", attrs: [{ name: "rel", value: "license" }, { name: "href", value: `./${noticeName}` }], childNodes: [], parentNode: head });
+  }
   const rewrite = (value) => {
     const url = new URL(value, "https://exta.invalid/");
     if (url.origin !== "https://exta.invalid" || !names.has(url.pathname.slice(1))) throw new Error(`Undeclared index resource: ${value}`);
@@ -93,8 +104,13 @@ export function rewriteIndex(html, names, prefix) {
   return serialize(document) + "\n";
 }
 
-/** Preserve the complete relative asset graph inside a verified immutable namespace. */
-export function packageOutput(output) {
+/**
+ * Preserve the complete asset graph and font notices in one verified namespace.
+ * @param {Array<object>} output - Vite's production chunks and assets.
+ * @param {string} [fontNotices] - Complete font notices delivered with the page.
+ * @returns {Map<string, Buffer>} Manifest-covered bundle files.
+ */
+export function packageOutput(output, fontNotices) {
   const payload = new Map();
   let index;
   for (const item of output) {
@@ -106,6 +122,11 @@ export function packageOutput(output) {
     payload.set(item.fileName, bytes);
   }
   if (!index || payload.size === 0) throw new Error("Empty production build");
+  const noticeName = fontNotices === undefined ? undefined : "assets/font-licenses.txt";
+  if (noticeName) {
+    if (typeof fontNotices !== "string" || !fontNotices.trim() || payload.has(noticeName)) throw new Error("Missing or conflicting font notices");
+    payload.set(noticeName, Buffer.from(fontNotices));
+  }
   validateNames([...payload.keys()]);
   for (const item of output.filter((entry) => entry.type === "chunk")) {
     for (const dependency of [...item.imports, ...item.dynamicImports]) if (!payload.has(dependency)) throw new Error(`Unpackaged chunk dependency: ${dependency}`);
@@ -114,7 +135,7 @@ export function packageOutput(output) {
   const bundleHash = digest(names.map((name) => `${name}\0${digest(payload.get(name))}\n`).join(""));
   const prefix = `assets/${bundleHash}/`;
   const files = new Map(names.map((name) => [prefix + name, payload.get(name)]));
-  files.set("index.html", Buffer.from(rewriteIndex(index, new Set(names), prefix)));
+  files.set("index.html", Buffer.from(rewriteIndex(index, new Set(names), prefix, noticeName)));
   const metadata = { format: 1, mode: "production", bundle_sha256: bundleHash, files: {}, routes: ROUTES };
   for (const [name, bytes] of files) metadata.files[name] = { size: bytes.length, sha256: digest(bytes), immutable: name !== "index.html" };
   files.set("manifest.json", Buffer.from(JSON.stringify(metadata, null, 2) + "\n"));
@@ -165,10 +186,43 @@ async function collectLicenses(moduleIds, lock, destination) {
 }
 
 /** Vendored web font shipped in the UI, with its retrieved component license texts. */
-export const FONT = { name: "JetBrainsLxgwNerdMono", version: "1.3", license: "OFL-1.1 AND MIT", root: path.join(WEB, "src/assets/fonts") };
+export const FONT = { name: "JetBrainsLxgwNerdMono", version: "1.3", license: "OFL-1.1", root: path.join(WEB, "src/assets/fonts") };
+
+/**
+ * Reject unreviewed font, CSS or notice bytes before publishing a production bundle.
+ * @param {object} font - Font identity and vendored directory.
+ * @returns {Promise<void>} Resolves only for the exact recorded source set.
+ */
+export async function verifyFontProvenance(font = FONT) {
+  const provenance = JSON.parse(await readFile(path.join(font.root, "provenance.json"), "utf8"));
+  if (provenance.format !== 1 || provenance.font.name !== font.name || provenance.font.version !== font.version || provenance.font.license !== font.license) throw new Error("Font provenance identity mismatch");
+  const expected = { ...provenance.files };
+  for (const [name, hash] of Object.entries(provenance.licenses)) expected[`LICENSES/${name}`] = hash;
+  validateNames(Object.keys(expected));
+  const actual = (await filesUnder(font.root)).filter((name) => name !== path.join(font.root, "provenance.json"));
+  if (actual.length !== Object.keys(expected).length) throw new Error("Font provenance source set changed");
+  for (const name of actual) {
+    const relative = path.relative(font.root, name).split(path.sep).join("/");
+    if (expected[relative] !== digest(await readFile(name))) throw new Error(`Font provenance bytes changed: ${relative}`);
+  }
+}
+
+/**
+ * Collect full font notices and verifiable source records for browser recipients.
+ * @param {object} font - Font identity and vendored directory.
+ * @returns {Promise<string>} Complete human-readable notice and provenance text.
+ */
+export async function collectFontNotices(font = FONT) {
+  const directory = path.join(font.root, "LICENSES");
+  const sections = [`${font.name} ${font.version}\nFont data: ${font.license}. Companion tooling notices are preserved separately.`];
+  for (const name of (await readdir(directory)).sort()) sections.push(`===== ${name} =====\n${await readFile(path.join(directory, name), "utf8")}`);
+  sections.push(`===== Source provenance =====\n${await readFile(path.join(font.root, "provenance.json"), "utf8")}`);
+  return sections.join("\n\n") + "\n";
+}
 
 /** Record the vendored font shards' identity and copy their license texts into the bundle evidence. */
 export async function collectFontLicenses(destination, font = FONT) {
+  await verifyFontProvenance(font);
   const licenseRoot = path.join(font.root, "LICENSES");
   const shards = (await filesUnder(font.root)).filter((name) => !name.startsWith(licenseRoot + path.sep)).sort();
   if (!shards.some((name) => name.endsWith(".woff2"))) throw new Error("Missing vendored font shards");
@@ -184,6 +238,10 @@ export async function collectFontLicenses(destination, font = FONT) {
     await writeFile(path.join(destination, target), bytes);
     entry.files[target] = digest(bytes);
   }
+  const provenance = await readFile(path.join(font.root, "provenance.json"));
+  const target = `${font.name}-${font.version}/provenance.json`;
+  await writeFile(path.join(destination, target), provenance);
+  entry.files[target] = digest(provenance);
   return entry;
 }
 
@@ -206,7 +264,7 @@ export async function build() {
   if (Array.isArray(result) || !("output" in result)) throw new Error("Unexpected Vite build result");
   const modules = result.output.filter((item) => item.type === "chunk").flatMap((item) => Object.keys(item.modules));
   if (modules.some((name) => /[\\/]src[\\/]mocks[\\/]|[\\/]node_modules[\\/]msw[\\/]/.test(name))) throw new Error("Mock code reached production output");
-  const files = packageOutput(result.output);
+  const files = packageOutput(result.output, await collectFontNotices());
   const artifacts = path.join(ROOT, "artifacts", "embed");
   await mkdir(artifacts, { recursive: true });
   const stage = path.join(artifacts, randomUUID());

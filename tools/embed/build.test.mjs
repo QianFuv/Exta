@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { digest, packageOutput, rewriteIndex, validateNames, sourceDigest, virtualOwner, requireProduction, dependencyRoot, collectFontLicenses, ROOT } from "./build.mjs";
+import { digest, packageOutput, rewriteIndex, validateNames, sourceDigest, virtualOwner, requireProduction, dependencyRoot, collectFontLicenses, collectFontNotices, verifyFontProvenance, FONT, ROOT } from "./build.mjs";
 
 /** Produce a cyclic split graph whose chunk bytes must survive relocation. */
 function fixture() {
@@ -41,6 +41,19 @@ test("changes the namespace when any lazy asset changes", () => {
   changed[2].code += "export const changed=true;";
   const revised = JSON.parse(packageOutput(changed).get("manifest.json"));
   assert.notEqual(original.bundle_sha256, revised.bundle_sha256);
+});
+
+test("delivers complete font notices through a declared discoverable immutable asset", () => {
+  const notice = "Copyright LXGW and The Klee Project Authors\nSIL OPEN FONT LICENSE Version 1.1\n";
+  const files = packageOutput(fixture(), notice);
+  const metadata = JSON.parse(files.get("manifest.json"));
+  const name = `assets/${metadata.bundle_sha256}/assets/font-licenses.txt`;
+  assert.equal(files.get(name)?.toString(), notice);
+  assert.equal(metadata.files[name].sha256, digest(notice));
+  assert.equal(metadata.files[name].immutable, true);
+  assert.match(files.get("index.html").toString(), /rel="license" href="\/app\/assets\/[a-f0-9]{64}\/assets\/font-licenses\.txt"/);
+  const revised = JSON.parse(packageOutput(fixture(), notice + "Updated attribution\n").get("manifest.json"));
+  assert.notEqual(revised.bundle_sha256, metadata.bundle_sha256);
 });
 
 test("hashes binary inputs verbatim and normalizes only declared text", () => {
@@ -88,14 +101,29 @@ test("ships vendored font license texts with a shard-set identity", async () => 
   await writeFile(path.join(font.root, "Regular", "a.woff2"), Buffer.from([0, 1, 2]));
   await writeFile(path.join(font.root, "Regular", "result.css"), "@font-face{}\r\n");
   await writeFile(path.join(font.root, "LICENSES", "OFL.txt"), "license text");
+  await writeFile(path.join(font.root, "provenance.json"), JSON.stringify({ format: 1, font: { name: font.name, version: font.version, license: font.license }, files: { "Regular/a.woff2": digest(Buffer.from([0, 1, 2])), "Regular/result.css": digest("@font-face{}\r\n") }, licenses: { "OFL.txt": digest("license text") } }));
   const destination = path.join(root, "licenses");
   const entry = await collectFontLicenses(destination, font);
   assert.equal(entry.name, "SyntheticFont");
   assert.match(entry.integrity, /^sha256-[a-f0-9]{64}$/);
-  assert.deepEqual(Object.keys(entry.files), ["SyntheticFont-1.0/OFL.txt"]);
+  assert.deepEqual(Object.keys(entry.files), ["SyntheticFont-1.0/OFL.txt", "SyntheticFont-1.0/provenance.json"]);
   assert.equal((await readFile(path.join(destination, "SyntheticFont-1.0/OFL.txt"))).toString(), "license text");
   await writeFile(path.join(font.root, "Regular", "result.css"), "@font-face{}\n");
-  assert.equal((await collectFontLicenses(destination, font)).integrity, entry.integrity);
+  await assert.rejects(() => collectFontLicenses(destination, font), /provenance bytes changed/);
+  await writeFile(path.join(font.root, "Regular", "result.css"), "@font-face{}\r\n");
   await writeFile(path.join(font.root, "Regular", "a.woff2"), Buffer.from([9]));
-  assert.notEqual((await collectFontLicenses(destination, font)).integrity, entry.integrity);
+  await assert.rejects(() => collectFontLicenses(destination, font), /provenance bytes changed/);
+});
+
+test("pins the shipped font source chain and provides complete browser notices", async () => {
+  await verifyFontProvenance();
+  const provenance = JSON.parse(await readFile(path.join(FONT.root, "provenance.json"), "utf8"));
+  assert.equal(provenance.upstream.archive_sha256, "535c724568f24cad90bde45765fcc98ab623246fdf4f39ba3e9d1391ed7d2f2a");
+  assert.equal(provenance.bold_cjk_source.source_sha256, "b413151b90f3c96c0d8905eb55c7078f0e3aca9cfb0d962f3826ab185f2e6439");
+  assert.equal(provenance.bold_cjk_source.license_sha256, "02c29dec8b0f48d1c73ed28e16824dcf9c1c6c3c2870d31e2a556a880b8ade7a");
+  assert.equal(Object.keys(provenance.upstream_members).filter((name) => name.startsWith("JetBrainsLxgwNerdMono-Regular/")).length, 344);
+  assert.equal(Object.keys(provenance.upstream_members).filter((name) => name.startsWith("JetBrainsLxgwNerdMono-Bold/")).length, 324);
+  const notice = await collectFontNotices();
+  assert.equal(FONT.license, "OFL-1.1");
+  for (const text of ["The JetBrains Mono Project Authors", "The Klee Project Authors", "Copyright 2022, 2024-2025 LXGW", "SIL OPEN FONT LICENSE Version 1.1", provenance.bold_cjk_source.source_sha256]) assert.ok(notice.includes(text));
 });

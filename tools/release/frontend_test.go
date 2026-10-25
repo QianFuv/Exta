@@ -80,6 +80,9 @@ func TestFrontendProvenanceRejectsSourceAndLicenseDrift(t *testing.T) {
 		{"npm config", ".npmrc", "changed", "stale frontend source"},
 		{"node version", ".node-version", "changed", "stale frontend source"},
 		{"new source", "web/src/unbuilt.tsx", "export const unbuilt=true", "source set changed"},
+		{"font provenance", "web/src/assets/fonts/provenance.json", "changed", "stale frontend source"},
+		{"font license source", "web/src/assets/fonts/LICENSES/LXGWZhenKai-OFL.txt", "changed", "stale frontend source"},
+		{"font CSS", "web/src/assets/fonts/JetBrainsLxgwNerdMono-Regular/result.css", "changed", "stale frontend source"},
 		{"license", "", "corrupt", "license integrity mismatch"},
 	} {
 		t.Run(test.name, func(t *testing.T) {

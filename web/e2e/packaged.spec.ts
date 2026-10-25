@@ -194,6 +194,24 @@ test("standalone key-only administration and persistent appearance", async ({
       )
       .toBe(200);
     await page.goto(`${origin}/app/`);
+    const fontNoticeLink = page.locator('link[rel="license"]');
+    await expect(fontNoticeLink).toHaveCount(1);
+    const fontNoticePath = await fontNoticeLink.getAttribute("href");
+    expect(fontNoticePath).toMatch(/^\/app\/assets\/[a-f0-9]{64}\/assets\/font-licenses\.txt$/);
+    const fontNotice = await page.request.get(new URL(fontNoticePath!, origin).href);
+    expect(fontNotice.status()).toBe(200);
+    expect(fontNotice.headers()["content-type"]).toContain("text/plain");
+    expect(fontNotice.headers()["cache-control"]).toContain("immutable");
+    const fontNoticeText = await fontNotice.text();
+    for (const copyright of [
+      "The JetBrains Mono Project Authors",
+      "The Klee Project Authors",
+      "Copyright 2022, 2024-2025 LXGW",
+      "SIL OPEN FONT LICENSE Version 1.1",
+      "b413151b90f3c96c0d8905eb55c7078f0e3aca9cfb0d962f3826ab185f2e6439",
+    ]) {
+      expect(fontNoticeText).toContain(copyright);
+    }
     await expect(page.getByRole("button", { name: "语言" })).toHaveCount(0);
     await page.evaluate(async () => {
       await document.fonts.ready;
