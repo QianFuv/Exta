@@ -121,6 +121,9 @@ export function Dialog({
     };
     document.addEventListener("keydown", onKeyDown, true);
     const previous = previousRef.current;
+    const previousDialog = previous?.closest<HTMLElement>('[role="dialog"]') ?? null;
+    const previousHref =
+      previous instanceof HTMLAnchorElement ? previous.getAttribute("href") : null;
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
       background.forEach((element, index) => {
@@ -128,6 +131,16 @@ export function Dialog({
       });
       document.body.style.overflow = overflowBefore;
       if (previous?.isConnected) previous.focus();
+      else if (previousHref !== null) {
+        const replacements = focusableControls(previousDialog ?? document.body).filter(
+          (element) =>
+            element instanceof HTMLAnchorElement &&
+            element.getAttribute("href") === previousHref &&
+            element.closest('[role="dialog"]') === previousDialog &&
+            element.isConnected,
+        );
+        if (replacements.length === 1) replacements[0]!.focus();
+      }
     };
   }, [titleId, descriptionId, description]);
 
