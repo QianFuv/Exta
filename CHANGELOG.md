@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5 — 2026-10-26
+
+- Publish the redesigned simplified-Chinese product home and management console with consistent light/dark appearance, keyboard interactions and self-hosted split typography.
+- Organize Actions into CI, reusable frontend and Go checks, and guarded manual Release workflows with common stage reports and exact tested-artifact handoff. Preserve Windows/Linux amd64 native/browser checks, Linux race detection and container/proxy acceptance.
+- Read the publication version from `VERSION`; distribute versioned Windows ZIP and Linux tar.gz archives with exact public checksums. Generate complete categorized, linked commit notes from the previous published stable ancestor. Preserve conflicting-identity rejection and matching-draft recovery.
+
 ## 0.1.4 — 2026-10-24
 
 - Accept administrator passwords containing 8–512 Unicode characters consistently in initialization, standard input, login contracts and the management interface. Count characters rather than UTF-8 bytes or UTF-16 code units.

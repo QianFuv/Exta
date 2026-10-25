@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: ""
+    outputs:
+      candidate_artifact_id:
+        description: Immutable artifact ID of the fully accepted candidates
+        value: ${{ jobs.backend.outputs.candidate_artifact_id }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.version == '' && 'quality' || github.run_id }}
+  cancel-in-progress: ${{ inputs.version == '' }}
+
+jobs:
+  changes:
+    name: Change identification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source
+        id: checkout_source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Record complete verification scope
+        id: verification_scope
+        env:
+          CANDIDATE_VERSION: ${{ inputs.version }}
+        run: |
+          if test -n "$CANDIDATE_VERSION"; then test "$CANDIDATE_VERSION" = "$(cat VERSION)"; fi
+          git diff-tree --root --no-commit-id --name-only -r HEAD
+      - name: Report detect-changes summary
+        id: report_detect_changes
+        if: always()
+        env:
+          CI_STAGE: detect-changes
+          CI_PLATFORMS: independent
+          CI_STATUS: ${{ job.status }}
+          CI_CHECKS: ${{ toJSON(steps) }}
+        run: python -B tools/release/report.py summary
+
+  frontend:
+    name: Frontend
+    needs: changes
+    uses: ./.github/workflows/frontend.yml
+
+  backend:
+    name: Backend
+    needs: [changes, frontend]
+    uses: ./.github/workflows/backend.yml
+    with:
+      version: ${{ inputs.version }}
+      ui_artifact_id: ${{ needs.frontend.outputs.ui_artifact_id }}
+      ui_sha256: ${{ needs.frontend.outputs.ui_sha256 }}
+
+  complete:
+    name: Complete verification
+    needs: [changes, frontend, backend]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout gate source
+        id: checkout_source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Reject failed or skipped required stages
+        id: require_complete_verification
+        env:
+          CI_GATE_RESULTS: '{"changes":"${{ needs.changes.result }}","frontend":"${{ needs.frontend.result }}","backend":"${{ needs.backend.result }}"}'
+        run: python -B tools/release/report.py gate

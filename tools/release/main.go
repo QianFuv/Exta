@@ -2,7 +2,9 @@
 package main
 
 import (
+	"archive/tar"
 	"archive/zip"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"debug/buildinfo"
@@ -81,7 +83,7 @@ func buildEnvironment(target string) []string {
 		result = append(result, value)
 	}
 	parts := strings.Split(target, "/")
-	return append(result, "GOOS="+parts[0], "GOARCH="+parts[1], "CGO_ENABLED=0", "GOTOOLCHAIN=local", "GOFLAGS=-mod=readonly")
+	return append(result, "GOOS="+parts[0], "GOARCH="+parts[1], "CGO_ENABLED=0", "GOTOOLCHAIN=local", "GOFLAGS=-mod=readonly -p=2")
 }
 
 func digestFile(path string) (string, int64, error) {
@@ -105,7 +107,7 @@ func writeJSON(path string, value any) error {
 
 func sourceFiles() (map[string]string, error) {
 	files := map[string]string{}
-	for _, root := range []string{"cmd", "internal", "tests", "tools", "api", "web", "go.mod", "go.sum", ".node-version", ".npmrc"} {
+	for _, root := range []string{"cmd", "internal", "tests", "tools", "api", "web", "go.mod", "go.sum", "VERSION", ".node-version", ".npmrc"} {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -253,12 +255,20 @@ func binaryImports(path, target string) ([]string, error) {
 	return imports, nil
 }
 
-func archive(destination, binary string) error {
-	file, err := os.OpenFile(filepath.Join(destination, binary+".zip"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+func archiveName(version, target string) string {
+	extension := ".zip"
+	if target == "linux/amd64" {
+		extension = ".tar.gz"
+	}
+	return "exta_" + version + "_" + strings.ReplaceAll(target, "/", "_") + extension
+}
+
+func archive(destination, binary, name string) error {
+	file, err := os.OpenFile(filepath.Join(destination, name), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
-	writer := zip.NewWriter(file)
+	defer file.Close()
 	paths := []string{binary, "RELEASE-NOTES.txt", "dependency-inventory.json"}
 	entries, err := os.ReadDir(filepath.Join(destination, "licenses"))
 	if err != nil {
@@ -288,28 +298,49 @@ func archive(destination, binary string) error {
 			return err
 		}
 	}
+	var writeEntry func(string, []byte, int64) error
+	var closeArchive func() error
+	if strings.HasSuffix(name, ".tar.gz") {
+		compressed := gzip.NewWriter(file)
+		writer := tar.NewWriter(compressed)
+		writeEntry = func(path string, content []byte, mode int64) error {
+			if err := writer.WriteHeader(&tar.Header{Name: path, Mode: mode, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
+				return err
+			}
+			_, err := writer.Write(content)
+			return err
+		}
+		closeArchive = func() error { return errors.Join(writer.Close(), compressed.Close()) }
+	} else {
+		writer := zip.NewWriter(file)
+		writeEntry = func(path string, content []byte, mode int64) error {
+			header := &zip.FileHeader{Name: path, Method: zip.Deflate}
+			header.SetMode(fs.FileMode(mode))
+			entry, err := writer.CreateHeader(header)
+			if err != nil {
+				return err
+			}
+			_, err = entry.Write(content)
+			return err
+		}
+		closeArchive = writer.Close
+	}
 	for _, path := range paths {
 		content, err := os.ReadFile(filepath.Join(destination, filepath.FromSlash(path)))
 		if err != nil {
 			file.Close()
 			return err
 		}
-		header := &zip.FileHeader{Name: path, Method: zip.Deflate}
-		header.SetMode(0644)
+		mode := int64(0644)
 		if path == binary {
-			header.SetMode(0755)
+			mode = 0755
 		}
-		entry, err := writer.CreateHeader(header)
-		if err != nil {
-			file.Close()
-			return err
-		}
-		if _, err = entry.Write(content); err != nil {
+		if err = writeEntry(path, content, mode); err != nil {
 			file.Close()
 			return err
 		}
 	}
-	if err = writer.Close(); err != nil {
+	if err = closeArchive(); err != nil {
 		file.Close()
 		return err
 	}
@@ -476,14 +507,15 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err = archive(destination, name); err != nil {
+		archiveFile := archiveName(*version, target)
+		if err = archive(destination, name, archiveFile); err != nil {
 			return err
 		}
-		archiveHash, compressedSize, err := digestFile(filepath.Join(destination, name+".zip"))
+		archiveHash, compressedSize, err := digestFile(filepath.Join(destination, archiveFile))
 		if err != nil {
 			return err
 		}
-		artifacts = append(artifacts, artifact{Target: target, File: name, Size: size, SHA256: hash, Archive: name + ".zip", CompressedSize: compressedSize, ArchiveSHA256: archiveHash, Imports: imports, RuntimeEvidence: "build-only; see separately recorded smoke evidence", MinimalBaselineSize: baselineSize, SizeAboveBaseline: size - baselineSize})
+		artifacts = append(artifacts, artifact{Target: target, File: name, Size: size, SHA256: hash, Archive: archiveFile, CompressedSize: compressedSize, ArchiveSHA256: archiveHash, Imports: imports, RuntimeEvidence: "build-only; see separately recorded smoke evidence", MinimalBaselineSize: baselineSize, SizeAboveBaseline: size - baselineSize})
 	}
 	after, err := sourceFiles()
 	if err != nil {
@@ -499,8 +531,10 @@ func run(args []string) error {
 		return err
 	}
 	checksums := ""
+	publicChecksums := ""
 	for _, item := range artifacts {
 		checksums += item.SHA256 + "  " + item.File + "\n" + item.ArchiveSHA256 + "  " + item.Archive + "\n"
+		publicChecksums += item.ArchiveSHA256 + "  " + item.Archive + "\n"
 	}
 	for _, name := range []string{"release-manifest.json", "dependency-inventory.json", "RELEASE-NOTES.txt"} {
 		hash, _, err := digestFile(filepath.Join(destination, name))
@@ -509,7 +543,10 @@ func run(args []string) error {
 		}
 		checksums += hash + "  " + name + "\n"
 	}
-	if err = os.WriteFile(filepath.Join(destination, "SHA256SUMS"), []byte(checksums), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(destination, "SHA256SUMS"), []byte(publicChecksums), 0600); err != nil {
+		return err
+	}
+	if err = os.WriteFile(filepath.Join(destination, "candidate-SHA256SUMS"), []byte(checksums), 0600); err != nil {
 		return err
 	}
 	fmt.Println("Verified cross-build artifacts at " + destination)

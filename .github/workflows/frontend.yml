@@ -1,0 +1,112 @@
+name: Reusable Frontend Checks
+
+on:
+  workflow_call:
+    outputs:
+      ui_artifact_id:
+        description: Immutable artifact ID of the tested production UI
+        value: ${{ jobs.frontend.outputs.ui_artifact_id }}
+      ui_sha256:
+        description: SHA-256 of the exact production archive
+        value: ${{ jobs.frontend.outputs.ui_sha256 }}
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: -mod=readonly -p=2
+  GOMAXPROCS: "2"
+
+jobs:
+  frontend:
+    name: Frontend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      ui_artifact_id: ${{ steps.export_ui.outputs.artifact-id }}
+      ui_sha256: ${{ steps.identify_ui.outputs.sha256 }}
+    steps:
+      - name: Checkout source
+        id: checkout_source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        id: setup_go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: 1.26.10
+          cache: true
+          cache-dependency-path: go.sum
+      - name: Set up Node.js
+        id: setup_node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install pinned npm
+        id: setup_npm
+        run: npm install --global npm@12.2.0
+      - name: Install locked frontend dependencies
+        id: install_dependencies
+        run: npm ci --prefix web
+      - name: Check frontend types, style and tests
+        id: frontend_quality
+        run: |
+          npm run typecheck --prefix web
+          npm exec --prefix web -- tsc --noEmit -p web/tsconfig.e2e.json
+          npm run lint --prefix web
+          npm run format:check --prefix web
+          npm exec --prefix web -- prettier --check web/e2e web/playwright.config.ts web/tsconfig.e2e.json
+          npm run test --prefix web -- --run --maxWorkers=2
+          node --test tools/embed/build.test.mjs
+          python -B -m unittest discover -s tools/release -p 'test_*.py'
+          go run ./tools/check
+      - name: Build production UI once
+        id: build_ui
+        run: npm run build --prefix web
+      - name: Identify exact production archive
+        id: identify_ui
+        run: echo "sha256=$(sha256sum internal/webassets/production.zip | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - name: Record frontend artifact provenance
+        id: record_frontend
+        if: always()
+        env:
+          CI_STAGE: quality
+          CI_PLATFORMS: independent
+          CI_STATUS: ${{ job.status }}
+          CI_CHECKS: ${{ toJSON(steps) }}
+          CI_REPORT_ROOT: .
+        run: |
+          python -B tools/release/report.py manifest internal/webassets/production.zip
+          mkdir -p artifacts/frontend
+          mv ci-manifest.json artifacts/frontend/
+      - name: Export verified production UI
+        id: export_ui
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: frontend-production-${{ github.sha }}
+          path: internal/webassets/production.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload frontend diagnostics
+        id: upload_frontend_diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: frontend-quality-${{ github.sha }}
+          path: artifacts/frontend/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Report quality summary
+        id: report_quality
+        if: always()
+        env:
+          CI_STAGE: quality
+          CI_PLATFORMS: independent
+          CI_STATUS: ${{ job.status }}
+          CI_CHECKS: ${{ toJSON(steps) }}
+          CI_REPORT_ROOT: artifacts/frontend
+        run: python -B tools/release/report.py summary

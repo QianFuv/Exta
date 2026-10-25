@@ -15,11 +15,11 @@ class PublicationSafetyTests(unittest.TestCase):
 
     def test_tag_peels_annotations_and_rejects_other_source(self):
         """A pre-existing tag must identify the accepted commit, including annotations."""
-        ref = [{"ref": "refs/tags/v0.1.4", "object": {"type": "tag", "sha": "annotation"}}]
+        ref = [{"ref": f"refs/tags/{publish.TAG}", "object": {"type": "tag", "sha": "annotation"}}]
         with patch.object(publish, "api", side_effect=[ref, {"object": {"type": "commit", "sha": "accepted"}}]):
             self.assertTrue(publish.verify_tag("accepted"))
         with patch.object(publish, "api", return_value=[{
-            "ref": "refs/tags/v0.1.4", "object": {"type": "commit", "sha": "other"},
+            "ref": f"refs/tags/{publish.TAG}", "object": {"type": "commit", "sha": "other"},
         }]):
             with self.assertRaisesRegex(RuntimeError, "conflicts"):
                 publish.verify_tag("accepted")
@@ -29,7 +29,7 @@ class PublicationSafetyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             candidate = Path(directory)
             (candidate / "release-manifest.json").write_text(json.dumps({
-                "head": "accepted", "version": "0.1.1", "artifacts": [],
+                "head": "accepted", "version": "0.1.4", "artifacts": [],
             }))
             with patch.object(publish, "command") as external:
                 with self.assertRaisesRegex(RuntimeError, "source/version mismatch"):
@@ -66,16 +66,16 @@ class PublicationSafetyTests(unittest.TestCase):
         """A failed upload is cleaned only on a matching draft and finalized after readback."""
         with tempfile.TemporaryDirectory() as directory:
             candidate = Path(directory)
-            names = ["exta-windows-amd64.exe.zip", "exta-linux-amd64.zip", "SHA256SUMS",
-                     "dependency-inventory.json", "RELEASE-NOTES.txt"]
-            for name in names:
+            archives = [f"exta_{publish.VERSION}_windows_amd64.zip", f"exta_{publish.VERSION}_linux_amd64.tar.gz"]
+            names = archives + ["SHA256SUMS"]
+            for name in archives:
                 (candidate / name).write_bytes(name.encode())
+            (candidate / "SHA256SUMS").write_text("".join(f"{publish.digest_file(candidate / name)}  {name}\n" for name in archives), encoding="utf-8")
             (candidate / "release-manifest.json").write_text(json.dumps({
-                "head": "accepted", "version": "0.1.4",
-                "artifacts": [{"target": "windows/amd64"}, {"target": "linux/amd64"}],
+                "head": "accepted", "version": publish.VERSION,
+                "artifacts": [{"target": target, "archive": name, "archive_sha256": publish.digest_file(candidate / name)} for target, name in zip(["windows/amd64", "linux/amd64"], archives)],
             }))
-            names += ["release-manifest.json", "container-digest.txt"]
-            release = {"draft": True, "assets": [{"id": 1, "name": names[0], "state": "starter"}]}
+            release = {"draft": True, "body": "accepted notes\n", "name": f"Exta {publish.TAG}", "assets": [{"id": 1, "name": names[0], "state": "starter"}]}
             deleted = []
             uploaded = []
 
@@ -102,6 +102,8 @@ class PublicationSafetyTests(unittest.TestCase):
                 return ""
 
             with patch.object(publish, "verify_tag", return_value=True), \
+                    patch.object(publish, "api", return_value={"object": {"sha": "accepted"}}), \
+                    patch.object(publish, "generate_notes", return_value="accepted notes\n"), \
                     patch.object(publish, "remote_image", return_value="sha256:" + "a" * 64), \
                     patch.object(publish, "release_state", side_effect=lambda: release), \
                     patch.object(publish, "command", side_effect=fake_command):
@@ -111,6 +113,40 @@ class PublicationSafetyTests(unittest.TestCase):
                 before = len(uploaded)
                 publish.publish(candidate, "accepted")
                 self.assertEqual(len(uploaded), before)
+
+    def test_public_checksums_reject_missing_extra_duplicate_and_corrupt_archives(self):
+        """Downloaded release attachments must suffice for exact checksum verification."""
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory)
+            names = [f"exta_{publish.VERSION}_linux_amd64.tar.gz", f"exta_{publish.VERSION}_windows_amd64.zip"]
+            for name in names:
+                (candidate / name).write_bytes(name.encode())
+            lines = [f"{publish.digest_file(candidate / name)}  {name}\n" for name in names]
+            checksum = candidate / "SHA256SUMS"
+            checksum.write_text("".join(lines), encoding="utf-8")
+            self.assertEqual({path.name for path in publish.public_assets(candidate)}, {*names, "SHA256SUMS"})
+            for invalid in [lines[:1], lines + [lines[0]], lines + ["a" * 64 + "  exta-linux-amd64\n"]]:
+                checksum.write_text("".join(invalid), encoding="utf-8")
+                with self.assertRaises(RuntimeError):
+                    publish.public_assets(candidate)
+            checksum.write_text("".join(lines), encoding="utf-8")
+            (candidate / names[0]).write_bytes(b"corrupt")
+            with self.assertRaisesRegex(RuntimeError, "checksum mismatch"):
+                publish.public_assets(candidate)
+
+    def test_bad_public_checksum_prevents_any_external_operation(self):
+        """Unverified package bytes cannot reach even the remote identity preflight."""
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory)
+            (candidate / "release-manifest.json").write_text(json.dumps({
+                "head": "accepted", "version": publish.VERSION,
+                "artifacts": [{"target": "windows/amd64"}, {"target": "linux/amd64"}],
+            }), encoding="utf-8")
+            (candidate / "SHA256SUMS").write_text("", encoding="utf-8")
+            with patch.object(publish, "command") as external:
+                with self.assertRaisesRegex(RuntimeError, "checksum membership"):
+                    publish.publish(candidate, "accepted")
+                external.assert_not_called()
 
     def test_draft_resumes_only_missing_assets_after_hash_readback(self):
         """Partial drafts resume while conflicting and incomplete public releases fail."""

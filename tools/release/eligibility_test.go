@@ -15,7 +15,7 @@ func TestReleaseEligibilityReadsCurrentSourceBundle(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, name := range []string{"go.mod", "go.sum", ".node-version", ".npmrc"} {
+	for _, name := range []string{"go.mod", "go.sum", "VERSION", ".node-version", ".npmrc"} {
 		if err := os.WriteFile(filepath.Join(root, name), nil, 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +47,7 @@ func TestReleaseEligibilityReadsCurrentSourceBundle(t *testing.T) {
 	}
 	writeBundle(`{"format":1,"mode":"backend-only","files":{},"routes":[]}`)
 	t.Chdir(root)
-	for _, name := range []string{".node-version", ".npmrc"} {
+	for _, name := range []string{".node-version", ".npmrc", "VERSION"} {
 		before, err := sourceFiles()
 		if err != nil {
 			t.Fatal(err)

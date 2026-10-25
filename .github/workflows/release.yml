@@ -7,41 +7,101 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-v0.1.4
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  verify:
-    if: github.repository == 'QianFuv/Exta' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/verify.yml
-    with:
-      version: 0.1.4
-  publish:
-    needs: verify
+  complete:
+    name: Confirm complete release
+    needs: [context, verify, publish]
+    if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    steps:
+      - name: Checkout gate source
+        id: checkout_source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Reject incomplete or skipped publication
+        id: require_publication
+        env:
+          CI_GATE_RESULTS: '{"context":"${{ needs.context.result }}","verify":"${{ needs.verify.result }}","publish":"${{ needs.publish.result }}"}'
+        run: python -B tools/release/report.py gate
+
+  context:
+    name: Validate version and source
+    if: github.repository == 'QianFuv/Exta' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.context.outputs.version }}
+    steps:
+      - name: Checkout source
+        id: checkout_source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Resolve checked-in release version
+        id: context
+        run: python -B tools/release/publish.py context
+      - name: Report detect-changes summary
+        id: report_detect_changes
+        if: always()
+        env:
+          CI_STAGE: detect-changes
+          CI_PLATFORMS: independent
+          CI_STATUS: ${{ job.status }}
+          CI_CHECKS: ${{ toJSON(steps) }}
+        run: python -B tools/release/report.py summary
+
+  verify:
+    name: Verify release candidates
+    needs: context
+    uses: ./.github/workflows/ci.yml
+    with:
+      version: ${{ needs.context.outputs.version }}
+
+  publish:
+    name: Publish verified packages and image
+    needs: [context, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+      - name: Checkout complete source history
+        id: checkout_source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          name: candidate-linux-amd64-${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download exact accepted candidates
+        id: download_candidates
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ needs.verify.outputs.candidate_artifact_id }}
           path: candidate
-      - name: Check accepted artifact identities
+          merge-multiple: true
+      - name: Verify candidate and container identities
+        id: verify_candidates
         working-directory: candidate
         env:
           SOURCE_SHA: ${{ github.sha }}
+          RELEASE_VERSION: ${{ needs.context.outputs.version }}
         run: |
           test "$(jq -r .head release-manifest.json)" = "$SOURCE_SHA"
-          test "$(jq -r .version release-manifest.json)" = 0.1.4
+          test "$(jq -r .version release-manifest.json)" = "$RELEASE_VERSION"
           test "$(jq -r '.artifacts | map(.target) | sort | join(",")' release-manifest.json)" = linux/amd64,windows/amd64
           sha256sum --check SHA256SUMS
+          sha256sum --check candidate-SHA256SUMS
           sha256sum --check container-SHA256SUMS
           docker load --input container-linux-amd64.tar
           test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "exta-candidate:$SOURCE_SHA")" = "$SOURCE_SHA"
-      - name: Publish accepted container and GitHub release
+          test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "exta-candidate:$SOURCE_SHA")" = "$RELEASE_VERSION"
+      - name: Publish exact tested image and release assets
+        id: publish_release
         working-directory: candidate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,6 +110,38 @@ jobs:
         run: |
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
-          python ../tools/release/publish.py .
-          digest="$(cat container-digest.txt)"
-          printf '## Exta release\n\nSource: `%s`\n\nContainer: `%s`\n\n[GitHub v0.1.4](https://github.com/QianFuv/Exta/releases/tag/v0.1.4)\n' "$SOURCE_SHA" "$digest" >> "$GITHUB_STEP_SUMMARY"
+          python -B ../tools/release/publish.py .
+      - name: Record publication provenance
+        id: record_publication
+        if: always()
+        env:
+          CI_STAGE: publish
+          CI_PLATFORMS: linux/amd64,windows/amd64
+          CI_STATUS: ${{ job.status }}
+          CI_CHECKS: ${{ toJSON(steps) }}
+          CI_REPORT_ROOT: candidate
+        run: python -B tools/release/report.py manifest release-notes.md SHA256SUMS release-manifest.json container-digest.txt
+      - name: Upload publication evidence
+        id: upload_publication
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-publication-${{ github.sha }}
+          path: |
+            candidate/ci-manifest.json
+            candidate/release-notes.md
+            candidate/SHA256SUMS
+            candidate/release-manifest.json
+            candidate/container-digest.txt
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Report publish summary
+        id: report_publish
+        if: always()
+        env:
+          CI_STAGE: publish
+          CI_PLATFORMS: linux/amd64,windows/amd64
+          CI_STATUS: ${{ job.status }}
+          CI_CHECKS: ${{ toJSON(steps) }}
+          CI_REPORT_ROOT: candidate
+        run: python -B tools/release/report.py summary
