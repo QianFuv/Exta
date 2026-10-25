@@ -24,35 +24,11 @@ import {
 import { useNotify } from "../../components/Notifications";
 import { PageHeader, PermissionHint, RequirePermission, Section } from "../../components/Page";
 import { DateTime, RouteRevision } from "../../components/Values";
+import { STATIC_TARGETS } from "../../lib/routeTargets";
 
 type Operation = Schemas["Operation"];
 type RoutePolicy = Schemas["RoutePolicy"];
 type RouteTarget = Schemas["RouteTarget"];
-
-/** Static profile/provider pairs per operation from the contract's mapping table. */
-const STATIC_TARGETS: Record<Operation, RouteTarget[]> = {
-  search: [
-    { provider: "exa", profile: "common" },
-    { provider: "tavily", profile: "common" },
-  ],
-  advanced_search: [
-    { provider: "exa", profile: "common" },
-    { provider: "tavily", profile: "common" },
-    { provider: "exa", profile: "exa_deep" },
-    { provider: "tavily", profile: "tavily_advanced" },
-  ],
-  fetch: [
-    { provider: "exa", profile: "common" },
-    { provider: "tavily", profile: "common" },
-  ],
-  map: [{ provider: "tavily", profile: "common" }],
-  crawl: [{ provider: "tavily", profile: "common" }],
-  research_create: [
-    { provider: "exa", profile: "exa_auto" },
-    { provider: "tavily", profile: "tavily_mini" },
-    { provider: "tavily", profile: "tavily_pro" },
-  ],
-};
 
 /**
  * Compare two route targets.

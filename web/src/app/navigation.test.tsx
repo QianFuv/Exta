@@ -18,7 +18,7 @@ const PAGES = [
 
 describe("application shell", () => {
   it("reaches every management page from the primary navigation", async () => {
-    renderApp("/");
+    renderApp("/overview");
     expect(
       await screen.findByRole("heading", { name: "Statistics", level: 1 }),
     ).toBeInTheDocument();

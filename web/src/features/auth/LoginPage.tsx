@@ -1,8 +1,10 @@
 import { Button, Input } from "../../components/Controls";
 /** Administrator password exchange for an HttpOnly admin session. */
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
+import IconTick from "@douyinfe/semi-icons/lib/es/icons/IconTick";
+import IconArrowLeft from "@douyinfe/semi-icons/lib/es/icons/IconArrowLeft";
 import { useMutation } from "@tanstack/react-query";
 import { call, useApi } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
@@ -49,6 +51,10 @@ export function LoginPage() {
     },
   });
 
+  useEffect(() => {
+    document.title = `${t("login.title")} · Exta`;
+  }, [t]);
+
   if (status === "authenticated" && !login.isPending) {
     return <Navigate to={target} replace />;
   }
@@ -64,49 +70,73 @@ export function LoginPage() {
   return (
     <div className="login">
       <MockModeBanner />
-      <header className="login-language">
+      <header className="login-header">
+        <Link className="login-home" to="/">
+          <IconArrowLeft aria-hidden />
+          <span>{t("login.backHome")}</span>
+        </Link>
         <PreferencesMenu />
       </header>
-      <main className="login-card" id="main">
-        <div className="login-brand">
-          <BrandMark />
-          <h1>Exta</h1>
-        </div>
-        {signedOutReason === "expired" ? (
-          <Notice tone="warning" role="status" title={t("login.expired")} />
-        ) : null}
-        {signedOutReason === "logged_out" ? (
-          <Notice tone="info" role="status" title={t("login.loggedOut")} />
-        ) : null}
-        <form onSubmit={onSubmit} className="form">
-          <div className="field">
-            <label id={fieldId + "-label"} htmlFor={fieldId}>
-              {t("login.credential")}
-            </label>
-            <Input
-              id={fieldId}
-              type="password"
-              autoComplete="current-password"
-              value={credential}
-              onChange={(event) => setCredential(event.target.value)}
-              required
-              aria-describedby={`${fieldId}-hint`}
-            />
-            <p id={`${fieldId}-hint`} className="field-hint">
-              {t("login.credentialHint")}
-            </p>
+      <div className="login-body">
+        <main className="login-card" id="main">
+          <div className="login-brand">
+            <BrandMark size={36} />
+            <span className="login-brand-name">Exta</span>
           </div>
-          {login.isError ? <InlineError error={login.error} /> : null}
-          <Button
-            type="submit"
-            className="button button-primary"
-            disabled={login.isPending || !isValidPassword}
-            loading={login.isPending}
-          >
-            {login.isPending ? t("login.signingIn") : t("login.signIn")}
-          </Button>
-        </form>
-      </main>
+          <h1>{t("login.title")}</h1>
+          <p className="login-subtitle">{t("login.subtitle")}</p>
+          {signedOutReason === "expired" ? (
+            <Notice tone="warning" role="status" title={t("login.expired")} />
+          ) : null}
+          {signedOutReason === "logged_out" ? (
+            <Notice tone="info" role="status" title={t("login.loggedOut")} />
+          ) : null}
+          <form onSubmit={onSubmit} className="form login-form">
+            <div className="field">
+              <label id={fieldId + "-label"} htmlFor={fieldId}>
+                {t("login.credential")}
+              </label>
+              <Input
+                id={fieldId}
+                type="password"
+                autoComplete="current-password"
+                value={credential}
+                onChange={(event) => setCredential(event.target.value)}
+                required
+                aria-describedby={`${fieldId}-hint`}
+              />
+              <p id={`${fieldId}-hint`} className="field-hint">
+                {t("login.credentialHint")}
+              </p>
+            </div>
+            {login.isError ? <InlineError error={login.error} /> : null}
+            <Button
+              type="submit"
+              className="button button-primary login-submit"
+              disabled={login.isPending || !isValidPassword}
+              loading={login.isPending}
+            >
+              {login.isPending ? t("login.signingIn") : t("login.signIn")}
+            </Button>
+          </form>
+          <p className="login-session-note">{t("login.sessionNote")}</p>
+        </main>
+        <aside className="login-aside" aria-label={t("home.eyebrow")}>
+          <p className="login-aside-eyebrow">{t("home.eyebrow")}</p>
+          <p className="login-aside-title">{t("login.asideTitle")}</p>
+          <ul className="login-aside-points">
+            {(
+              ["login.asidePointKeys", "login.asidePointAccess", "login.asidePointLogs"] as const
+            ).map((point) => (
+              <li key={point}>
+                <IconTick aria-hidden />
+                {t(point)}
+              </li>
+            ))}
+          </ul>
+          <div className="login-aside-grid" aria-hidden="true" />
+        </aside>
+      </div>
     </div>
   );
 }

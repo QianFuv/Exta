@@ -16,6 +16,7 @@ import { NotificationsProvider } from "../components/Notifications";
 import { Layout } from "../components/Layout";
 import { ErrorState, LoadingState } from "../components/Feedback";
 import { LoginPage } from "../features/auth/LoginPage";
+import { HomePage } from "../features/home/HomePage";
 import { NotFoundPage } from "./NotFoundPage";
 
 const OverviewPage = lazy(() =>
@@ -103,6 +104,7 @@ function RequireSession() {
 
 /** Route table relative to the `/app` basename. */
 export const APP_ROUTES: RouteObject[] = [
+  { index: true, element: <HomePage /> },
   { path: "/login", element: <LoginPage /> },
   {
     element: <RequireSession />,
@@ -110,7 +112,6 @@ export const APP_ROUTES: RouteObject[] = [
       {
         element: <Layout />,
         children: [
-          { index: true, element: <Navigate to="/overview" replace /> },
           { path: "/overview", element: <OverviewPage /> },
           { path: "/keys", element: <KeysPage /> },
           { path: "/access-keys", element: <AccessKeysPage /> },
