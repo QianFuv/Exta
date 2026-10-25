@@ -415,7 +415,9 @@ function Integrate() {
         {examples.map((example) => (
           <Tabs.TabPane key={example.key} itemKey={example.key} tab={example.title}>
             <div className="integrate-code">
-              <pre className="code-block">{example.command}</pre>
+              <pre className="code-block" tabIndex={0} role="region" aria-label={example.title}>
+                {example.command}
+              </pre>
               <div className="integrate-code-footer">
                 <span className="muted">{t("home.integrate.placeholder")}</span>
                 <CopyButton
