@@ -1,1 +1,2 @@
 /internal/webassets/production.zip -text
+/web/src/assets/fonts/** -text

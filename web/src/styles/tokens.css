@@ -1,20 +1,17 @@
 /*
  * Exta design tokens. Semi Design owns component rendering; these variables retheme it
  * through its official CSS-variable layer: monochrome surfaces with one blue accent.
- * System fonts only, so the strict same-origin CSP needs no remote assets.
+ * The interface font is the self-hosted JetBrainsLxgwNerdMono shard set (see
+ * `assets/fonts/LICENSES/NOTICE.md`); system Chinese fonts remain the fallback if a
+ * shard cannot load, so the strict same-origin CSP needs no remote assets.
  */
 :root {
   --font-sans:
-    "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
-    sans-serif;
-  --font-display:
-    "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", -apple-system,
-    BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui,
-    sans-serif;
+    "JetBrainsLxgwNerdMono", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI",
+    "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-display: var(--font-sans);
   --font-mono:
-    "Cascadia Mono", "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono",
-    monospace;
+    "JetBrainsLxgwNerdMono", "Cascadia Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --duration-fast: 140ms;

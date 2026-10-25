@@ -164,6 +164,29 @@ async function collectLicenses(moduleIds, lock, destination) {
   return inventory;
 }
 
+/** Vendored web font shipped in the UI, with its retrieved component license texts. */
+export const FONT = { name: "JetBrainsLxgwNerdMono", version: "1.3", license: "OFL-1.1 AND MIT", root: path.join(WEB, "src/assets/fonts") };
+
+/** Record the vendored font shards' identity and copy their license texts into the bundle evidence. */
+export async function collectFontLicenses(destination, font = FONT) {
+  const licenseRoot = path.join(font.root, "LICENSES");
+  const shards = (await filesUnder(font.root)).filter((name) => !name.startsWith(licenseRoot + path.sep)).sort();
+  if (!shards.some((name) => name.endsWith(".woff2"))) throw new Error("Missing vendored font shards");
+  const records = [];
+  for (const name of shards) records.push(`${path.relative(font.root, name).split(path.sep).join("/")}\0${sourceDigest(name, await readFile(name))}\n`);
+  const entry = { name: font.name, version: font.version, integrity: `sha256-${digest(records.join(""))}`, license: font.license, files: {} };
+  const licenses = (await readdir(licenseRoot)).sort();
+  if (!licenses.length) throw new Error(`Missing font license texts: ${font.name}`);
+  for (const name of licenses) {
+    const bytes = await readFile(path.join(licenseRoot, name));
+    const target = `${font.name}-${font.version}/${name}`;
+    await mkdir(path.dirname(path.join(destination, target)), { recursive: true });
+    await writeFile(path.join(destination, target), bytes);
+    entry.files[target] = digest(bytes);
+  }
+  return entry;
+}
+
 /** Build once, validate all outputs, then promote one directory with rollback on rename failure. */
 export async function build() {
   const before = await sourceFiles();
@@ -194,6 +217,7 @@ export async function build() {
   }
   const lock = JSON.parse(await readFile(path.join(WEB, "package-lock.json"), "utf8"));
   const dependencies = await collectLicenses(modules, lock, path.join(stage, "licenses"));
+  dependencies.push(await collectFontLicenses(path.join(stage, "licenses")));
   const after = await sourceFiles();
   if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error("Frontend sources changed during build");
   const provenance = { format: 1, node: process.versions.node, npm: npmVersion, vite: JSON.parse(await readFile(requireWeb.resolve("vite/package.json"), "utf8")).version, contract_sha256: contract.contract_sha256, manifest_sha256: digest(files.get("manifest.json")), source_files: before, dependencies };

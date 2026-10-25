@@ -8,6 +8,8 @@ import { RouterProvider } from "react-router/dom";
 import { APP_ROUTES, AppProviders } from "./app/App";
 import { createBrowserApiClient } from "./lib/api";
 import { createAppQueryClient } from "./lib/queryClient";
+import "./assets/fonts/JetBrainsLxgwNerdMono-Regular/result.css";
+import "./assets/fonts/JetBrainsLxgwNerdMono-Bold/result.css";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/shell.css";

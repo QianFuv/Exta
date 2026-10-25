@@ -2,7 +2,9 @@ import path from "node:path";
 /** Packaging regressions use synthetic output and never invoke Vite or providers. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { digest, packageOutput, rewriteIndex, validateNames, sourceDigest, virtualOwner, requireProduction, dependencyRoot, ROOT } from "./build.mjs";
+import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { digest, packageOutput, rewriteIndex, validateNames, sourceDigest, virtualOwner, requireProduction, dependencyRoot, collectFontLicenses, ROOT } from "./build.mjs";
 
 /** Produce a cyclic split graph whose chunk bytes must survive relocation. */
 function fixture() {
@@ -76,4 +78,24 @@ test("attributes nested ESM metadata and nested installations to their locked pa
   assert.equal(dependencyRoot(path.join(modules, "@douyinfe/semi-ui/lib/es/button/index.js")), path.join(modules, "@douyinfe/semi-ui"));
   assert.equal(dependencyRoot(path.join(modules, "parent/node_modules/child/lib/index.js")), path.join(modules, "parent/node_modules/child"));
   assert.throws(() => dependencyRoot(path.resolve(ROOT, "../outside/node_modules/child/index.js")), /outside/);
+});
+
+test("ships vendored font license texts with a shard-set identity", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "exta-font-"));
+  const font = { name: "SyntheticFont", version: "1.0", license: "OFL-1.1", root: path.join(root, "fonts") };
+  await mkdir(path.join(font.root, "Regular"), { recursive: true });
+  await mkdir(path.join(font.root, "LICENSES"), { recursive: true });
+  await writeFile(path.join(font.root, "Regular", "a.woff2"), Buffer.from([0, 1, 2]));
+  await writeFile(path.join(font.root, "Regular", "result.css"), "@font-face{}\r\n");
+  await writeFile(path.join(font.root, "LICENSES", "OFL.txt"), "license text");
+  const destination = path.join(root, "licenses");
+  const entry = await collectFontLicenses(destination, font);
+  assert.equal(entry.name, "SyntheticFont");
+  assert.match(entry.integrity, /^sha256-[a-f0-9]{64}$/);
+  assert.deepEqual(Object.keys(entry.files), ["SyntheticFont-1.0/OFL.txt"]);
+  assert.equal((await readFile(path.join(destination, "SyntheticFont-1.0/OFL.txt"))).toString(), "license text");
+  await writeFile(path.join(font.root, "Regular", "result.css"), "@font-face{}\n");
+  assert.equal((await collectFontLicenses(destination, font)).integrity, entry.integrity);
+  await writeFile(path.join(font.root, "Regular", "a.woff2"), Buffer.from([9]));
+  assert.notEqual((await collectFontLicenses(destination, font)).integrity, entry.integrity);
 });

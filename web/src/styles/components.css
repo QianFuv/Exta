@@ -18,7 +18,7 @@
   font-size: 26px;
   font-weight: 650;
   line-height: 1.25;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .page-description {
@@ -1028,8 +1028,12 @@ body[theme-mode="dark"] .semi-button-danger.semi-button-solid:not(.semi-button-d
   }
 
   .numeric-control {
-    grid-template-columns: minmax(90px, 1fr) 92px;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .numeric-control > .semi-input-number {
+    max-width: 220px;
   }
 
   .exta-modal .semi-modal-body {
