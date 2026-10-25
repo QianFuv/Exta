@@ -192,6 +192,12 @@ test("standalone key-only administration and persistent appearance", async ({
     await page.goto(`${origin}/app/`);
     await page.getByRole("button", { name: "语言", exact: true }).click();
     await page.getByRole("menuitem", { name: "English", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "One endpoint for Exa and Tavily search.", level: 1 }),
+    ).toBeVisible();
+    await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
+    await page.getByRole("link", { name: "Sign in to console", exact: true }).first().click();
+    await expect(page).toHaveURL(`${origin}/app/login`);
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
     await page.getByLabel("Administrator password").fill(credential);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
