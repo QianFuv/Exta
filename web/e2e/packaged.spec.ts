@@ -79,8 +79,8 @@ async function expectNumericSurface(page: Page) {
 
 /** Choose an official Semi option by its visible accessible label. */
 async function chooseTheme(page: Page, theme: "light" | "dark" | "system") {
-  const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
-  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  const label = theme === "light" ? "浅色" : theme === "dark" ? "深色" : "跟随系统";
+  await page.getByRole("button", { name: "外观", exact: true }).click();
   await page
     .getByRole("menuitem", {
       name: label,
@@ -164,6 +164,10 @@ test("standalone key-only administration and persistent appearance", async ({
   });
   const errors: string[] = [];
   const external: string[] = [];
+  const fontShards = new Set<string>();
+  page.on("response", (response) => {
+    if (new URL(response.url()).pathname.endsWith(".woff2")) fontShards.add(response.url());
+  });
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (/violates.*content security|refused to.*content security/i.test(message.text()))
@@ -190,18 +194,26 @@ test("standalone key-only administration and persistent appearance", async ({
       )
       .toBe(200);
     await page.goto(`${origin}/app/`);
-    await page.getByRole("button", { name: "语言", exact: true }).click();
-    await page.getByRole("menuitem", { name: "English", exact: true }).click();
+    await expect(page.getByRole("button", { name: "语言" })).toHaveCount(0);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+    expect(
+      await page.evaluate(() => document.fonts.check('16px "JetBrainsLxgwNerdMono"', "统一调度")),
+    ).toBe(true);
+    expect(fontShards.size).toBeGreaterThan(0);
+    expect(fontShards.size).toBeLessThan(120);
+    await expect(page.locator('link[rel="preload"][as="font"]')).toHaveCount(0);
     await expect(
-      page.getByRole("heading", { name: "One endpoint for Exa and Tavily search.", level: 1 }),
+      page.getByRole("heading", { name: "一个入口，统一调度 Exa 与 Tavily 检索", level: 1 }),
     ).toBeVisible();
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
-    await page.getByRole("link", { name: "Sign in to console", exact: true }).first().click();
+    await page.getByRole("link", { name: "登录控制台", exact: true }).first().click();
     await expect(page).toHaveURL(`${origin}/app/login`);
     await expect(audit(page).then((result) => result.violations)).resolves.toEqual([]);
-    await page.getByLabel("Administrator password").fill(credential);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Statistics", exact: true })).toBeVisible();
+    await page.getByLabel("管理员密码").fill(credential);
+    await page.getByRole("button", { name: "登录", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "统计", exact: true })).toBeVisible();
     const cookies = await context.cookies();
     expect(cookies.some((cookie) => cookie.httpOnly)).toBe(true);
     expect(await page.evaluate(() => document.cookie)).not.toContain("exta_session");
@@ -231,32 +243,32 @@ test("standalone key-only administration and persistent appearance", async ({
     expect(denied.status()).toBe(403);
     await page.goto(`${origin}/app/keys`);
     let moreActions = page.getByRole("button", {
-      name: "More actions for Invalid offline fixture key",
+      name: "Invalid offline fixture key 的更多操作",
       exact: true,
     });
-    await expect(page.getByRole("menuitem", { name: "Retire", exact: true })).not.toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "退役", exact: true })).not.toBeVisible();
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await moreActions.focus();
       await page.keyboard.press("Enter");
-      await page.getByRole("menuitem", { name: "Retire", exact: true }).click();
+      await page.getByRole("menuitem", { name: "退役", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
       await expect(moreActions).toBeFocused();
-      await expect(page.getByRole("menuitem", { name: "Retire", exact: true })).not.toBeVisible();
+      await expect(page.getByRole("menuitem", { name: "退役", exact: true })).not.toBeVisible();
     }
     await moreActions.click();
-    await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
-    const keyDialog = page.getByRole("dialog", { name: "Edit key & limits" });
+    await page.getByRole("menuitem", { name: "编辑密钥与限额", exact: true }).click();
+    const keyDialog = page.getByRole("dialog", { name: "编辑密钥与限额" });
     await page.setViewportSize({ width: 390, height: 844 });
     await expectDialogWithinViewport(page);
     await expectNumericMarksReadable(page);
     await page.setViewportSize({ width: 1440, height: 1000 });
-    const capacity = keyDialog.getByRole("slider", { name: "Active research jobs", exact: true });
+    const capacity = keyDialog.getByRole("slider", { name: "活动研究任务数", exact: true });
     await capacity.focus();
     await page.keyboard.press("Home");
     await page.keyboard.press("ArrowRight");
     await expect(
-      keyDialog.getByRole("spinbutton", { name: "Active research jobs", exact: true }),
+      keyDialog.getByRole("spinbutton", { name: "活动研究任务数", exact: true }),
     ).toHaveValue("1");
     await expect(keyDialog).toBeVisible();
     expect((await audit(page)).violations).toEqual([]);
@@ -267,41 +279,38 @@ test("standalone key-only administration and persistent appearance", async ({
       headers: { Origin: origin, "X-Exta-CSRF": session.csrf_token },
     });
     expect(concurrent.status()).toBe(200);
-    await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }).click();
     await expect(
-      page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }),
+      page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }),
     ).toBeDisabled();
-    await page.getByRole("button", { name: "Reload and review latest", exact: true }).click();
+    await page.getByRole("button", { name: "重新加载并检查最新版本", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(page.getByText("Concurrently updated fixture", { exact: true })).toBeVisible();
     moreActions = page.getByRole("button", {
-      name: "More actions for Concurrently updated fixture",
+      name: "Concurrently updated fixture 的更多操作",
       exact: true,
     });
     await moreActions.click();
-    await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
-    await page
-      .getByRole("dialog")
-      .getByLabel("Label", { exact: true })
-      .fill("Reviewed fixture key");
+    await page.getByRole("menuitem", { name: "编辑密钥与限额", exact: true }).click();
+    await page.getByRole("dialog").getByLabel("名称", { exact: true }).fill("Reviewed fixture key");
     const capInput = page
       .getByRole("dialog")
-      .getByRole("spinbutton", { name: "Local safety limit", exact: true });
+      .getByRole("spinbutton", { name: "本地安全限额", exact: true });
     await capInput.fill("2500000");
-    await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(page.getByText("Reviewed fixture key", { exact: true })).toBeVisible();
     await page
-      .getByRole("button", { name: "More actions for Reviewed fixture key", exact: true })
+      .getByRole("button", { name: "Reviewed fixture key 的更多操作", exact: true })
       .click();
-    await page.getByRole("menuitem", { name: "Edit key & limits", exact: true }).click();
+    await page.getByRole("menuitem", { name: "编辑密钥与限额", exact: true }).click();
     await expect(
-      page.getByRole("dialog").getByRole("spinbutton", { name: "Local safety limit", exact: true }),
+      page.getByRole("dialog").getByRole("spinbutton", { name: "本地安全限额", exact: true }),
     ).toHaveValue("2500000");
-    await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
     await page.goto(`${origin}/app/settings`);
     const concurrency = page.getByRole("spinbutton", {
-      name: "Synchronous concurrency",
+      name: "同步并发数",
       exact: true,
     });
     const numeric = concurrency.locator("xpath=ancestor::div[contains(@class,'numeric-control')]");
@@ -318,8 +327,8 @@ test("standalone key-only administration and persistent appearance", async ({
     await page.mouse.up();
     await expect(concurrency).not.toHaveValue("8");
     await concurrency.fill("7");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText(/Settings saved/)).toBeVisible();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(page.getByText(/设置已保存/)).toBeVisible();
     await page.reload();
     await expect(concurrency).toHaveValue("7");
     const persistedSettings = await (await page.request.get(`${origin}/v1/admin/settings`)).json();
@@ -328,29 +337,27 @@ test("standalone key-only administration and persistent appearance", async ({
     const routeRow = page
       .getByRole("row")
       .filter({ has: page.locator(".operation-name", { hasText: /^search$/ }) });
-    await routeRow.getByRole("button", { name: "Edit", exact: true }).click();
-    const routeDialog = page.getByRole("dialog", { name: "Edit route: search", exact: true });
-    if (await routeDialog.getByRole("combobox", { name: "Add target" }).isVisible()) {
-      await routeDialog.getByRole("combobox", { name: "Add target" }).click();
+    await routeRow.getByRole("button", { name: "编辑", exact: true }).click();
+    const routeDialog = page.getByRole("dialog", { name: "编辑路由：search", exact: true });
+    if (await routeDialog.getByRole("combobox", { name: "添加目标" }).isVisible()) {
+      await routeDialog.getByRole("combobox", { name: "添加目标" }).click();
       await page.getByRole("option", { name: "Tavily · common", exact: true }).click();
-      await routeDialog.getByRole("button", { name: "Add", exact: true }).click();
+      await routeDialog.getByRole("button", { name: "添加", exact: true }).click();
     }
-    await expect(routeDialog.getByRole("button", { name: "Move exa/common up" })).toBeDisabled();
-    await expect(
-      routeDialog.getByRole("button", { name: "Move tavily/common down" }),
-    ).toBeDisabled();
+    await expect(routeDialog.getByRole("button", { name: "上移 exa/common" })).toBeDisabled();
+    await expect(routeDialog.getByRole("button", { name: "下移 tavily/common" })).toBeDisabled();
     await page.setViewportSize({ width: 390, height: 844 });
     await expectDialogWithinViewport(page);
-    await routeDialog.getByRole("button", { name: "Move tavily/common up" }).click();
+    await routeDialog.getByRole("button", { name: "上移 tavily/common" }).click();
     await expect(routeDialog.locator(".target-name").first()).toContainText("Tavily");
-    await routeDialog.getByRole("button", { name: "Remove exa/common" }).click();
+    await routeDialog.getByRole("button", { name: "移除 exa/common" }).click();
     await expect(routeDialog.locator(".target-name")).toHaveCount(1);
-    await routeDialog.getByRole("button", { name: "Save", exact: true }).click();
+    await routeDialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(routeDialog).not.toBeVisible();
-    await routeRow.getByRole("button", { name: "Edit", exact: true }).click();
+    await routeRow.getByRole("button", { name: "编辑", exact: true }).click();
     await expect(routeDialog.locator(".target-name")).toHaveCount(1);
     await expect(routeDialog.locator(".target-name")).toContainText("Tavily");
-    await routeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await routeDialog.getByRole("button", { name: "取消", exact: true }).click();
     await page.setViewportSize({ width: 1440, height: 1000 });
     const expiryEvidence: Array<{ timezone: string; expected: string; persisted: string }> = [];
     for (const [timezone, expected] of [
@@ -365,18 +372,18 @@ test("standalone key-only administration and persistent appearance", async ({
       try {
         const zonePage = await zoneContext.newPage();
         await zonePage.goto(`${origin}/app/access-keys`);
-        await zonePage.getByRole("button", { name: "Create access key", exact: true }).click();
-        const dialog = zonePage.getByRole("dialog", { name: "Create access key" });
-        await dialog.getByLabel("Label", { exact: true }).fill(`Expiry fixture ${timezone}`);
-        const expiry = dialog.getByLabel("Expires", { exact: true });
+        await zonePage.getByRole("button", { name: "创建访问密钥", exact: true }).click();
+        const dialog = zonePage.getByRole("dialog", { name: "创建访问密钥" });
+        await dialog.getByLabel("名称", { exact: true }).fill(`Expiry fixture ${timezone}`);
+        const expiry = dialog.getByLabel("到期时间", { exact: true });
         let posts = 0;
         zonePage.on("request", (request) => {
           if (request.method() === "POST" && request.url().endsWith("/v1/admin/tokens")) posts += 1;
         });
         for (const invalid of ["", "2020-01-01 10:30"]) {
           await expiry.fill(invalid);
-          await dialog.getByRole("button", { name: "Create access key", exact: true }).click();
-          await expect(dialog.getByText("Choose a future expiry time.")).toBeVisible();
+          await dialog.getByRole("button", { name: "创建访问密钥", exact: true }).click();
+          await expect(dialog.getByText("请选择未来的到期时间。")).toBeVisible();
           expect(posts).toBe(0);
         }
         await expiry.fill("2028-06-15 10:30");
@@ -392,11 +399,11 @@ test("standalone key-only administration and persistent appearance", async ({
         const sent = zonePage.waitForRequest(
           (request) => request.method() === "POST" && request.url().endsWith("/v1/admin/tokens"),
         );
-        await dialog.getByRole("button", { name: "Create access key", exact: true }).click();
+        await dialog.getByRole("button", { name: "创建访问密钥", exact: true }).click();
         expect(new Date((await sent).postDataJSON().expires_at).toISOString()).toBe(
           new Date(expected).toISOString(),
         );
-        await zonePage.getByRole("button", { name: "I have copied it", exact: true }).click();
+        await zonePage.getByRole("button", { name: "我已复制", exact: true }).click();
         expect(posts).toBe(1);
         const stored = (
           await (await zonePage.request.get(`${origin}/v1/admin/tokens`)).json()
@@ -411,13 +418,13 @@ test("standalone key-only administration and persistent appearance", async ({
           },
         );
         expect(revoked.status()).toBe(200);
-        await zonePage.getByRole("button", { name: "Create access key", exact: true }).click();
+        await zonePage.getByRole("button", { name: "创建访问密钥", exact: true }).click();
         await expect(
-          zonePage.getByRole("dialog").getByLabel("Expires", { exact: true }),
+          zonePage.getByRole("dialog").getByLabel("到期时间", { exact: true }),
         ).not.toHaveValue("2028-06-20 10:30");
         await zonePage
           .getByRole("dialog")
-          .getByRole("button", { name: "Cancel", exact: true })
+          .getByRole("button", { name: "取消", exact: true })
           .click();
       } finally {
         await zoneContext.close();
@@ -460,33 +467,31 @@ test("standalone key-only administration and persistent appearance", async ({
             ...new Set(elements.map((element) => getComputedStyle(element).fontFamily)),
           ]);
         expect(fontFamilies, `${theme}: coherent typography on ${route}`).toHaveLength(1);
-        expect(fontFamilies[0]).toContain("Segoe UI Variable Text");
+        expect(fontFamilies[0]).toContain("JetBrainsLxgwNerdMono");
         expect.soft((await audit(page)).violations, `${theme}: ${route}`).toEqual([]);
         await page.screenshot({
           path: info.outputPath(`desktop-${route.replace(/[?=]/g, "-")}-${theme}.png`),
           fullPage: true,
         });
         if (route === "keys") {
-          await expect(
-            page.getByRole("button", { name: "About Upstream provider keys" }),
-          ).toHaveCount(0);
+          await expect(page.getByRole("button", { name: "关于上游提供商密钥" })).toHaveCount(0);
         }
       }
       await page.goto(`${origin}/app/requests`);
-      const dateField = page.getByLabel("Created after", { exact: true });
+      const dateField = page.getByLabel("创建时间晚于", { exact: true });
       await dateField.focus();
       await page.keyboard.press("ArrowDown");
       await expect(page.locator(".semi-datepicker-month-grid")).toBeVisible();
       await page.keyboard.press("Escape");
       await dateField.fill("not-a-date");
-      await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "应用", exact: true })).toBeDisabled();
       await dateField.fill("");
       await page.keyboard.press("Escape");
       const opener = page.locator(`a[href$="?request=${fixture.request}"]`);
       for (let attempt = 0; attempt < 2; attempt++) {
         await opener.click();
-        const dialog = page.getByRole("dialog", { name: "Request detail" });
-        await expect(dialog.getByText("Attempt 1", { exact: true })).toBeVisible();
+        const dialog = page.getByRole("dialog", { name: "请求详情" });
+        await expect(dialog.getByText("第 1 次尝试", { exact: true })).toBeVisible();
         expect((await audit(page)).violations).toEqual([]);
         if (attempt === 0)
           await page.screenshot({ path: info.outputPath(`detail-${theme}.png`), fullPage: true });
@@ -501,8 +506,8 @@ test("standalone key-only administration and persistent appearance", async ({
       }
       await page.screenshot({ path: info.outputPath(`logs-${theme}.png`), fullPage: true });
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("button", { name: "Appearance", exact: true }).click();
-      await expect(page.getByRole("menuitem", { name: "System", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "外观", exact: true }).click();
+      await expect(page.getByRole("menuitem", { name: "跟随系统", exact: true })).toBeVisible();
       await page.keyboard.press("Escape");
       await expectActiveNavigationVisible(page, `${theme}: navigation after mobile resize`);
       for (const route of ["overview", "keys", "access-keys", "requests", "settings"]) {
@@ -521,10 +526,10 @@ test("standalone key-only administration and persistent appearance", async ({
           ).toBe(true);
           await expect(records.locator(".semi-tag").first()).toBeVisible();
           if (route === "keys") {
-            const action = records.getByRole("button", { name: /More actions/ }).first();
+            const action = records.getByRole("button", { name: /的更多操作/ }).first();
             await action.focus();
             await page.keyboard.press("Enter");
-            await expect(page.getByRole("menuitem", { name: "Edit key" })).toBeVisible();
+            await expect(page.getByRole("menuitem", { name: "编辑密钥" })).toBeVisible();
             await page.keyboard.press("Escape");
             await expect(action).toBeFocused();
           }
@@ -583,8 +588,6 @@ test("standalone key-only administration and persistent appearance", async ({
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
     if (process.env.EXTA_CAPTURE_UI === "1") {
-      await page.getByRole("button", { name: "Language", exact: true }).click();
-      await page.getByRole("menuitem", { name: "简体中文", exact: true }).click();
       const routes = [
         "overview",
         "overview?view=usage",
@@ -765,11 +768,9 @@ test("standalone key-only administration and persistent appearance", async ({
         await capture(`zh-keys-error-${theme}`);
         await page.unroute("**/v1/admin/keys?*");
       }
-      await page.getByRole("button", { name: "语言", exact: true }).click();
-      await page.getByRole("menuitem", { name: "English", exact: true }).click();
     }
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "退出登录", exact: true }).click();
+    await expect(page.getByRole("button", { name: "登录", exact: true })).toBeVisible();
     expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(401);
     if (process.env.EXTA_CAPTURE_UI === "1") {
       for (const theme of ["light", "dark"] as const) {
@@ -777,9 +778,9 @@ test("standalone key-only administration and persistent appearance", async ({
         await page.screenshot({ path: info.outputPath(`login-${theme}.png`), fullPage: true });
       }
     }
-    await page.getByLabel("Administrator password").fill(credential);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+    await page.getByLabel("管理员密码").fill(credential);
+    await page.getByRole("button", { name: "登录", exact: true }).click();
+    await expect(page.getByRole("button", { name: "退出登录", exact: true })).toBeVisible();
     expect((await page.request.get(`${origin}/v1/admin/session`)).status()).toBe(200);
 
     await info.attach("binary-identity", {
