@@ -8,8 +8,12 @@ import { RouterProvider } from "react-router/dom";
 import { APP_ROUTES, AppProviders } from "./app/App";
 import { createBrowserApiClient } from "./lib/api";
 import { createAppQueryClient } from "./lib/queryClient";
-import "./styles/app.css";
-import "./styles/semi.css";
+import "./styles/tokens.css";
+import "./styles/base.css";
+import "./styles/shell.css";
+import "./styles/components.css";
+import "./styles/pages.css";
+import "./styles/home.css";
 
 /**
  * Start the optional development-only mock worker. Production builds statically remove

@@ -1,0 +1,206 @@
+/*
+ * Exta design tokens. Semi Design owns component rendering; these variables retheme it
+ * through its official CSS-variable layer: monochrome surfaces with one blue accent.
+ * System fonts only, so the strict same-origin CSP needs no remote assets.
+ */
+:root {
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
+    sans-serif;
+  --font-display:
+    "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui,
+    sans-serif;
+  --font-mono:
+    "Cascadia Mono", "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono",
+    monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 420ms;
+  --sidebar-width: 248px;
+  --rail-width: 88px;
+  --bottom-nav-height: 64px;
+  --topbar-height: 60px;
+  --content-max: 1280px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+  }
+}
+
+/* Light theme: white panels on a near-white canvas, ink text, blue for action and focus. */
+html body {
+  --exta-canvas: #fafafa;
+  --exta-surface: #ffffff;
+  --exta-surface-raised: #ffffff;
+  --exta-surface-sunken: #f4f4f5;
+  --exta-ink: #09090b;
+  --exta-ink-inverse: #fafafa;
+  --exta-border: #e4e4e7;
+  --exta-border-strong: #d4d4d8;
+  --exta-control-border: #8e8e98;
+  --exta-accent: #2563eb;
+  --exta-accent-hover: #1d4ed8;
+  --exta-accent-soft: #eff4ff;
+  --exta-accent-ink: #1d4ed8;
+  --exta-on-accent: #ffffff;
+  --exta-shadow-panel: 0 1px 2px rgb(9 9 11 / 4%);
+  --exta-shadow-overlay: 0 24px 48px -12px rgb(9 9 11 / 18%), 0 2px 6px rgb(9 9 11 / 6%);
+  --exta-grid-line: rgb(9 9 11 / 6%);
+  --exta-success-fg: #15803d;
+  --exta-success-bg: #ecfdf3;
+  --exta-success-border: #bbf0cf;
+  --exta-warning-fg: #a15c07;
+  --exta-warning-bg: #fff7e6;
+  --exta-warning-border: #fadfa8;
+  --exta-danger-fg: #b91c1c;
+  --exta-danger-bg: #fef2f2;
+  --exta-danger-border: #f9cdcd;
+  --exta-info-fg: #1d4ed8;
+  --exta-info-bg: #eff4ff;
+  --exta-info-border: #cbdafc;
+  --exta-neutral-fg: #3f3f46;
+  --exta-neutral-bg: #f4f4f5;
+  --exta-neutral-border: #e4e4e7;
+  --exta-series-total: #2a78d6;
+  --exta-series-failed: #eb6834;
+  --exta-series-succeeded: #1baf7a;
+
+  --semi-color-bg-0: #ffffff;
+  --semi-color-bg-1: #ffffff;
+  --semi-color-bg-2: #ffffff;
+  --semi-color-bg-3: #ffffff;
+  --semi-color-bg-4: #ffffff;
+  --semi-color-text-0: #09090b;
+  --semi-color-text-1: #3f3f46;
+  --semi-color-text-2: #52525b;
+  --semi-color-text-3: #66666f;
+  --semi-color-fill-0: #f4f4f5;
+  --semi-color-fill-1: #ececee;
+  --semi-color-fill-2: #e4e4e7;
+  --semi-color-border: #e4e4e7;
+  --semi-color-primary: #2563eb;
+  --semi-color-primary-hover: #1d4ed8;
+  --semi-color-primary-active: #1e40af;
+  --semi-color-primary-disabled: #bfd0f7;
+  --semi-color-primary-light-default: #eff4ff;
+  --semi-color-primary-light-hover: #e0eaff;
+  --semi-color-primary-light-active: #cddcff;
+  --semi-color-focus-border: #2563eb;
+  --semi-color-link: #2563eb;
+  --semi-color-link-hover: #1d4ed8;
+  --semi-color-link-active: #1e40af;
+  --semi-color-link-visited: #2563eb;
+  --semi-color-info: #2563eb;
+  --semi-color-info-hover: #1d4ed8;
+  --semi-color-info-active: #1e40af;
+  --semi-color-info-light-default: #eff4ff;
+  --semi-color-info-light-hover: #e0eaff;
+  --semi-color-info-light-active: #cddcff;
+  --semi-color-danger: #dc2626;
+  --semi-color-danger-hover: #b91c1c;
+  --semi-color-danger-active: #991b1b;
+  --semi-color-tertiary: #52525b;
+  --semi-color-tertiary-hover: #3f3f46;
+  --semi-color-tertiary-active: #27272a;
+  --semi-color-tertiary-light-default: #f4f4f5;
+  --semi-color-tertiary-light-hover: #ececee;
+  --semi-color-tertiary-light-active: #e4e4e7;
+  --semi-color-nav-bg: #ffffff;
+  --semi-border-radius-extra-small: 4px;
+  --semi-border-radius-small: 7px;
+  --semi-border-radius-medium: 9px;
+  --semi-border-radius-large: 14px;
+  --semi-font-family-regular: var(--font-sans);
+}
+
+/* Dark theme: separately chosen steps validated against the dark surfaces, not an inversion. */
+html body[theme-mode="dark"] {
+  --exta-canvas: #09090b;
+  --exta-surface: #111114;
+  --exta-surface-raised: #18181c;
+  --exta-surface-sunken: #0d0d10;
+  --exta-ink: #fafafa;
+  --exta-ink-inverse: #09090b;
+  --exta-border: #26262b;
+  --exta-border-strong: #34343a;
+  --exta-control-border: #6b6b75;
+  --exta-accent: #5b9cff;
+  --exta-accent-hover: #7cb0ff;
+  --exta-accent-soft: #13213d;
+  --exta-accent-ink: #93bbff;
+  --exta-on-accent: #050a14;
+  --exta-shadow-panel: none;
+  --exta-shadow-overlay: 0 24px 56px -12px rgb(0 0 0 / 70%), 0 0 0 1px #26262b;
+  --exta-grid-line: rgb(250 250 250 / 7%);
+  --exta-success-fg: #6ee7a0;
+  --exta-success-bg: #0f2a1c;
+  --exta-success-border: #1d4a33;
+  --exta-warning-fg: #fbbf5c;
+  --exta-warning-bg: #2e2108;
+  --exta-warning-border: #4d3812;
+  --exta-danger-fg: #fca5a5;
+  --exta-danger-bg: #331415;
+  --exta-danger-border: #5a2224;
+  --exta-info-fg: #93bbff;
+  --exta-info-bg: #13213d;
+  --exta-info-border: #233a66;
+  --exta-neutral-fg: #d4d4d8;
+  --exta-neutral-bg: #232327;
+  --exta-neutral-border: #34343a;
+  --exta-series-total: #3987e5;
+  --exta-series-failed: #d95926;
+  --exta-series-succeeded: #199e70;
+
+  --semi-color-bg-0: #09090b;
+  --semi-color-bg-1: #111114;
+  --semi-color-bg-2: #18181c;
+  --semi-color-bg-3: #1d1d22;
+  --semi-color-bg-4: #232329;
+  --semi-color-text-0: #fafafa;
+  --semi-color-text-1: #d4d4d8;
+  --semi-color-text-2: #a1a1aa;
+  --semi-color-text-3: #8a8a93;
+  --semi-color-fill-0: #1c1c20;
+  --semi-color-fill-1: #26262b;
+  --semi-color-fill-2: #303036;
+  --semi-color-border: #26262b;
+  --semi-color-primary: #5b9cff;
+  --semi-color-primary-hover: #7cb0ff;
+  --semi-color-primary-active: #9cc3ff;
+  --semi-color-primary-disabled: #23314d;
+  --semi-color-primary-light-default: #13213d;
+  --semi-color-primary-light-hover: #182a4d;
+  --semi-color-primary-light-active: #1e355f;
+  --semi-color-focus-border: #5b9cff;
+  --semi-color-link: #5b9cff;
+  --semi-color-link-hover: #7cb0ff;
+  --semi-color-link-active: #9cc3ff;
+  --semi-color-link-visited: #5b9cff;
+  --semi-color-info: #5b9cff;
+  --semi-color-info-hover: #7cb0ff;
+  --semi-color-info-active: #9cc3ff;
+  --semi-color-info-light-default: #13213d;
+  --semi-color-info-light-hover: #182a4d;
+  --semi-color-info-light-active: #1e355f;
+  --semi-color-danger: #f87171;
+  --semi-color-danger-hover: #fa8f8f;
+  --semi-color-danger-active: #fcabab;
+  --semi-color-tertiary: #a1a1aa;
+  --semi-color-tertiary-hover: #d4d4d8;
+  --semi-color-tertiary-active: #f4f4f5;
+  --semi-color-tertiary-light-default: #1c1c20;
+  --semi-color-tertiary-light-hover: #26262b;
+  --semi-color-tertiary-light-active: #303036;
+  --semi-color-nav-bg: #0d0d10;
+}

@@ -1,6 +1,10 @@
 import Tag from "@douyinfe/semi-ui/lib/es/tag";
 import Banner from "@douyinfe/semi-ui/lib/es/banner";
 import Spin from "@douyinfe/semi-ui/lib/es/spin";
+import Empty from "@douyinfe/semi-ui/lib/es/empty";
+import IconInbox from "@douyinfe/semi-icons/lib/es/icons/IconInbox";
+import IconLock from "@douyinfe/semi-icons/lib/es/icons/IconLock";
+import IconAlertTriangle from "@douyinfe/semi-icons/lib/es/icons/IconAlertTriangle";
 import { Button } from "./Controls";
 /** Shared loading, error, empty, locked and status presentation. */
 import { useState } from "react";
@@ -104,10 +108,32 @@ export function EmptyState({
 }) {
   return (
     <div className="state state-empty">
-      <p className="state-title">{title}</p>
-      {description === undefined ? null : <p className="state-description">{description}</p>}
-      {action ?? null}
+      <Empty
+        image={<StateIcon icon={<IconInbox aria-hidden />} />}
+        description={
+          <>
+            <p className="state-title">{title}</p>
+            {description === undefined ? null : <p className="state-description">{description}</p>}
+          </>
+        }
+      >
+        {action ?? null}
+      </Empty>
     </div>
+  );
+}
+
+/**
+ * Restrained circular glyph used as the Semi Empty image; decorative only.
+ *
+ * @param props - Icon element and tone.
+ * @returns Decorative icon container.
+ */
+function StateIcon({ icon, tone = "neutral" }: { icon: ReactNode; tone?: "neutral" | "danger" }) {
+  return (
+    <span className={`state-icon state-icon-${tone}`} aria-hidden="true">
+      {icon}
+    </span>
   );
 }
 
@@ -121,10 +147,17 @@ export function LockedState({ permission }: { permission: string }) {
   const { t } = useI18n();
   return (
     <div className="state state-locked" role="status">
-      <p className="state-title">{t("permission.lockedTitle")}</p>
-      <p className="state-description">
-        {t("permission.lockedDescription")} <code>{permission}</code>
-      </p>
+      <Empty
+        image={<StateIcon icon={<IconLock aria-hidden />} />}
+        description={
+          <>
+            <p className="state-title">{t("permission.lockedTitle")}</p>
+            <p className="state-description">
+              {t("permission.lockedDescription")} <code>{permission}</code>
+            </p>
+          </>
+        }
+      />
     </div>
   );
 }
@@ -178,6 +211,7 @@ export function ErrorState({
   const detail = failure?.detail ?? null;
   return (
     <div className="state state-error" role="alert">
+      <StateIcon icon={<IconAlertTriangle aria-hidden />} tone="danger" />
       <p className="state-title">{title ?? describeError(error, t)}</p>
       {title === undefined ? null : <p className="state-description">{describeError(error, t)}</p>}
       {detail === null || detail.code === "invalid_token" ? null : (

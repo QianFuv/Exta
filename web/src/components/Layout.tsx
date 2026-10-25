@@ -1,9 +1,16 @@
 import { Button } from "./Controls";
 import { PreferencesMenu } from "./PreferencesMenu";
-/** Authenticated application shell: brand, navigation, language and sign-out. */
+/**
+ * Authenticated application shell built on Semi Layout: a full sidebar on desktop, an
+ * icon rail on tablets and a bottom tab bar on phones. One semantic navigation list is
+ * recomposed by CSS so its links, names and current-page state stay identical.
+ */
 import { Suspense, useEffect, useRef } from "react";
-import { NavLink, Outlet, useLocation } from "react-router";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useMutation } from "@tanstack/react-query";
+import SemiLayout from "@douyinfe/semi-ui/lib/es/layout";
+import IconExit from "@douyinfe/semi-icons/lib/es/icons/IconExit";
+import IconHomeStroked from "@douyinfe/semi-icons/lib/es/icons/IconHomeStroked";
 import { call, useApi } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import type { MessageKey } from "../lib/messages";
@@ -11,17 +18,19 @@ import { useSession } from "../lib/session";
 import { InlineError, LoadingState } from "./Feedback";
 import { BrandMark } from "./BrandMark";
 import { NavigationIcon } from "./NavigationIcon";
+import type { NavigationIconName } from "./NavigationIcon";
 
 const NAVIGATION = [
-  { to: "/overview", label: "nav.overview", icon: "overview" },
-  { to: "/keys", label: "keys.upstream", icon: "keys" },
-  { to: "/access-keys", label: "keys.access", icon: "keys" },
-  { to: "/requests", label: "nav.requests", icon: "requests" },
-  { to: "/settings", label: "nav.settings", icon: "settings" },
+  { to: "/overview", label: "nav.overview", short: "nav.short.overview", icon: "overview" },
+  { to: "/keys", label: "keys.upstream", short: "nav.short.keys", icon: "keys" },
+  { to: "/access-keys", label: "keys.access", short: "nav.short.access", icon: "access" },
+  { to: "/requests", label: "nav.requests", short: "nav.short.requests", icon: "requests" },
+  { to: "/settings", label: "nav.settings", short: "nav.short.settings", icon: "settings" },
 ] as const satisfies ReadonlyArray<{
   to: string;
   label: MessageKey;
-  icon: "overview" | "keys" | "requests" | "settings";
+  short: MessageKey;
+  icon: NavigationIconName;
 }>;
 
 /**
@@ -52,14 +61,18 @@ export function Layout() {
   const api = useApi();
   const { csrfToken, expire } = useSession();
   const location = useLocation();
-  const mainRef = useRef<HTMLElement>(null);
   const navigationRef = useRef<HTMLElement>(null);
+  const isFirstRender = useRef(true);
+  const current = NAVIGATION.find(
+    (item) => location.pathname === item.to || location.pathname.startsWith(item.to + "/"),
+  );
+
   useEffect(() => {
-    /** Keep the selected destination visible after navigation, translation or viewport changes. */
+    /** Keep the selected destination visible after navigation, translation or resizing. */
     const revealActive = () => {
       const nav = navigationRef.current;
       const active = nav?.querySelector<HTMLElement>("[aria-current=page]");
-      if (!nav || !active || !window.matchMedia?.("(max-width: 640px)").matches) return;
+      if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
       const bounds = nav.getBoundingClientRect();
       const item = active.getBoundingClientRect();
       if (item.left < bounds.left) nav.scrollLeft -= bounds.left - item.left;
@@ -72,14 +85,13 @@ export function Layout() {
       window.removeEventListener("resize", revealActive);
     };
   }, [location.pathname, locale]);
-  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
-    mainRef.current?.focus();
+    document.getElementById("main")?.focus();
   }, [location.pathname]);
 
   const logout = useMutation({
@@ -94,52 +106,89 @@ export function Layout() {
         {t("common.skipToContent")}
       </a>
       <MockModeBanner />
-      <aside className="sidebar">
-        <div className="brand">
-          <BrandMark />
-          <span className="brand-name">Exta</span>
-        </div>
-        <p className="nav-caption">{t("nav.workspace")}</p>
-        <nav ref={navigationRef} id="primary-navigation" aria-label={t("nav.primary")} tabIndex={0}>
-          <ul>
-            {NAVIGATION.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-                >
-                  <NavigationIcon name={item.icon} />
-                  {t(item.label)}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <div className="topbar-actions">
-            <PreferencesMenu />
-            <Button
-              className="button-ghost session-sign-out"
-              onClick={() => logout.mutate()}
-              disabled={logout.isPending}
-            >
-              {logout.isPending ? t("session.signingOut") : t("session.signOut")}
-            </Button>
+      <SemiLayout className="shell-frame" hasSider>
+        <SemiLayout.Sider className="shell-sider">
+          <Link className="brand" to="/" aria-label={`Exta · ${t("nav.home")}`}>
+            <BrandMark />
+            <span className="brand-name">Exta</span>
+          </Link>
+          <p className="nav-caption">{t("nav.workspace")}</p>
+          <nav
+            ref={navigationRef}
+            id="primary-navigation"
+            aria-label={t("nav.primary")}
+            className="primary-navigation"
+          >
+            <ul>
+              {NAVIGATION.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                  >
+                    <NavigationIcon name={item.icon} />
+                    <span className="nav-label">{t(item.label)}</span>
+                    <span className="nav-label-short" aria-hidden="true">
+                      {t(item.short)}
+                    </span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="sider-footer">
+            <Link className="sider-home" to="/">
+              <IconHomeStroked aria-hidden />
+              <span>{t("nav.home")}</span>
+            </Link>
           </div>
-        </header>
-        {logout.isError ? (
-          <div className="topbar-error">
-            <InlineError error={logout.error} />
-          </div>
-        ) : null}
-        <main id="main" ref={mainRef} tabIndex={-1} className="content">
-          <Suspense fallback={<LoadingState />}>
-            <Outlet />
-          </Suspense>
-        </main>
-      </div>
+        </SemiLayout.Sider>
+        <SemiLayout className="shell-main">
+          <SemiLayout.Header className="topbar">
+            <Link className="topbar-brand" to="/" aria-label={`Exta · ${t("nav.home")}`}>
+              <BrandMark size={26} />
+              <span aria-hidden="true">Exta</span>
+            </Link>
+            <p className="topbar-context">
+              <span>{t("nav.console")}</span>
+              {current ? (
+                <>
+                  <span className="topbar-separator" aria-hidden="true">
+                    /
+                  </span>
+                  <span className="topbar-current">{t(current.label)}</span>
+                </>
+              ) : null}
+            </p>
+            <div className="topbar-actions">
+              <PreferencesMenu />
+              <Button
+                className="button-ghost session-sign-out"
+                onClick={() => logout.mutate()}
+                disabled={logout.isPending}
+                aria-label={logout.isPending ? t("session.signingOut") : t("session.signOut")}
+              >
+                <IconExit aria-hidden className="session-sign-out-icon" />
+                <span className="session-sign-out-label">
+                  {logout.isPending ? t("session.signingOut") : t("session.signOut")}
+                </span>
+              </Button>
+            </div>
+          </SemiLayout.Header>
+          {logout.isError ? (
+            <div className="topbar-error">
+              <InlineError error={logout.error} />
+            </div>
+          ) : null}
+          <main id="main" tabIndex={-1} className="content">
+            <div key={location.pathname} className="route-view">
+              <Suspense fallback={<LoadingState />}>
+                <Outlet />
+              </Suspense>
+            </div>
+          </main>
+        </SemiLayout>
+      </SemiLayout>
     </div>
   );
 }
