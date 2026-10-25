@@ -311,7 +311,7 @@ function LimitsForm({ settings }: { settings: Settings }) {
             : t("settings.rangeError", { minimum, maximum })}
         </p>
         {name.endsWith("_bytes") && isFieldValid ? (
-          <p className="field-hint">≈ {formatNumber(Number(value) / 1048576)} MiB</p>
+          <p className="field-hint">≈ {formatNumber(Number(value) / 1048576, 2)} MiB</p>
         ) : null}
         {name === "research_active" ? (
           <p className="field-hint">
