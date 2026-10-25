@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { call, useApi } from "../../lib/api";
 import type { Schemas } from "../../lib/api";
-import { useI18n } from "../../lib/i18n";
+import { INTL_LOCALE, useI18n } from "../../lib/i18n";
 import { Button, Disclosure, Select } from "../../components/Controls";
 import { EmptyState, QueryView } from "../../components/Feedback";
 import { Section } from "../../components/Page";
@@ -47,7 +47,7 @@ export function CallTrend() {
 
 /** Render an accessible SVG with identical count data available as a semantic table. */
 function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
-  const { t, locale, formatNumber } = useI18n();
+  const { t, formatNumber } = useI18n();
   const [hovered, setHovered] = useState<number | null>(null);
   const series = ["total", "succeeded", "failed"] as const;
   const totals = data.buckets.reduce(
@@ -66,7 +66,7 @@ function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
   const x = (index: number) => 60 + (index / Math.max(1, data.buckets.length - 1)) * 760;
   const y = (count: number) => 240 - (count / maximum) * 200;
   const time = (value: string) =>
-    new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
+    new Intl.DateTimeFormat(INTL_LOCALE, {
       timeZone: "UTC",
       month: "2-digit",
       day: "2-digit",
@@ -99,7 +99,7 @@ function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
           }}
           viewBox="0 0 860 290"
           role="img"
-          aria-label={`${t("trends.title")}: ${time(data.from)} – ${time(data.to)}, UTC; ${t("trends.total")}: ${totals.total}`}
+          aria-label={`${t("trends.title")}：${time(data.from)} – ${time(data.to)}（UTC）；${t("trends.total")}：${totals.total}`}
         >
           <text x="60" y="18" className="trend-axis-label">
             {t("trends.count")}
@@ -199,8 +199,8 @@ function TrendPlot({ data }: { data: Schemas["CallTrends"] }) {
         {totals.total === 0 ? <EmptyState title={t("trends.empty")} /> : null}
       </div>
       <p className="trend-summary">
-        {t("trends.pending")}: {formatNumber(totals.pending)} · {t("trends.uncertain")}:{" "}
-        {formatNumber(totals.uncertain)} · {t("trends.cancelled")}: {formatNumber(totals.cancelled)}
+        {t("trends.pending")}：{formatNumber(totals.pending)} · {t("trends.uncertain")}：
+        {formatNumber(totals.uncertain)} · {t("trends.cancelled")}：{formatNumber(totals.cancelled)}
       </p>
       <Disclosure label={t("trends.table")}>
         <div className="table-wrap" tabIndex={0} role="region" aria-label={t("trends.table")}>

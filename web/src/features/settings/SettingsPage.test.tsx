@@ -12,17 +12,17 @@ beforeAll(async () => {
 describe("settings", () => {
   it("groups settings by purpose with explicit units and one save action", async () => {
     renderApp("/settings");
-    const traffic = await screen.findByRole("group", { name: "Traffic and concurrency" });
+    const traffic = await screen.findByRole("group", { name: "流量与并发" });
     expect(within(traffic).getAllByRole("spinbutton")).toHaveLength(3);
-    const research = screen.getByRole("group", { name: "Research capacity and observation" });
+    const research = screen.getByRole("group", { name: "研究容量与观察" });
     expect(
-      within(research).getByRole("spinbutton", { name: "Max polls" }),
-    ).toHaveAccessibleDescription(/polls/);
-    const payload = screen.getByRole("group", { name: "Request and response size" });
+      within(research).getByRole("spinbutton", { name: "最大轮询次数" }),
+    ).toHaveAccessibleDescription(/次/);
+    const payload = screen.getByRole("group", { name: "请求与响应大小" });
     expect(
-      within(payload).getByRole("spinbutton", { name: "Max request bytes" }),
-    ).toHaveAccessibleDescription(/bytes/);
-    expect(screen.getAllByRole("button", { name: "Save" })).toHaveLength(1);
+      within(payload).getByRole("spinbutton", { name: "最大请求字节数" }),
+    ).toHaveAccessibleDescription(/字节/);
+    expect(screen.getAllByRole("button", { name: "保存" })).toHaveLength(1);
   });
 
   it("warns about an incompatible server contract", async () => {
@@ -31,17 +31,17 @@ describe("settings", () => {
       build: { ...mockDb.state.settings.build, contract_hash: "0".repeat(64) },
     };
     renderApp("/settings?view=health");
-    expect(await screen.findByText("Incompatible contract")).toBeInTheDocument();
-    expect(screen.getByText("Mismatch").closest(".semi-tag")).toHaveClass("status-danger");
+    expect(await screen.findByText("契约不兼容")).toBeInTheDocument();
+    expect(screen.getByText("不一致").closest(".semi-tag")).toHaveClass("status-danger");
   });
 
   it("saves limits with the settings version and constant fields", async () => {
     renderApp("/settings");
-    const field = await screen.findByRole("spinbutton", { name: "Max polls" });
+    const field = await screen.findByRole("spinbutton", { name: "最大轮询次数" });
     await userEvent.clear(field);
     await userEvent.type(field, "90");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("设置已保存。")).toBeInTheDocument();
     const body = callsTo("PATCH", "/v1/admin/settings")[0]?.body as {
       expected_version: number;
       limits: { max_polls: number; principal_research_active: number };
@@ -55,23 +55,21 @@ describe("settings", () => {
 
   it("blocks out-of-range values before sending", async () => {
     renderApp("/settings");
-    const field = await screen.findByRole("spinbutton", { name: "Research content days" });
+    const field = await screen.findByRole("spinbutton", { name: "研究内容保留天数" });
     await userEvent.clear(field);
     await userEvent.type(field, "31");
     expect(field).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   });
 
   it("does not expose or fetch a standalone audit view and preserves internal retention", async () => {
     mockDb.state.settings.retention.audit_days = 61;
     renderApp("/settings?view=audit");
-    expect(
-      await screen.findByRole("group", { name: "Traffic and concurrency" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Audit" })).toBeNull();
+    expect(await screen.findByRole("group", { name: "流量与并发" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "审计" })).toBeNull();
     expect(callsTo("GET", "/v1/admin/audit")).toHaveLength(0);
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("设置已保存。")).toBeInTheDocument();
     expect(callsTo("PATCH", "/v1/admin/settings")[0]?.body).toMatchObject({
       retention: { audit_days: 61 },
     });

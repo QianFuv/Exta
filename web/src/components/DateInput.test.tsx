@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 import { Input } from "./Controls";
+import { I18nProvider } from "../lib/i18n";
 
 /** Keep the same string-valued draft used by access-key and log forms. */
 function DateFixture() {
@@ -19,7 +20,11 @@ function DateFixture() {
 }
 
 it("retains a calendar-selected 2028 date and supports clear then reselect", async () => {
-  render(<DateFixture />);
+  render(
+    <I18nProvider>
+      <DateFixture />
+    </I18nProvider>,
+  );
   const input = screen.getByRole("textbox", { name: "Expiry" });
   await userEvent.click(input);
   const day = await screen.findByRole("gridcell", { name: "2028-06-20" });

@@ -315,7 +315,7 @@ function LimitsForm({ settings }: { settings: Settings }) {
         ) : null}
         {name === "research_active" ? (
           <p className="field-hint">
-            {t("settings.field.principal_research_active")}: 1 {t("settings.unit.job")}
+            {t("settings.field.principal_research_active")}：1 {t("settings.unit.job")}
           </p>
         ) : null}
       </div>

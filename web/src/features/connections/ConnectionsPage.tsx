@@ -228,7 +228,7 @@ function CapabilityTable({ capabilities }: { capabilities: Schemas["Capability"]
                           )}{" "}
                           {capability.operation.startsWith("research") ? (
                             <span className="cell-secondary">
-                              {t("connections.cancellation")}:{" "}
+                              {t("connections.cancellation")}：
                               {profile.cancellation.upstream
                                 ? t("connections.upstreamCancel")
                                 : t("connections.noUpstreamCancel")}

@@ -10,7 +10,6 @@ import type { RouteObject } from "react-router";
 import { ApiProvider } from "../lib/api";
 import type { ApiClient } from "../lib/api";
 import { I18nProvider, useI18n } from "../lib/i18n";
-import type { Locale } from "../lib/i18n";
 import { SessionProvider, useSession } from "../lib/session";
 import { NotificationsProvider } from "../components/Notifications";
 import { Layout } from "../components/Layout";
@@ -44,24 +43,22 @@ const SettingsPage = lazy(() =>
 /**
  * Wrap the application with API, query, language, session and notification providers.
  *
- * @param props - Client instances, optional fixed locale and children.
+ * @param props - Client instances and children.
  * @returns Provider tree.
  */
 export function AppProviders({
   apiClient,
   queryClient,
-  initialLocale,
   children,
 }: {
   apiClient: ApiClient;
   queryClient: QueryClient;
-  initialLocale?: Locale;
   children: ReactNode;
 }) {
   return (
     <ApiProvider value={apiClient}>
       <QueryClientProvider client={queryClient}>
-        <I18nProvider {...(initialLocale === undefined ? {} : { initialLocale })}>
+        <I18nProvider>
           <SemiProvider>
             <SessionProvider>
               <NotificationsProvider>{children}</NotificationsProvider>

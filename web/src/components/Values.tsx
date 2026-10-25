@@ -2,7 +2,7 @@ import { Button } from "./Controls";
 /** Small value renderers shared across pages: money/credits, revisions, copy and dates. */
 import { useState } from "react";
 import type { Schemas } from "../lib/api";
-import { useI18n } from "../lib/i18n";
+import { INTL_LOCALE, useI18n } from "../lib/i18n";
 import { Badge } from "./Feedback";
 import type { Tone } from "./Feedback";
 
@@ -38,8 +38,8 @@ export function formatUnitAmount(
  * @returns Formatter for amount and unit.
  */
 export function useUnitFormatter(): (amount: number, unit: Schemas["UsageUnit"]) => string {
-  const { locale, t } = useI18n();
-  const tag = locale === "zh" ? "zh-CN" : "en-US";
+  const { t } = useI18n();
+  const tag = INTL_LOCALE;
   const creditTemplate = t("unit.credits");
   return (amount, unit) => formatUnitAmount(amount, unit, tag, creditTemplate);
 }

@@ -32,16 +32,14 @@ describe("key pools", () => {
       ),
     );
     renderApp("/keys");
-    await userEvent.click(await screen.findByRole("button", { name: "Add key" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Add key · Exa" }));
+    await userEvent.click(await screen.findByRole("button", { name: "添加密钥" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "添加密钥 · Exa" }));
     const dialog = screen.getByRole("dialog");
-    await userEvent.type(within(dialog).getByLabelText("Label"), "Duplicate fixture");
-    await userEvent.type(within(dialog).getByLabelText("Secret"), "synthetic-duplicate-secret");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Add key" }));
-    expect(
-      await screen.findByText("This key already exists and cannot be added again."),
-    ).toBeVisible();
-    expect(within(dialog).getByLabelText("Secret")).toHaveValue("");
+    await userEvent.type(within(dialog).getByLabelText("名称"), "Duplicate fixture");
+    await userEvent.type(within(dialog).getByLabelText("密钥内容"), "synthetic-duplicate-secret");
+    await userEvent.click(within(dialog).getByRole("button", { name: "添加密钥" }));
+    expect(await screen.findByText("此密钥已存在，无法重复添加。")).toBeVisible();
+    expect(within(dialog).getByLabelText("密钥内容")).toHaveValue("");
     expect(allBrowserStorage()).not.toContain("synthetic-duplicate-secret");
   });
 
@@ -49,16 +47,16 @@ describe("key pools", () => {
     mockDb.state.keys.find((entry) => entry.id === "key_exa_1")!.enabled = false;
     renderApp("/keys");
     const row = within((await screen.findByText("Exa primary")).closest("tr")!);
-    expect(row.getAllByText("Disabled")).toHaveLength(1);
-    await userEvent.click(row.getByRole("button", { name: "More actions for Exa primary" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Edit key & limits" }));
+    expect(row.getAllByText("已停用")).toHaveLength(1);
+    await userEvent.click(row.getByRole("button", { name: "Exa primary 的更多操作" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "编辑密钥与限额" }));
     const dialog = within(screen.getByRole("dialog"));
-    const toggle = dialog.getByRole("switch", { name: "Enable this key" });
+    const toggle = dialog.getByRole("switch", { name: "启用此密钥" });
     expect(toggle).not.toBeChecked();
-    expect(dialog.queryByText("Enabled")).toBeNull();
+    expect(dialog.queryByText("已启用")).toBeNull();
     await userEvent.click(toggle);
     expect(toggle).toBeChecked();
-    expect(dialog.getByRole("switch", { name: "Enable this key" })).toBe(toggle);
+    expect(dialog.getByRole("switch", { name: "启用此密钥" })).toBe(toggle);
   });
   it("does not label an enabled but blocked key as usable", async () => {
     const key = mockDb.state.keys.find((entry) => entry.id === "key_exa_1")!;
@@ -66,10 +64,10 @@ describe("key pools", () => {
     key.billing_state = "blocked";
     renderApp("/keys");
     const row = within((await screen.findByText("Exa primary")).closest("tr")!);
-    expect(row.getByText("Unavailable")).toBeInTheDocument();
-    expect(row.getByText("Billing blocked")).toBeInTheDocument();
-    expect(row.queryByText("Enabled")).toBeNull();
-    expect(row.getByRole("button", { name: "Disable Exa primary" })).toBeEnabled();
+    expect(row.getByText("受阻")).toBeInTheDocument();
+    expect(row.getByText("计费受阻")).toBeInTheDocument();
+    expect(row.queryByText("已启用")).toBeNull();
+    expect(row.getByRole("button", { name: "停用 Exa primary" })).toBeEnabled();
   });
   it.each(["create", "rotate"])("clears failed %s secrets from mutation state", async (action) => {
     server.use(
@@ -93,21 +91,21 @@ describe("key pools", () => {
     await screen.findByText("Exa primary");
     await userEvent.click(
       action === "create"
-        ? screen.getByRole("button", { name: "Add key" })
-        : screen.getByRole("button", { name: "More actions for Exa primary" }),
+        ? screen.getByRole("button", { name: "添加密钥" })
+        : screen.getByRole("button", { name: "Exa primary 的更多操作" }),
     );
     await userEvent.click(
-      screen.getByRole("menuitem", { name: action === "create" ? "Add key · Exa" : "Rotate" }),
+      screen.getByRole("menuitem", { name: action === "create" ? "添加密钥 · Exa" : "轮换" }),
     );
     const dialog = screen.getByRole("dialog");
     if (action === "create")
-      await userEvent.type(within(dialog).getByLabelText("Label"), "Rejected key");
-    await userEvent.type(within(dialog).getByLabelText("Secret"), "synthetic-rejected-secret");
+      await userEvent.type(within(dialog).getByLabelText("名称"), "Rejected key");
+    await userEvent.type(within(dialog).getByLabelText("密钥内容"), "synthetic-rejected-secret");
     await userEvent.click(
-      within(dialog).getByRole("button", { name: action === "create" ? "Add key" : "Rotate" }),
+      within(dialog).getByRole("button", { name: action === "create" ? "添加密钥" : "轮换" }),
     );
     await within(dialog).findByText(/invalid_request/);
-    expect(within(dialog).getByLabelText("Secret")).toHaveValue("");
+    expect(within(dialog).getByLabelText("密钥内容")).toHaveValue("");
     expect(
       JSON.stringify(
         queryClient
@@ -120,15 +118,15 @@ describe("key pools", () => {
   it("keeps secondary actions behind a disclosure and requires retirement confirmation", async () => {
     renderApp("/keys");
     const row = (await screen.findByText("Exa primary")).closest("tr")!;
-    const summary = within(row).getByRole("button", { name: /More actions/ });
-    expect(screen.queryByRole("menuitem", { name: "Retire" })).toBeNull();
+    const summary = within(row).getByRole("button", { name: /的更多操作/ });
+    expect(screen.queryByRole("menuitem", { name: "退役" })).toBeNull();
     for (let attempt = 0; attempt < 2; attempt += 1) {
       summary.focus();
       await userEvent.keyboard(attempt === 0 ? "{Enter}" : " ");
-      await userEvent.click(screen.getByRole("menuitem", { name: "Retire" }));
-      const dialog = screen.getByRole("dialog", { name: "Retire Exa primary" });
+      await userEvent.click(screen.getByRole("menuitem", { name: "退役" }));
+      const dialog = screen.getByRole("dialog", { name: "退役 Exa primary" });
       expect(callsTo("POST", "/v1/admin/keys/key_exa_1/retire")).toHaveLength(0);
-      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
       expect(summary).toHaveFocus();
       expect(summary).toHaveAttribute("aria-expanded", "false");
     }
@@ -141,26 +139,26 @@ describe("key pools", () => {
   it("shows per-key usage without ownership identification or an account workflow", async () => {
     renderApp("/keys");
     expect(await screen.findByText("Exa primary")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "About Upstream provider keys" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "关于上游提供商密钥" })).toBeNull();
     expect(screen.queryByText(/not independently verified|shared allowance/i)).toBeNull();
     expect(screen.queryByText(/billing account/i)).toBeNull();
     expect(screen.queryByRole("columnheader", { name: "Shared allowance" })).toBeNull();
-    expect(screen.queryByRole("columnheader", { name: "Local safety limit" })).toBeNull();
-    expect(screen.getByRole("columnheader", { name: "Usage" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "本地安全限额" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "用量" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add account" })).toBeNull();
     expect(callsTo("GET", "/v1/admin/accounts")).toHaveLength(0);
-    expect(screen.getByText(/Credential retained for 1 unresolved job/)).toBeInTheDocument();
+    expect(screen.getByText(/凭据仍为 1 个未结任务保留/)).toBeInTheDocument();
   });
 
   it("sends a new secret once and keeps it out of storage", async () => {
     renderApp("/keys");
-    await userEvent.click(await screen.findByRole("button", { name: "Add key" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Add key · Exa" }));
-    const dialog = screen.getByRole("dialog", { name: "Add key · Exa" });
-    await userEvent.type(within(dialog).getByLabelText("Label"), "Exa third");
-    await userEvent.type(within(dialog).getByLabelText("Secret"), "synthetic-secret-9999");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Add key" }));
-    expect(await screen.findByText("Key added.")).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "添加密钥" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "添加密钥 · Exa" }));
+    const dialog = screen.getByRole("dialog", { name: "添加密钥 · Exa" });
+    await userEvent.type(within(dialog).getByLabelText("名称"), "Exa third");
+    await userEvent.type(within(dialog).getByLabelText("密钥内容"), "synthetic-secret-9999");
+    await userEvent.click(within(dialog).getByRole("button", { name: "添加密钥" }));
+    expect(await screen.findByText("密钥已添加。")).toBeInTheDocument();
     expect(callsTo("POST", "/v1/admin/keys")[0]?.body).toEqual({
       provider: "exa",
       quota_policy: {
@@ -187,8 +185,8 @@ describe("key pools", () => {
     if (key !== undefined) {
       key.version += 1;
     }
-    await userEvent.click(within(row).getByRole("button", { name: "Disable Exa primary" }));
-    expect(await screen.findByText(/changed elsewhere/)).toBeInTheDocument();
+    await userEvent.click(within(row).getByRole("button", { name: "停用 Exa primary" }));
+    expect(await screen.findByText(/已在别处被修改/)).toBeInTheDocument();
     expect(callsTo("PATCH", "/v1/admin/keys/key_exa_1")[0]?.body).toEqual({
       expected_version: 1,
       enabled: false,
@@ -201,9 +199,9 @@ describe("key pools", () => {
     );
     renderApp("/keys");
     await screen.findByText("Exa primary");
-    expect(screen.getByRole("button", { name: "Add key" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "添加密钥" })).toBeDisabled();
     expect(screen.getByText("admin:keys:write")).toBeInTheDocument();
-    for (const trigger of screen.getAllByRole("button", { name: /More actions/ })) {
+    for (const trigger of screen.getAllByRole("button", { name: /的更多操作/ })) {
       expect(trigger).toBeDisabled();
     }
     expect(mockDb.state.calls.filter((call) => call.method !== "GET")).toHaveLength(0);

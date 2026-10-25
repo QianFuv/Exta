@@ -12,6 +12,7 @@ import IconCalendar from "@douyinfe/semi-icons/lib/es/icons/IconCalendar";
 import IconChevronDown from "@douyinfe/semi-icons/lib/es/icons/IconChevronDown";
 import Collapse from "@douyinfe/semi-ui/lib/es/collapse";
 import Dropdown from "@douyinfe/semi-ui/lib/es/dropdown";
+import { useI18n } from "../lib/i18n";
 
 /** Omit absent native attributes before forwarding to strict component prop types. */
 function defined<T extends object>(props: T): { [K in keyof T]: Exclude<T[K], undefined> } {
@@ -245,6 +246,7 @@ export function ActionMenu({
 
 /** Keep typed local dates and calendar selection in the same validated form state. */
 function DateInput({ onChange, value, ...props }: InputProps) {
+  const { t } = useI18n();
   const [isOpen, setOpen] = useState(false);
   const parsed = value ? new Date(value) : undefined;
   return (
@@ -269,7 +271,7 @@ function DateInput({ onChange, value, ...props }: InputProps) {
           <SemiInput
             {...defined(props)}
             value={String(value ?? "").replace("T", " ")}
-            placeholder="YYYY-MM-DD HH:mm"
+            placeholder={t("common.dateTimePlaceholder")}
             suffix={<IconCalendar aria-hidden />}
             validateStatus={props["aria-invalid"] === true ? "error" : "default"}
             onChange={(text) =>

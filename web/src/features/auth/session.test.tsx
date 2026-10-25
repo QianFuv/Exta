@@ -12,8 +12,8 @@ describe("admin session", () => {
   it("counts administrator password Unicode characters without truncating exact input", async () => {
     mockDb.state.session = null;
     renderApp("/login");
-    const field = await screen.findByLabelText("Administrator password");
-    const submit = screen.getByRole("button", { name: "Sign in" });
+    const field = await screen.findByLabelText("管理员密码");
+    const submit = screen.getByRole("button", { name: "登录" });
     for (const character of ["a", "界", "🔐"]) {
       for (const length of [7, 8, 10, 512, 513]) {
         const password = character.repeat(length);
@@ -27,21 +27,19 @@ describe("admin session", () => {
     mockDb.state.validCredential = "🔐".repeat(8);
     fireEvent.change(field, { target: { value: mockDb.state.validCredential } });
     await userEvent.click(submit);
-    expect(
-      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "统计", level: 1 })).toBeInTheDocument();
     expect(callsTo("POST", "/v1/admin/session")).toHaveLength(1);
   });
 
   it("signs in without persisting the credential or CSRF token", async () => {
     mockDb.state.session = null;
     const { router, queryClient } = renderApp("/requests");
-    const field = await screen.findByLabelText("Administrator password");
+    const field = await screen.findByLabelText("管理员密码");
     expect(router.state.location.pathname).toBe("/login");
 
     await userEvent.type(field, "wrong-credential-value");
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByText("The credential was not accepted.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "登录" }));
+    expect(await screen.findByText("凭据未被接受。")).toBeInTheDocument();
     expect(field).toHaveValue("");
     expect(
       JSON.stringify(
@@ -53,8 +51,8 @@ describe("admin session", () => {
     ).not.toContain("wrong-credential-value");
 
     await userEvent.type(field, mockDb.state.validCredential);
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("heading", { name: "Call logs", level: 1 })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "登录" }));
+    expect(await screen.findByRole("heading", { name: "调用日志", level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/requests");
 
     const stored = allBrowserStorage();
@@ -64,23 +62,21 @@ describe("admin session", () => {
 
   it("returns to login with an explanation when the session expires mid-use", async () => {
     const { router } = renderApp("/overview");
-    expect(
-      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "统计", level: 1 })).toBeInTheDocument();
     mockDb.state.session = null;
     await userEvent.click(
-      within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", {
-        name: "Upstream provider keys",
+      within(screen.getByRole("navigation", { name: "主导航" })).getByRole("link", {
+        name: "上游提供商密钥",
       }),
     );
-    expect(await screen.findByText(/Your session ended/)).toBeInTheDocument();
+    expect(await screen.findByText(/会话已结束/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/login");
   });
 
   it("signs out with the CSRF header", async () => {
     renderApp("/overview");
-    await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
-    expect(await screen.findByText("You signed out.")).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "退出登录" }));
+    expect(await screen.findByText("已退出登录。")).toBeInTheDocument();
     const calls = callsTo("DELETE", "/v1/admin/session");
     expect(calls).toHaveLength(1);
     expect(calls[0]?.headers["x-exta-csrf"]).toBe(mockSession().csrf_token);
@@ -105,8 +101,8 @@ describe("admin session", () => {
       ),
     );
     renderApp("/overview");
-    expect(await screen.findByText("Session status is unavailable")).toBeInTheDocument();
-    expect(screen.getByText("Storage is unavailable.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Administrator password")).toBeNull();
+    expect(await screen.findByText("无法获取会话状态")).toBeInTheDocument();
+    expect(screen.getByText("存储不可用。")).toBeInTheDocument();
+    expect(screen.queryByLabelText("管理员密码")).toBeNull();
   });
 });

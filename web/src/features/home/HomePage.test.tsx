@@ -10,29 +10,27 @@ describe("product home", () => {
     renderApp("/");
     expect(
       await screen.findByRole("heading", {
-        name: "One endpoint for Exa and Tavily search.",
+        name: "一个入口，统一调度 Exa 与 Tavily 检索",
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "Primary" })).toBeNull();
-    const entry = (await screen.findAllByRole("link", { name: /Open console/ }))[0]!;
+    expect(screen.queryByRole("navigation", { name: "主导航" })).toBeNull();
+    const entry = (await screen.findAllByRole("link", { name: /进入控制台/ }))[0]!;
     await userEvent.click(entry);
-    expect(
-      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "统计", level: 1 })).toBeInTheDocument();
   });
 
   it("sends an anonymous visitor to sign in", async () => {
     mockDb.state = createMockState({ signedIn: false });
     renderApp("/");
-    const entry = (await screen.findAllByRole("link", { name: /Sign in to console/ }))[0]!;
+    const entry = (await screen.findAllByRole("link", { name: /登录控制台/ }))[0]!;
     await userEvent.click(entry);
-    expect(await screen.findByLabelText("Administrator password")).toBeInTheDocument();
+    expect(await screen.findByLabelText("管理员密码")).toBeInTheDocument();
   });
 
   it("describes the implemented operations without loading console data", async () => {
     renderApp("/");
-    const operations = await screen.findByRole("list", { name: "Six operations, two providers" });
+    const operations = await screen.findByRole("list", { name: "六类操作，两家提供商" });
     for (const operation of [
       "search",
       "advanced_search",
@@ -43,7 +41,7 @@ describe("product home", () => {
     ]) {
       expect(within(operations).getByText(operation)).toBeInTheDocument();
     }
-    expect(screen.getByText(/not a third-party security certification/)).toBeInTheDocument();
+    expect(screen.getByText(/并非第三方安全认证/)).toBeInTheDocument();
     const requested = mockDb.state.calls.map((call) => call.path);
     expect(requested.every((path) => path === "/v1/admin/session")).toBe(true);
   });

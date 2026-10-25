@@ -57,7 +57,7 @@ export function MockModeBanner() {
  * @returns Shell with navigation and routed content.
  */
 export function Layout() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const api = useApi();
   const { csrfToken, expire } = useSession();
   const location = useLocation();
@@ -84,7 +84,7 @@ export function Layout() {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", revealActive);
     };
-  }, [location.pathname, locale]);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (isFirstRender.current) {

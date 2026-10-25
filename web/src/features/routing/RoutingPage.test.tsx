@@ -29,10 +29,10 @@ beforeAll(async () => {
 describe("routing", () => {
   it("closes the nested selector before its parent dialog on Escape", async () => {
     renderApp("/settings?view=routing");
-    const opener = within(await policyRow("advanced_search")).getByRole("button", { name: "Edit" });
+    const opener = within(await policyRow("advanced_search")).getByRole("button", { name: "编辑" });
     await userEvent.click(opener);
-    const dialog = screen.getByRole("dialog", { name: "Edit route: advanced_search" });
-    const selector = within(dialog).getByRole("combobox", { name: "Add target" });
+    const dialog = screen.getByRole("dialog", { name: "编辑路由：advanced_search" });
+    const selector = within(dialog).getByRole("combobox", { name: "添加目标" });
     await userEvent.click(selector);
     expect(await screen.findByRole("option", { name: "Tavily · common" })).toBeInTheDocument();
     fireEvent.keyDown(selector, { key: "Escape", code: "Escape", keyCode: 27 });
@@ -53,23 +53,23 @@ describe("routing", () => {
   ])("bounds %s deadlines before dispatch", async (operation, limit) => {
     renderApp("/settings?view=routing");
     await userEvent.click(
-      within(await policyRow(String(operation))).getByRole("button", { name: "Edit" }),
+      within(await policyRow(String(operation))).getByRole("button", { name: "编辑" }),
     );
     const dialog = screen.getByRole("dialog");
-    const field = within(dialog).getByRole("spinbutton", { name: "Deadline (seconds)" });
+    const field = within(dialog).getByRole("spinbutton", { name: "时限（秒）" });
     await userEvent.clear(field);
     await userEvent.type(field, String(Number(limit) + 1));
-    expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeDisabled();
     expect(callsTo("PUT", `/v1/admin/routes/${operation}`)).toHaveLength(0);
     await userEvent.clear(field);
     await userEvent.type(field, String(limit));
-    expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeEnabled();
   });
   it("flags an enabled policy without targets", async () => {
     renderApp("/settings?view=routing");
     expect(
       within(await policyRow("crawl"))
-        .getByText("No compatible route")
+        .getByText("没有兼容路由")
         .closest(".semi-tag"),
     ).toHaveClass("status-danger");
   });
@@ -77,18 +77,18 @@ describe("routing", () => {
   it("saves with expected_version equal to the current revision", async () => {
     renderApp("/settings?view=routing");
     await userEvent.click(
-      within(await policyRow("advanced_search")).getByRole("button", { name: "Edit" }),
+      within(await policyRow("advanced_search")).getByRole("button", { name: "编辑" }),
     );
-    const dialog = screen.getByRole("dialog", { name: "Edit route: advanced_search" });
-    await selectOption(within(dialog).getByLabelText("Add target"), "Tavily · common");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
-    expect(within(dialog).getByRole("button", { name: "Move exa/common up" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Move tavily/common down" })).toBeDisabled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Move tavily/common up" }));
-    expect(within(dialog).getByRole("button", { name: "Move tavily/common up" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Move exa/common down" })).toBeDisabled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Route saved as revision 3.")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "编辑路由：advanced_search" });
+    await selectOption(within(dialog).getByLabelText("添加目标"), "Tavily · common");
+    await userEvent.click(within(dialog).getByRole("button", { name: "添加" }));
+    expect(within(dialog).getByRole("button", { name: "上移 exa/common" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "下移 tavily/common" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "上移 tavily/common" }));
+    expect(within(dialog).getByRole("button", { name: "上移 tavily/common" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "下移 exa/common" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("路由已保存为版本 3。")).toBeInTheDocument();
     expect(callsTo("PUT", "/v1/admin/routes/advanced_search")[0]?.body).toEqual({
       expected_version: 2,
       enabled: true,
@@ -104,14 +104,14 @@ describe("routing", () => {
 
   it("removes only the selected target and retains the remaining order", async () => {
     renderApp("/settings?view=routing");
-    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "Edit" }));
-    const dialog = screen.getByRole("dialog", { name: "Edit route: search" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Remove exa/common" }));
-    expect(within(dialog).queryByRole("button", { name: "Move exa/common up" })).toBeNull();
-    expect(within(dialog).getByRole("button", { name: "Move tavily/common up" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Move tavily/common down" })).toBeDisabled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-    expect(await screen.findByText(/Route saved as revision/)).toBeInTheDocument();
+    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "编辑" }));
+    const dialog = screen.getByRole("dialog", { name: "编辑路由：search" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "移除 exa/common" }));
+    expect(within(dialog).queryByRole("button", { name: "上移 exa/common" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "上移 tavily/common" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "下移 tavily/common" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存" }));
+    expect(await screen.findByText(/路由已保存为版本/)).toBeInTheDocument();
     expect(callsTo("PUT", "/v1/admin/routes/search")[0]?.body).toMatchObject({
       targets: [{ provider: "tavily", profile: "common" }],
     });
@@ -119,19 +119,19 @@ describe("routing", () => {
 
   it("shows a stale revision conflict", async () => {
     renderApp("/settings?view=routing");
-    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "Edit" }));
+    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "编辑" }));
     const route = mockDb.state.routes.find((entry) => entry.capability === "search");
     if (route !== undefined) {
       route.revision = 5;
     }
-    const dialog = screen.getByRole("dialog", { name: "Edit route: search" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-    expect(await within(dialog).findByText(/changed elsewhere/)).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Reload and review latest" }));
-    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "Edit" }));
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Route saved as revision 6.")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "编辑路由：search" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存" }));
+    expect(await within(dialog).findByText(/已在别处被修改/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "重新加载并检查最新版本" }));
+    await userEvent.click(within(await policyRow("search")).getByRole("button", { name: "编辑" }));
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("路由已保存为版本 6。")).toBeInTheDocument();
     expect(callsTo("PUT", "/v1/admin/routes/search").at(-1)?.body).toMatchObject({
       expected_version: 5,
     });

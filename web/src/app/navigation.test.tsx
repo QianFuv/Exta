@@ -1,4 +1,4 @@
-/** Shell: Exta branding, every management page reachable, language switch and focus. */
+/** Shell: Exta branding, every management page reachable, Chinese-only text and focus. */
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -8,22 +8,14 @@ beforeAll(async () => {
   await import("../features/overview/OverviewPage");
 });
 
-const PAGES = [
-  "Statistics",
-  "Upstream provider keys",
-  "Service access keys",
-  "Call logs",
-  "Settings",
-];
+const PAGES = ["统计", "上游提供商密钥", "服务访问密钥", "调用日志", "设置"];
 
 describe("application shell", () => {
   it("reaches every management page from the primary navigation", async () => {
     renderApp("/overview");
-    expect(
-      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "统计", level: 1 })).toBeInTheDocument();
     expect(screen.getByText("Exta", { selector: ".brand-name" })).toBeInTheDocument();
-    const navigation = screen.getByRole("navigation", { name: "Primary" });
+    const navigation = screen.getByRole("navigation", { name: "主导航" });
     expect(within(navigation).getAllByRole("link")).toHaveLength(5);
     for (const page of PAGES) {
       await userEvent.click(within(navigation).getByRole("link", { name: page }));
@@ -37,24 +29,21 @@ describe("application shell", () => {
     expect(document.activeElement).toBe(screen.getByRole("main"));
   });
 
-  it("defaults to Chinese and switches to English", async () => {
-    renderApp("/overview", { locale: "zh" });
+  it("presents only Simplified Chinese without a language control", async () => {
+    window.localStorage.setItem("exta.locale", "en");
+    renderApp("/overview");
     expect(await screen.findByRole("heading", { name: "统计", level: 1 })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "语言" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "English" }));
-    expect(
-      await screen.findByRole("heading", { name: "Statistics", level: 1 }),
-    ).toBeInTheDocument();
-    expect(window.localStorage.getItem("exta.locale")).toBe("en");
-    expect(document.documentElement.lang).toBe("en-US");
+    expect(document.documentElement.lang).toBe("zh-CN");
+    expect(screen.queryByRole("button", { name: /语言|Language/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "外观" })).toBeInTheDocument();
   });
 
   it("closes dialogs with Escape and returns focus to the opener", async () => {
     renderApp("/access-keys");
-    const opener = await screen.findByRole("button", { name: "Create access key" });
+    const opener = await screen.findByRole("button", { name: "创建访问密钥" });
     await userEvent.click(opener);
-    const dialog = screen.getByRole("dialog", { name: "Create access key" });
-    expect(within(dialog).getByLabelText("Label")).toHaveFocus();
+    const dialog = screen.getByRole("dialog", { name: "创建访问密钥" });
+    expect(within(dialog).getByLabelText("名称")).toHaveFocus();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(opener).toHaveFocus();
@@ -62,14 +51,14 @@ describe("application shell", () => {
 
   it("shows a not-found page for unknown routes inside the shell", async () => {
     renderApp("/nowhere");
-    expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "页面不存在" })).toBeInTheDocument();
   });
   it.each(["/research", "/research/job_unknown", "/routing", "/usage", "/connections", "/audit"])(
     "does not expose a removed entry at %s",
     async (path) => {
       renderApp(path);
-      expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Create research" })).toBeNull();
+      expect(await screen.findByRole("heading", { name: "页面不存在" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "创建研究" })).toBeNull();
     },
   );
 });

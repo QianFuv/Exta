@@ -54,7 +54,7 @@ export function UsageContent() {
           {t("usage.refreshAll")}
         </Button>
         <span className="muted">
-          {t("usage.lastRefresh")}:{" "}
+          {t("usage.lastRefresh")}：
           {refreshedAt ? <DateTime value={refreshedAt} /> : t("usage.notRefreshed")}
         </span>
         <PermissionHint permission="admin:usage:refresh" />

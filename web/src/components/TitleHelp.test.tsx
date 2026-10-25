@@ -14,15 +14,15 @@ describe("heading help", () => {
     const operation = await screen.findByText("advanced_search", {
       selector: "td .operation-name",
     });
-    await userEvent.click(within(operation.closest("tr")!).getByRole("button", { name: "Edit" }));
+    await userEvent.click(within(operation.closest("tr")!).getByRole("button", { name: "编辑" }));
     const dialog = screen.getByRole("dialog");
     expect(dialog.querySelector(".dialog-description")).toBeNull();
     expect(screen.queryByRole("tooltip")).toBeNull();
-    const help = within(dialog).getByRole("button", { name: /About Edit route/ });
+    const help = within(dialog).getByRole("button", { name: /关于编辑路由/ });
     help.focus();
     const tooltip = await screen.findByRole("tooltip");
     expect(dialog).toContainElement(tooltip);
-    expect(tooltip).toHaveTextContent(/revision/i);
+    expect(tooltip).toHaveTextContent(/版本/);
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
     expect(dialog).toBeInTheDocument();
@@ -40,10 +40,10 @@ describe("heading help", () => {
 
   it("opens on focus, hover or click and dismisses without moving focus", async () => {
     renderApp("/access-keys");
-    const help = await screen.findByRole("button", { name: "About Service access keys" });
+    const help = await screen.findByRole("button", { name: "关于服务访问密钥" });
     const user = userEvent.setup();
     help.focus();
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("MCP and API clients");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("MCP 与 API 客户端");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
     expect(help).toHaveFocus();

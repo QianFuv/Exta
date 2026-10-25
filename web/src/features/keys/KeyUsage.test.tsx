@@ -35,7 +35,7 @@ function fixture(provider: "exa" | "tavily", allocation = 100) {
 /** Render actual Semi progress and localized numbers without network requests. */
 function show(key: Schemas["UpstreamKey"], items: Schemas["KeyUsage"][]) {
   return render(
-    <I18nProvider initialLocale="en">
+    <I18nProvider>
       <KeyUsage providerKey={key} items={items} />
     </I18nProvider>,
   );
@@ -51,17 +51,17 @@ describe("key usage", () => {
       expect(screen.getByText("25%")).toBeVisible();
       expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "25");
       expect(
-        screen.getByText(provider === "exa" ? "$0.000025 / $0.0001" : "25 credits / 100 credits"),
+        screen.getByText(provider === "exa" ? "US$0.000025 / US$0.0001" : "25 积分 / 100 积分"),
       ).toBeVisible();
-      expect(screen.getByText(/Reserved/)).toBeVisible();
-      expect(screen.getByText(/Remaining/)).toHaveTextContent(
-        provider === "exa" ? "$0.000065" : "65 credits",
+      expect(screen.getByText(/预留/)).toBeVisible();
+      expect(screen.getByText(/剩余/)).toHaveTextContent(
+        provider === "exa" ? "US$0.000065" : "65 积分",
       );
     },
   );
   it.each([
-    [100, "Allowance exhausted"],
-    [125, "Over allowance"],
+    [100, "额度耗尽"],
+    [125, "已超额度"],
   ])("shows %s used without hiding exhaustion or overspend", (used, label) => {
     const { key, usage } = fixture("tavily");
     usage.used = Number(used);
@@ -93,8 +93,8 @@ describe("key usage", () => {
     };
     show(key, [usage, upstream]);
     expect(screen.getByText("12.5%")).toBeVisible();
-    expect(screen.getByText("25 credits / 200 credits")).toBeVisible();
-    expect(screen.getByText(/No local cap/)).toBeVisible();
+    expect(screen.getByText("25 积分 / 200 积分")).toBeVisible();
+    expect(screen.getByText(/本地不限/)).toBeVisible();
   });
   it("does not manufacture an upstream total from a balance, a shared scope or another unit", () => {
     const { key, usage } = fixture("exa", 0);
@@ -119,13 +119,13 @@ describe("key usage", () => {
       remaining: 900,
     };
     show(key, [shared, wrongUnit, upstream]);
-    expect(screen.getByText("$0.000025 / Total unknown")).toBeVisible();
+    expect(screen.getByText("US$0.000025 / 总量未知")).toBeVisible();
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
   it("keeps missing use unknown instead of showing zero percent", () => {
     const { key } = fixture("tavily", 0);
     show(key, []);
-    expect(screen.getByText(/Total unknown/)).toBeVisible();
+    expect(screen.getByText(/总量未知/)).toBeVisible();
     expect(screen.queryByRole("progressbar")).toBeNull();
     expect(screen.queryByText("0%")).toBeNull();
   });

@@ -45,7 +45,7 @@ function ScopeBadges({ scopes }: { scopes: readonly ClientScope[] }) {
   return (
     <span className="badge-group">
       {scopes.map((scope) => (
-        <span key={scope} title={scope} aria-label={`${t(`scope.${scope}`)} (${scope})`}>
+        <span key={scope} title={scope} aria-label={`${t(`scope.${scope}`)}（${scope}）`}>
           <Badge tone="neutral">{t(`scope.${scope}`)}</Badge>
         </span>
       ))}
@@ -176,7 +176,7 @@ export function TokensSection() {
                     </Badge>
                   </div>
                   <p className="cell-secondary">
-                    {t("tokens.expires")}: <DateTime value={token.expires_at} />
+                    {t("tokens.expires")}：<DateTime value={token.expires_at} />
                   </p>
                   <div className="scope-summary">
                     <ScopeBadges scopes={token.scopes} />

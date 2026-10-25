@@ -10,7 +10,7 @@ import { NumericControl } from "./NumericControl";
 function NumericFixture() {
   const [value, setValue] = useState("0");
   return (
-    <I18nProvider initialLocale="en">
+    <I18nProvider>
       <label id="limit-label" htmlFor="limit">
         Limit
       </label>
@@ -21,7 +21,7 @@ function NumericFixture() {
         minimum={0}
         maximum={Number.MAX_SAFE_INTEGER}
         presets={[0, 10, 100]}
-        zeroLabel="No local cap"
+        zeroLabel="本地不限"
         emptyIsZero
       />
       <output data-testid="draft">{value}</output>
@@ -45,7 +45,7 @@ it("synchronizes marks, keyboard and exact values beyond the visible slider", as
   expect(screen.getByText("0", { selector: ".semi-slider-mark" })).toBeVisible();
   expect(screen.getByRole("slider", { name: "Limit" })).toHaveAttribute(
     "aria-valuetext",
-    "No local cap",
+    "本地不限",
   );
   const number = screen.getByRole("spinbutton", { name: "Limit" });
   fireEvent.click(screen.getByText("10", { selector: ".semi-slider-mark" }), {

@@ -26,10 +26,10 @@ describe("usage", () => {
   });
   it("renders call counts and an accessible table without money or balance figures", async () => {
     renderApp("/overview?view=usage");
-    expect(await screen.findByRole("img", { name: /Call trends.*Total: 3/ })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /调用趋势.*总调用：3/ })).toBeInTheDocument();
     expect(screen.queryByText(/640 credits|\$12.50|Limit unknown/)).toBeNull();
-    await userEvent.click(screen.getByText("View count data"));
-    expect(await screen.findByRole("region", { name: "View count data" })).toBeInTheDocument();
+    await userEvent.click(screen.getByText("查看计数明细"));
+    expect(await screen.findByRole("region", { name: "查看计数明细" })).toBeInTheDocument();
   });
 
   it("keeps zero axes with an explicit empty state", async () => {
@@ -43,8 +43,8 @@ describe("usage", () => {
       ),
     );
     renderApp("/overview?view=usage");
-    expect(await screen.findByText("No calls in this period")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /Call trends.*Total: 0/ })).toBeInTheDocument();
+    expect(await screen.findByText("此时段暂无调用")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /调用趋势.*总调用：0/ })).toBeInTheDocument();
   });
 
   it("shows the refresh cooldown from a 429 response", async () => {
@@ -66,8 +66,8 @@ describe("usage", () => {
       ),
     );
     renderApp("/overview?view=usage");
-    await userEvent.click(await screen.findByRole("button", { name: "Refresh all" }));
-    expect(await screen.findByText(/Rate limited by Exta/)).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "全部刷新" }));
+    expect(await screen.findByText(/Exta 本地限流/)).toBeInTheDocument();
     expect(screen.getByText(/local_rate_limited, 45 s/)).toBeInTheDocument();
   });
 });

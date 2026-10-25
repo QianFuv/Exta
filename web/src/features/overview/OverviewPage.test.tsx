@@ -22,13 +22,13 @@ describe("overview", () => {
       }),
     );
     renderApp("/overview");
-    const recent = await screen.findByRole("region", { name: "Recent calls" }, { timeout: 15_000 });
+    const recent = await screen.findByRole("region", { name: "最近调用" }, { timeout: 15_000 });
     expect(within(recent).getAllByRole("row")).toHaveLength(6);
-    expect(screen.getAllByRole("link", { name: /View all calls/ })).toHaveLength(1);
-    expect(screen.queryByRole("heading", { name: "Recent errors" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Recent errors" }));
+    expect(screen.getAllByRole("link", { name: /查看全部调用/ })).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "最近错误" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "最近错误" }));
     await waitFor(() => expect(selectedStatus).toBe("failed"));
-    expect(screen.getAllByRole("link", { name: /View all calls/ })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: /查看全部调用/ })).toHaveLength(1);
   });
 
   it("shows locked secret store and missing keys without unrelated usage banners", async () => {
@@ -38,11 +38,11 @@ describe("overview", () => {
     };
     mockDb.state.keys = [];
     renderApp("/overview");
-    expect(await screen.findByText("Secret store locked")).toBeInTheDocument();
-    expect(screen.getByText("Not ready").closest(".semi-tag")).toHaveClass("status-danger");
-    expect(await screen.findByText("No provider keys configured")).toBeInTheDocument();
+    expect(await screen.findByText("密钥库已锁定")).toBeInTheDocument();
+    expect(screen.getByText("未就绪").closest(".semi-tag")).toHaveClass("status-danger");
+    expect(await screen.findByText("尚未配置提供方密钥")).toBeInTheDocument();
     expect(screen.queryByText(/usage rows are stale/)).toBeNull();
-    expect(screen.getByText("Uncertain research")).toBeInTheDocument();
+    expect(screen.getByText("待确认的研究")).toBeInTheDocument();
   });
 
   it("never reports readiness when settings cannot be loaded", async () => {
@@ -64,14 +64,14 @@ describe("overview", () => {
       ),
     );
     renderApp("/overview");
-    expect(await screen.findByText("Storage is unavailable.")).toBeInTheDocument();
-    expect(screen.queryByText("Ready")).toBeNull();
+    expect(await screen.findByText("存储不可用。")).toBeInTheDocument();
+    expect(screen.queryByText("就绪")).toBeNull();
   });
 
   it("shows stored calls without mounting research execution or polling", async () => {
     renderApp("/overview");
-    expect(await screen.findByText("Recent calls")).toBeInTheDocument();
+    expect(await screen.findByText("最近调用")).toBeInTheDocument();
     expect(callsTo("GET", "/v1/admin/research")).toHaveLength(0);
-    expect(screen.queryByRole("link", { name: "Research" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "研究任务" })).toBeNull();
   });
 });

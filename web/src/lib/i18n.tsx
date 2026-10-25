@@ -1,27 +1,16 @@
-/** Small Chinese/English dictionary with locale-aware formatting; no localization service. */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+/** Simplified Chinese interface text with zh-CN formatting; no runtime language switch. */
+import { createContext, useContext, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
-import { EN_MESSAGES, ZH_MESSAGES } from "./messages";
+import { MESSAGES } from "./messages";
 import type { MessageKey } from "./messages";
 
-/** Supported interface languages. Chinese is the product default. */
-export type Locale = "zh" | "en";
-
-const LOCALE_STORAGE_KEY = "exta.locale";
-
-const DICTIONARIES: Record<Locale, Record<MessageKey, string>> = {
-  zh: ZH_MESSAGES,
-  en: EN_MESSAGES,
-};
-
-const INTL_LOCALES: Record<Locale, string> = { zh: "zh-CN", en: "en-US" };
+/** Intl locale tag used for every date, number and unit format. */
+export const INTL_LOCALE = "zh-CN";
 
 /** Interpolation values for message placeholders such as `{count}`. */
 export type MessageValues = Record<string, string | number>;
 
 interface I18nValue {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
   t: (key: MessageKey, values?: MessageValues) => string;
   formatDateTime: (value: string | null | undefined) => string;
   formatNumber: (value: number, maximumFractionDigits?: number) => string;
@@ -29,20 +18,6 @@ interface I18nValue {
 }
 
 const I18nContext = createContext<I18nValue | null>(null);
-
-/**
- * Read the saved non-secret language preference.
- *
- * @returns Saved locale or Chinese.
- */
-function readInitialLocale(): Locale {
-  try {
-    const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-    return saved === "en" || saved === "zh" ? saved : "zh";
-  } catch {
-    return "zh";
-  }
-}
 
 /**
  * Replace `{name}` placeholders with values.
@@ -63,42 +38,22 @@ function interpolate(template: string, values: MessageValues | undefined): strin
 /**
  * Provide translation and formatting helpers.
  *
- * @param props - Optional fixed locale for tests and children.
+ * @param props - Children.
  * @returns The provider element.
  */
-export function I18nProvider({
-  children,
-  initialLocale,
-}: {
-  children: ReactNode;
-  initialLocale?: Locale;
-}) {
-  const [locale, setLocaleState] = useState<Locale>(() => initialLocale ?? readInitialLocale());
-
+export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
-    document.documentElement.lang = INTL_LOCALES[locale];
-  }, [locale]);
-
-  const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
-    try {
-      window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
-    } catch {
-      return;
-    }
+    document.documentElement.lang = INTL_LOCALE;
   }, []);
 
   const value = useMemo<I18nValue>(() => {
-    const dictionary = DICTIONARIES[locale];
-    const intlLocale = INTL_LOCALES[locale];
-    const dateFormat = new Intl.DateTimeFormat(intlLocale, {
+    const dateFormat = new Intl.DateTimeFormat(INTL_LOCALE, {
       dateStyle: "medium",
       timeStyle: "medium",
     });
+    const decimal = new Intl.NumberFormat(INTL_LOCALE, { maximumFractionDigits: 1 });
     return {
-      locale,
-      setLocale,
-      t: (key, values) => interpolate(dictionary[key], values),
+      t: (key, values) => interpolate(MESSAGES[key], values),
       formatDateTime: (input) => {
         if (input === null || input === undefined) {
           return "—";
@@ -107,7 +62,7 @@ export function I18nProvider({
         return Number.isNaN(date.getTime()) ? input : dateFormat.format(date);
       },
       formatNumber: (input, maximumFractionDigits = 0) =>
-        new Intl.NumberFormat(intlLocale, { maximumFractionDigits }).format(input),
+        new Intl.NumberFormat(INTL_LOCALE, { maximumFractionDigits }).format(input),
       formatDuration: (milliseconds) => {
         if (milliseconds === null || milliseconds === undefined) {
           return "—";
@@ -117,12 +72,12 @@ export function I18nProvider({
         }
         const seconds = milliseconds / 1000;
         if (seconds < 120) {
-          return `${new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 1 }).format(seconds)} s`;
+          return `${decimal.format(seconds)} s`;
         }
-        return `${new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 1 }).format(seconds / 60)} min`;
+        return `${decimal.format(seconds / 60)} min`;
       },
     };
-  }, [locale, setLocale]);
+  }, []);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
@@ -130,7 +85,7 @@ export function I18nProvider({
 /**
  * Read translation helpers.
  *
- * @returns Locale, translation and formatting functions.
+ * @returns Translation and formatting functions.
  */
 export function useI18n(): I18nValue {
   const value = useContext(I18nContext);

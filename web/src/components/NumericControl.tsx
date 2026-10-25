@@ -1,7 +1,7 @@
 /** Common numeric presets and exact input share one validated string draft. */
 import Slider from "@douyinfe/semi-ui/lib/es/slider";
 import { Input } from "./Controls";
-import { useI18n } from "../lib/i18n";
+import { INTL_LOCALE, useI18n } from "../lib/i18n";
 
 /** A finite slider range never constrains the separately validated precise input. */
 export function NumericControl({
@@ -29,7 +29,7 @@ export function NumericControl({
   zeroLabel?: string;
   emptyIsZero?: boolean;
 }) {
-  const { formatNumber, locale } = useI18n();
+  const { formatNumber } = useI18n();
   const stops = [
     ...new Set([minimum, ...presets.filter((entry) => entry >= minimum && entry <= maximum)]),
   ].sort((first, second) => first - second);
@@ -47,7 +47,9 @@ export function NumericControl({
   const marks = Object.fromEntries(
     stops.map((stop) => [
       stop,
-      new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(stop),
+      new Intl.NumberFormat(INTL_LOCALE, { notation: "compact", maximumFractionDigits: 1 }).format(
+        stop,
+      ),
     ]),
   );
   return (
